@@ -242,7 +242,7 @@ using Newtonsoft.Json.Linq;
                         var optionalParamIndex = k - 1; // the index of the optional parameter we will be currently setting a default value.
                         parameters[paramIndex] = metadata.defaultValues[optionalParamIndex].Value; // set the default value for the optional parameter that rpc-call didn't set a value for.
                         paramIndex++;
-                        paramCount++;
+                        paramCount++; // we need to increase the paramCount by one each time we add default-value for an optional parameter that rpc-call didn't set a value for.
                     }
                 }
             }
