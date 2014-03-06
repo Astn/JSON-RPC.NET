@@ -37,6 +37,8 @@
                 List<Type> parameterTypeArray = new List<Type>();
                 for (int i = 0; i < paramzs.Length; i++)
                 {
+                    // reflection attribute information for optional parameters
+                    //http://stackoverflow.com/questions/2421994/invoking-methods-with-optional-parameters-through-reflection
                     paras.Add(paramzs[i].Name, paramzs[i].ParameterType);
                 }
 

@@ -14,7 +14,7 @@ using System.Text.RegularExpressions;
  
 namespace TestClient
 {
-    [TestClass]
+    //[TestClass]
     public class UnitTest1
     {
         Random r = null;

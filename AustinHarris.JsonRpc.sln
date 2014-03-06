@@ -22,7 +22,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AustinHarris.JsonRpc.AspNet
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestServer_Console", "TestServer_Console\TestServer_Console.csproj", "{31AE59FC-B6F6-4AC7-A7B9-1E07630AE42B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AustinHarris.JsonRpcTest", "AustinHarris.JsonRpcTest\AustinHarris.JsonRpcTest.csproj", "{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -108,18 +108,18 @@ Global
 		{31AE59FC-B6F6-4AC7-A7B9-1E07630AE42B}.Release|Mixed Platforms.Build.0 = Release|x86
 		{31AE59FC-B6F6-4AC7-A7B9-1E07630AE42B}.Release|x86.ActiveCfg = Release|x86
 		{31AE59FC-B6F6-4AC7-A7B9-1E07630AE42B}.Release|x86.Build.0 = Release|x86
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Debug|ARM.ActiveCfg = Debug|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Release|ARM.ActiveCfg = Release|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{AC1713D7-B3FD-4E9B-9245-E2C3249BFD54}.Release|x86.ActiveCfg = Release|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Release|ARM.ActiveCfg = Release|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{0A11B164-EA4A-41E7-BBE8-2CD19DB4C1AD}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
