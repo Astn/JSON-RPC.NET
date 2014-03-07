@@ -34,9 +34,9 @@ namespace AustinHarris.JsonRpc
             TypeHashes = new List<string>();
 	    }
 
-        public void AddService(string method, Dictionary<string,Type> parameters)
+        public void AddService(string method, Dictionary<string,Type> parameters, Dictionary<string, object> defaultValues)
         {
-            var newService = new SMDService(transport,"JSON-RPC-2.0",parameters);
+            var newService = new SMDService(transport,"JSON-RPC-2.0",parameters, defaultValues);
             Services.Add(method,newService);
         }
 
@@ -65,7 +65,8 @@ namespace AustinHarris.JsonRpc
         /// <param name="transport">POST, GET, REST, JSONP, TCP/IP</param>
         /// <param name="envelope">URL, PATH, JSON, JSON-RPC-1.0, JSON-RPC-1.1, JSON-RPC-2.0</param>
         /// <param name="parameters"></param>
-        public SMDService(string transport, string envelope, Dictionary<string, Type> parameters)
+        /// <param name="defaultValues"></param>
+        public SMDService(string transport, string envelope, Dictionary<string, Type> parameters, Dictionary<string, object> defaultValues )
         {
             // TODO: Complete member initialization
             this.transport = transport;
@@ -79,6 +80,14 @@ namespace AustinHarris.JsonRpc
                     this.parameters[ctr++] = new SMDAdditionalParameters(item.Key, item.Value);
                 }
 	        }
+
+            // create the default values storage for optional parameters.
+            this.defaultValues = new ParameterDefaultValue[defaultValues.Count];
+            int counter = 0;
+            foreach (var item in defaultValues)
+            {
+                this.defaultValues[counter++] = new ParameterDefaultValue(item.Key, item.Value);
+            }
 
             // this is getting the return type from the end of the param list
             this.returns = new SMDResult(parameters.Values.LastOrDefault());
@@ -95,6 +104,11 @@ namespace AustinHarris.JsonRpc
         /// JSON Schema property definition with the additional properties:
         /// </summary>
         public SMDAdditionalParameters[] parameters { get; private set; }
+
+        /// <summary>
+        /// Stores default values for optional parameters.
+        /// </summary>
+        public ParameterDefaultValue[] defaultValues { get; private set; }
     }
 
     public class SMDResult
@@ -105,6 +119,27 @@ namespace AustinHarris.JsonRpc
         public SMDResult(System.Type type)
         {
             Type = SMDAdditionalParameters.GetTypeRecursive(type);
+        }
+    }
+
+    /// <summary>
+    /// Holds default value for parameters.
+    /// </summary>
+    public class ParameterDefaultValue
+    {
+        /// <summary>
+        /// Name of the parameter.
+        /// </summary>
+        public string Name { get; private set; }
+        /// <summary>
+        /// Default value for the parameter.
+        /// </summary>
+        public object Value { get; private set; }
+
+        public ParameterDefaultValue(string name, object value)
+        {
+            this.Name = name;
+            this.Value = value;
         }
     }
 

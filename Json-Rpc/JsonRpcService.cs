@@ -32,14 +32,19 @@
             foreach (var meth in methods)
             {
                 Dictionary<string, Type> paras = new Dictionary<string, Type>();
+                Dictionary<string, object> defaultValues = new Dictionary<string, object>(); // dictionary that holds default values for optional params.
+
                 var paramzs = meth.GetParameters();
 
-                List<Type> parameterTypeArray = new List<Type>();
-                for (int i = 0; i < paramzs.Length; i++)
+                List<Type> parameterTypeArray = new List<Type>();                
+                 for (int i = 0; i < paramzs.Length; i++)
                 {
                     // reflection attribute information for optional parameters
                     //http://stackoverflow.com/questions/2421994/invoking-methods-with-optional-parameters-through-reflection
                     paras.Add(paramzs[i].Name, paramzs[i].ParameterType);
+
+                    if (paramzs[i].IsOptional) // if the parameter is an optional, add the default value to our default values dictionary.
+                        defaultValues.Add(paramzs[i].Name, paramzs[i].DefaultValue);
                 }
 
                 var resType = meth.ReturnType;
@@ -52,7 +57,7 @@
                     var newDel = Delegate.CreateDelegate(System.Linq.Expressions.Expression.GetDelegateType(paras.Values.ToArray()), this /*Need to add support for other methods outside of this instance*/, meth);
                     var handlerSession = Handler.GetSessionHandler(sessionID);
                     regMethod.Invoke(handlerSession, new object[] { methodName, newDel });
-                    handlerSession.MetaData.AddService(methodName, paras);
+                    handlerSession.MetaData.AddService(methodName, paras, defaultValues);
                 }
             }
         }
