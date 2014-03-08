@@ -7,9 +7,14 @@ namespace UnitTests
     [TestClass]
     public class UnitTest1
     {
-        static object[] services = new object[] {
-           new CalculatorService()
-        };
+        static object[] services ;
+
+        static UnitTest1()
+        {
+            services = new object[] {
+           new CalculatorService()};
+        
+        }
 
         [TestMethod]
         public void TestInProcessClient()
