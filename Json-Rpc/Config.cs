@@ -39,6 +39,7 @@ namespace AustinHarris.JsonRpc
         }
 
         /// <summary>
+        /// For exceptions thrown after the routed method has been called.
         /// Allows you to specify an error handler that will be invoked prior to returning the JsonResponse to the client.
         /// You are able to modify the error that is returned inside the provided handler.
         /// </summary>
@@ -49,6 +50,7 @@ namespace AustinHarris.JsonRpc
         }
 
         /// <summary>
+        /// For exceptions thrown after the routed method has been called.
         /// Allows you to specify an error handler that will be invoked prior to returning the JsonResponse to the client.
         /// You are able to modify the error that is returned inside the provided handler. 
         /// </summary>
@@ -57,6 +59,29 @@ namespace AustinHarris.JsonRpc
         public static void SetErrorHandler(string sessionId, Func<JsonRequest, JsonRpcException, JsonRpcException> handler)
         {
             Handler.GetSessionHandler(sessionId).SetErrorHandler(handler);
+        }
+
+        /// <summary>
+        /// For exceptions thrown during parsing and prior to a routed method being called.
+        /// Allows you to specify an error handler that will be invoked prior to returning the JsonResponse to the client.
+        /// You are able to modify the error that is returned inside the provided handler.
+        /// </summary>
+        /// <param name="handler"></param>
+        public static void SetParseErrorHandler(Func<string,JsonRpcException,JsonRpcException> handler)
+        {
+            Handler.DefaultHandler.SetParseErrorHandler(handler);
+        }
+
+        /// <summary>
+        /// For exceptions thrown during parsing and prior to a routed method being called.
+        /// Allows you to specify an error handler that will be invoked prior to returning the JsonResponse to the client.
+        /// You are able to modify the error that is returned inside the provided handler. 
+        /// </summary>
+        /// <param name="sessionId"></param>
+        /// <param name="handler"></param>
+        public static void SetParseErrorHandler(string sessionId, Func<string, JsonRpcException, JsonRpcException> handler)
+        {
+            Handler.GetSessionHandler(sessionId).SetParseErrorHandler(handler);
         }
     }
 }

@@ -132,6 +132,7 @@ using Newtonsoft.Json.Linq;
 
         private AustinHarris.JsonRpc.PreProcessHandler externalPreProcessingHandler;
         private Func<JsonRequest, JsonRpcException, JsonRpcException> externalErrorHandler;
+        private Func<string, JsonRpcException, JsonRpcException> parseErrorHandler;
         private Dictionary<string,Delegate> Handlers { get; set; }
         #endregion
 
@@ -357,10 +358,19 @@ using Newtonsoft.Json.Linq;
                 return externalErrorHandler(req,ex);
             return ex;
         }
-
+        internal JsonRpcException ProcessParseException(string req,JsonRpcException ex)
+        {
+            if (parseErrorHandler != null)
+                return parseErrorHandler(req, ex);
+            return ex;
+        }
         internal void SetErrorHandler(Func<JsonRequest, JsonRpcException, JsonRpcException> handler)
         {
             externalErrorHandler = handler;
+        }
+        internal void SetParseErrorHandler(Func<string, JsonRpcException, JsonRpcException> handler)
+        {
+            parseErrorHandler = handler;
         }
         
         #endregion
