@@ -217,7 +217,7 @@ namespace UnitTests
 
 
         [TestMethod]
-        public void TestOptionalParambyteMissing()
+        public void TestOptionalParamByteMissing()
         {
             string request = @"{method:'TestOptionalParambyte',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -227,7 +227,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamsbyteMissing()
+        public void TestOptionalParamSbyteMissing()
         {
             string request = @"{method:'TestOptionalParamsbyte',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -237,7 +237,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamshortMissing()
+        public void TestOptionalParamShortMissing()
         {
             string request = @"{method:'TestOptionalParamshort',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -257,7 +257,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamlongMissing()
+        public void TestOptionalParamLongMissing()
         {
             string request = @"{method:'TestOptionalParamlong',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -267,7 +267,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamushortMissing()
+        public void TestOptionalParamUshortMissing()
         {
             string request = @"{method:'TestOptionalParamushort',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -277,7 +277,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamuintMissing()
+        public void TestOptionalParamUintMissing()
         {
             string request = @"{method:'TestOptionalParamuint',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -287,7 +287,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamulongMissing()
+        public void TestOptionalParamUlongMissing()
         {
             string request = @"{method:'TestOptionalParamulong',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -297,7 +297,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamfloatMissing()
+        public void TestOptionalParamFloatMissing()
         {
             string request = @"{method:'TestOptionalParamfloat',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
@@ -307,7 +307,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdoubleMissing()
+        public void TestOptionalParamDoubleMissing()
         {
             string request = @"{method:'TestOptionalParamdouble',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
@@ -317,7 +317,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamboolMissing()
+        public void TestOptionalParamBoolMissing()
         {
             string request = @"{method:'TestOptionalParambool',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
@@ -327,7 +327,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamcharMissing()
+        public void TestOptionalParamCharMissing()
         {
             string request = @"{method:'TestOptionalParamchar',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"a\",\"id\":1}";
@@ -337,7 +337,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdecimalMissing()
+        public void TestOptionalParamDecimalMissing()
         {
             string request = @"{method:'TestOptionalParamdecimal',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
@@ -348,7 +348,7 @@ namespace UnitTests
         }
 
         [TestMethod]
-        public void TestOptionalParambytePresent()
+        public void TestOptionalParamBytePresent()
         {
             string request = @"{method:'TestOptionalParambyte',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -358,7 +358,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamsbytePresent()
+        public void TestOptionalParamSbytePresent()
         {
             string request = @"{method:'TestOptionalParamsbyte',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -368,7 +368,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamshortPresent()
+        public void TestOptionalParamShortPresent()
         {
             string request = @"{method:'TestOptionalParamshort',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -388,7 +388,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamlongPresent()
+        public void TestOptionalParamLongPresent()
         {
             string request = @"{method:'TestOptionalParamlong',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -398,7 +398,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamushortPresent()
+        public void TestOptionalParamUshortPresent()
         {
             string request = @"{method:'TestOptionalParamushort',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -408,7 +408,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamuintPresent()
+        public void TestOptionalParamUintPresent()
         {
             string request = @"{method:'TestOptionalParamuint',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -418,7 +418,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamulongPresent()
+        public void TestOptionalParamUlongPresent()
         {
             string request = @"{method:'TestOptionalParamulong',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -428,7 +428,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamfloatPresent()
+        public void TestOptionalParamFloatPresent()
         {
             string request = @"{method:'TestOptionalParamfloat',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
@@ -438,7 +438,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdoublePresent()
+        public void TestOptionalParamDoublePresent()
         {
             string request = @"{method:'TestOptionalParamdouble',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
@@ -448,7 +448,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamboolPresent()
+        public void TestOptionalParamBoolPresent()
         {
             string request = @"{method:'TestOptionalParambool',params:[false],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
@@ -458,7 +458,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamcharPresent()
+        public void TestOptionalParamCharPresent()
         {
             string request = @"{method:'TestOptionalParamchar',params:["+(int)'b'+"],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"b\",\"id\":1}";
@@ -468,7 +468,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdecimalPresent()
+        public void TestOptionalParamDecimalPresent()
         {
             string request = @"{method:'TestOptionalParamdecimal',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
@@ -479,7 +479,7 @@ namespace UnitTests
         }
 
         [TestMethod]
-        public void TestOptionalParambytePresentObjectSyntax()
+        public void TestOptionalParamBytePresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParambyte',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -489,7 +489,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamsbytePresentObjectSyntax()
+        public void TestOptionalParamSbytePresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamsbyte',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -499,7 +499,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamshortPresentObjectSyntax()
+        public void TestOptionalParamShortPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamshort',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -519,7 +519,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamlongPresentObjectSyntax()
+        public void TestOptionalParamLongPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamlong',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -529,7 +529,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamushortPresentObjectSyntax()
+        public void TestOptionalParamUshortPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamushort',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -539,7 +539,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamuintPresentObjectSyntax()
+        public void TestOptionalParamUintPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamuint',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -549,7 +549,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamulongPresentObjectSyntax()
+        public void TestOptionalParamUlongPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamulong',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
@@ -559,7 +559,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamfloatPresentObjectSyntax()
+        public void TestOptionalParamFloatPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamfloat',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
@@ -569,7 +569,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdoublePresentObjectSyntax()
+        public void TestOptionalParamDoublePresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamdouble',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
@@ -579,7 +579,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamboolPresentObjectSyntax()
+        public void TestOptionalParamBoolPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParambool',params:{'input':false},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
@@ -589,7 +589,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamcharPresentObjectSyntax()
+        public void TestOptionalParamCharPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamchar',params:{'input':"+(int)'c'+"},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"c\",\"id\":1}";
@@ -599,7 +599,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdecimalPresentObjectSyntax()
+        public void TestOptionalParamDecimalPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamdecimal',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
@@ -610,7 +610,7 @@ namespace UnitTests
         }
 
         [TestMethod]
-        public void TestOptionalParambyteMissingObjectSyntax()
+        public void TestOptionalParamByteMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParambyte',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -620,7 +620,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamsbyteMissingObjectSyntax()
+        public void TestOptionalParamSbyteMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamsbyte',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -630,7 +630,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamshortMissingObjectSyntax()
+        public void TestOptionalParamShortMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamshort',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -650,7 +650,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamlongMissingObjectSyntax()
+        public void TestOptionalParamLongMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamlong',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -660,7 +660,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamushortMissingObjectSyntax()
+        public void TestOptionalParamUshortMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamushort',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -670,7 +670,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamuintMissingObjectSyntax()
+        public void TestOptionalParamUintMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamuint',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -680,7 +680,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamulongMissingObjectSyntax()
+        public void TestOptionalParamUlongMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamulong',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
@@ -690,7 +690,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamfloatMissingObjectSyntax()
+        public void TestOptionalParamFloatMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamfloat',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
@@ -700,7 +700,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdoubleMissingObjectSyntax()
+        public void TestOptionalParamDoubleMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamdouble',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
@@ -710,7 +710,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamboolMissingObjectSyntax()
+        public void TestOptionalParamBoolMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParambool',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
@@ -720,7 +720,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamcharMissingObjectSyntax()
+        public void TestOptionalParamCharMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamchar',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"a\",\"id\":1}";
@@ -730,7 +730,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdecimalMissingObjectSyntax()
+        public void TestOptionalParamDecimalMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamdecimal',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
@@ -741,7 +741,7 @@ namespace UnitTests
         }
 
         [TestMethod]
-        public void TestOptionalParambyte_2ndMissingObjectSyntax()
+        public void TestOptionalParamByte_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
@@ -751,7 +751,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamsbyte_2ndMissingObjectSyntax()
+        public void TestOptionalParamSbyte_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":126,\"id\":1}";
@@ -761,7 +761,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamshort_2ndMissingObjectSyntax()
+        public void TestOptionalParamShort_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -781,7 +781,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamlong_2ndMissingObjectSyntax()
+        public void TestOptionalParamLong_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -791,7 +791,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamushort_2ndMissingObjectSyntax()
+        public void TestOptionalParamUshort_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -801,7 +801,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamuint_2ndMissingObjectSyntax()
+        public void TestOptionalParamUint_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -811,7 +811,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamulong_2ndMissingObjectSyntax()
+        public void TestOptionalParamUlong_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -821,7 +821,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamfloat_2ndMissingObjectSyntax()
+        public void TestOptionalParamFloat_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
@@ -831,7 +831,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdouble_2ndMissingObjectSyntax()
+        public void TestOptionalParamDouble_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
@@ -841,7 +841,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParambool_2ndMissingObjectSyntax()
+        public void TestOptionalParamBool_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParambool_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
@@ -851,7 +851,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamchar_2ndMissingObjectSyntax()
+        public void TestOptionalParamChar_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
@@ -861,7 +861,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdecimal_2ndMissingObjectSyntax()
+        public void TestOptionalParamDecimal_2ndMissingObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
@@ -872,7 +872,7 @@ namespace UnitTests
         }
 
         [TestMethod]
-        public void TestOptionalParambyte_2ndPresentObjectSyntax()
+        public void TestOptionalParamByte_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:{input1:123, input2: 67},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":67,\"id\":1}";
@@ -882,7 +882,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParambyte_2ndPresentArraySyntax()
+        public void TestOptionalParamByte_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:[123, 67],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":67,\"id\":1}";
@@ -892,7 +892,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParambyte_2ndMissingArraySyntax()
+        public void TestOptionalParamByte_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
@@ -902,7 +902,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamsbyte_2ndPresentObjectSyntax()
+        public void TestOptionalParamSbyte_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:{input1:123, input2: 97},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":97,\"id\":1}";
@@ -912,7 +912,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamsbyte_2ndPresentArraySyntax()
+        public void TestOptionalParamSbyte_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:[123, 98],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
@@ -922,7 +922,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamsbyte_2ndMissingArraySyntax()
+        public void TestOptionalParamSbyte_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":126,\"id\":1}";
@@ -932,7 +932,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamshort_2ndPresentObjectSyntax()
+        public void TestOptionalParamShort_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -942,7 +942,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamshort_2ndPresentArraySyntax()
+        public void TestOptionalParamShort_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -952,7 +952,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamshort_2ndMissingArraySyntax()
+        public void TestOptionalParamShort_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -992,7 +992,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamlong_2ndPresentObjectSyntax()
+        public void TestOptionalParamLong_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -1002,7 +1002,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamlong_2ndPresentArraySyntax()
+        public void TestOptionalParamLong_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:[123,  671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -1012,7 +1012,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamlong_2ndMissingArraySyntax()
+        public void TestOptionalParamLong_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -1022,7 +1022,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamushort_2ndPresentObjectSyntax()
+        public void TestOptionalParamUshort_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -1032,7 +1032,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamushort_2ndPresentArraySyntax()
+        public void TestOptionalParamUshort_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:[123,  671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -1042,7 +1042,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamushort_2ndMissingArraySyntax()
+        public void TestOptionalParamUshort_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -1052,7 +1052,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamuint_2ndPresentObjectSyntax()
+        public void TestOptionalParamUint_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -1062,7 +1062,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamuint_2ndPresentArraySyntax()
+        public void TestOptionalParamUint_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -1072,7 +1072,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamuint_2ndMissingArraySyntax()
+        public void TestOptionalParamUint_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -1082,7 +1082,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamulong_2ndPresentObjectSyntax()
+        public void TestOptionalParamUlong_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -1092,7 +1092,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamulong_2ndPresentArraySyntax()
+        public void TestOptionalParamUlong_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
@@ -1102,7 +1102,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamulong_2ndMissingArraySyntax()
+        public void TestOptionalParamUlong_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
@@ -1112,7 +1112,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamfloat_2ndPresentObjectSyntax()
+        public void TestOptionalParamFloat_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
@@ -1122,7 +1122,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamfloat_2ndPresentArraySyntax()
+        public void TestOptionalParamFloat_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
@@ -1132,7 +1132,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamfloat_2ndMissingArraySyntax()
+        public void TestOptionalParamFloat_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
@@ -1142,7 +1142,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdouble_2ndPresentObjectSyntax()
+        public void TestOptionalParamDouble_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
@@ -1152,7 +1152,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdouble_2ndPresentArraySyntax()
+        public void TestOptionalParamDouble_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:[123,  671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
@@ -1162,7 +1162,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdouble_2ndMissingArraySyntax()
+        public void TestOptionalParamDouble_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
@@ -1172,7 +1172,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParambool_2ndPresentObjectSyntax()
+        public void TestOptionalParamBool_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParambool_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
@@ -1182,7 +1182,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParambool_2ndPresentArraySyntax()
+        public void TestOptionalParamBool_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParambool_2x',params:[true, false],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
@@ -1192,7 +1192,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParambool_2ndMissingArraySyntax()
+        public void TestOptionalParamBool_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParambool_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
@@ -1202,7 +1202,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamchar_2ndPresentObjectSyntax()
+        public void TestOptionalParamChar_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:{'input1':" + (int)'c' + ", 'input2':" + (int)'d' + "},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
@@ -1212,7 +1212,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamchar_2ndPresentArraySyntax()
+        public void TestOptionalParamChar_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:[" + (int)'c' + ", " + (int)'d' + "],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
@@ -1222,7 +1222,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamchar_2ndMissingArraySyntax()
+        public void TestOptionalParamChar_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:["+(int)'c'+"],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
@@ -1232,7 +1232,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdecimal_2ndPresentObjectSyntax()
+        public void TestOptionalParamDecimal_2ndPresentObjectSyntax()
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
@@ -1242,7 +1242,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdecimal_2ndPresentArraySyntax()
+        public void TestOptionalParamDecimal_2ndPresentArraySyntax()
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
@@ -1252,7 +1252,7 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
         [TestMethod]
-        public void TestOptionalParamdecimal_2ndMissingArraySyntax()
+        public void TestOptionalParamDecimal_2ndMissingArraySyntax()
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
