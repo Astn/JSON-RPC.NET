@@ -142,5 +142,75 @@ namespace UnitTests
             public recursiveClass Nested1 { get; set; }
             public int Value1 { get; set; }
         }
+
+        #region OptionalParams Tests
+        [JsonRpcMethod]
+        private byte TestOptionalParambyte(byte input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private sbyte TestOptionalParamsbyte(sbyte input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private short TestOptionalParamshort(short input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private int TestOptionalParamint(int input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private long TestOptionalParamlong(long input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private ushort TestOptionalParamushort(ushort input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private uint TestOptionalParamuint(uint input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private ulong TestOptionalParamulong(ulong input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private float TestOptionalParamfloat(float input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private double TestOptionalParamdouble(double input = 1)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private bool TestOptionalParambool(bool input = true)
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private char TestOptionalParamchar(char input = 'a')
+        {
+            return input;
+        }
+        [JsonRpcMethod]
+        private decimal TestOptionalParamdecimal(decimal input = 1)
+        {
+            return input;
+        }
+
+        #endregion
+
     }
 }
