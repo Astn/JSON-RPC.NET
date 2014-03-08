@@ -212,5 +212,72 @@ namespace UnitTests
 
         #endregion
 
+        [JsonRpcMethod]
+        public byte TestOptionalParambyte_2x(byte input1, byte input2 = 98)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public sbyte TestOptionalParamsbyte_2x(sbyte input1, sbyte input2 = 126)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public short TestOptionalParamshort_2x(short input1, short input2 = 987)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public int TestOptionalParamint_2x(int input1, int input2 = 987)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public long TestOptionalParamlong_2x(long input1, long input2 = 987)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public ushort TestOptionalParamushort_2x(ushort input1, ushort input2 = 987)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public uint TestOptionalParamuint_2x(uint input1, uint input2 = 987)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public ulong TestOptionalParamulong_2x(ulong input1, ulong input2 = 987)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public float TestOptionalParamfloat_2x(float input1, float input2 = 987)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public double TestOptionalParamdouble_2x(double input1, double input2 = 987)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public bool TestOptionalParambool_2x(bool input1, bool input2 = true)
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public char TestOptionalParamchar_2x(char input1, char input2 = 'd')
+        {
+            return input2;
+        }
+        [JsonRpcMethod]
+        public decimal TestOptionalParamdecimal_2x(decimal input1, decimal input2 = 987)
+        {
+            return input2;
+        }
+
+
     }
 }
