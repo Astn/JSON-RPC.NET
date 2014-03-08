@@ -472,6 +472,268 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
 
+        [TestMethod]
+        public void TestOptionalParambytePresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParambyte',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamsbytePresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamsbyte',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamshortPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamshort',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamintPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamint',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamlongPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamlong',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamushortPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamushort',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamuintPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamuint',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamulongPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamulong',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamfloatPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamfloat',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamdoublePresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamdouble',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamboolPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParambool',params:{'input':false},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamcharPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamchar',params:{'input':"+(int)'c'+"},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"c\",\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamdecimalPresentObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamdecimal',params:{'input':71},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+
+        [TestMethod]
+        public void TestOptionalParambyteMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParambyte',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamsbyteMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamsbyte',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamshortMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamshort',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamintMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamint',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamlongMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamlong',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamushortMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamushort',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamuintMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamuint',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamulongMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamulong',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamfloatMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamfloat',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamdoubleMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamdouble',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamboolMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParambool',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamcharMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamchar',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"a\",\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+        [TestMethod]
+        public void TestOptionalParamdecimalMissingObjectSyntax()
+        {
+            string request = @"{method:'TestOptionalParamdecimal',params:{},id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
+            var result = InProcessClient.Invoke(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+
 
     }
 }
