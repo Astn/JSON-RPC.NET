@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using AustinHarris.JsonRpc.Client;
+using AustinHarris.JsonRpc;
 
 namespace UnitTests
 {
@@ -21,7 +22,7 @@ namespace UnitTests
         {
             string request = @"{method:'NullableFloatToNullableFloat',params:[0.0],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.0,\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
 
             Assert.AreEqual(result.Result, expectedResult);
@@ -33,7 +34,7 @@ namespace UnitTests
         {
             string request = @"{method:'NullableFloatToNullableFloat',params:[1.2345],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.2345,\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.AreEqual(result.Result, expectedResult);
             Assert.AreEqual(expectedResult, result.Result);
@@ -44,7 +45,7 @@ namespace UnitTests
         {
             string request = @"{method:'NullableFloatToNullableFloat',params:[null],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.AreEqual(result.Result, expectedResult);
             Assert.AreEqual(expectedResult, result.Result);
@@ -55,7 +56,7 @@ namespace UnitTests
         {
             string request = @"{method:'DecimalToNullableDecimal',params:[0.0],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.0,\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.AreEqual(result.Result, expectedResult);
             Assert.AreEqual(expectedResult, result.Result);
@@ -66,7 +67,7 @@ namespace UnitTests
         {
             string request = @"{method:'StringToListOfString',params:['some string'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"one\",\"two\",\"three\",\"some string\"],\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.AreEqual(result.Result, expectedResult);
             Assert.AreEqual(expectedResult, result.Result);
@@ -77,7 +78,7 @@ namespace UnitTests
         {
             string request = @"{method:'CustomStringToListOfString',params:[{str:'some string'}],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"one\",\"two\",\"three\",\"some string\"],\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.AreEqual(result.Result, expectedResult);
             Assert.AreEqual(expectedResult, result.Result);
@@ -88,7 +89,7 @@ namespace UnitTests
         {
             string request = @"{method:'StringToThrowingException',params:['some string'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32603,\"message\":\"Internal Error\",\"data\":";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsTrue(result.Result.StartsWith(expectedResult));
         }
@@ -98,7 +99,7 @@ namespace UnitTests
         {
             string request = @"{method:'StringToRefException',params:['some string'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-1,\"message\":\"refException worked\",\"data\":null},\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsTrue(result.Result.StartsWith(expectedResult));
             Assert.AreEqual(expectedResult, result.Result);
@@ -109,7 +110,7 @@ namespace UnitTests
         {
             string request = @"{method:'StringToThrowJsonRpcException',params:['some string'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-27000,\"message\":\"Just some testing\"";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsTrue(result.Result.StartsWith(expectedResult));
 
@@ -119,7 +120,7 @@ namespace UnitTests
         public void ReturnsDateTime()
         {
             string request = @"{method:'ReturnsDateTime',params:[],id:1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
         }
@@ -129,7 +130,7 @@ namespace UnitTests
         {
             string request = @"{method:'ReturnsCustomRecursiveClass',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":{\"Nested1\":{\"Nested1\":null,\"Value1\":5},\"Value1\":10},\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -141,7 +142,7 @@ namespace UnitTests
         {
             string request = @"{method:'FloatToFloat',params:[0.123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.123,\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -153,7 +154,7 @@ namespace UnitTests
         {
             string request = @"{method:'IntToInt',params:[789],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -164,7 +165,7 @@ namespace UnitTests
         {            
             string request = @"{method:'TestOptionalParamInt16',params:[789],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -175,7 +176,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamInt16',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -186,7 +187,7 @@ namespace UnitTests
         {
             string request = @"{method:'Int16ToInt16',params:[789],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -197,7 +198,7 @@ namespace UnitTests
         {
             string request = @"{method:'Int32ToInt32',params:[789],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -208,7 +209,7 @@ namespace UnitTests
         {
             string request = @"{method:'Int64ToInt64',params:[78915984515564],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":78915984515564,\"id\":1}";
-            var result =  InProcessClient.Invoke(request);
+            var result =  JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -220,7 +221,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambyte',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -230,7 +231,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamsbyte',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -240,7 +241,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamshort',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -250,7 +251,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamint',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -260,7 +261,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamlong',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -270,7 +271,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamushort',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -280,7 +281,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamuint',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -290,7 +291,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamulong',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -300,7 +301,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamfloat',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -310,7 +311,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdouble',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -320,7 +321,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambool',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -330,7 +331,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamchar',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"a\",\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -340,7 +341,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdecimal',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -351,7 +352,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambyte',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -361,7 +362,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamsbyte',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -371,7 +372,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamshort',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -381,7 +382,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamint',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -391,7 +392,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamlong',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -401,7 +402,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamushort',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -411,7 +412,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamuint',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -421,7 +422,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamulong',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -431,7 +432,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamfloat',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -441,7 +442,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdouble',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -451,7 +452,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambool',params:[false],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -461,7 +462,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamchar',params:["+(int)'b'+"],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"b\",\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -471,7 +472,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdecimal',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -482,7 +483,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambyte',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -492,7 +493,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamsbyte',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -502,7 +503,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamshort',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -512,7 +513,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamint',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -522,7 +523,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamlong',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -532,7 +533,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamushort',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -542,7 +543,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamuint',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -552,7 +553,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamulong',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -562,7 +563,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamfloat',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -572,7 +573,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdouble',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -582,7 +583,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambool',params:{'input':false},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -592,7 +593,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamchar',params:{'input':"+(int)'c'+"},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"c\",\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -602,7 +603,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdecimal',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -613,7 +614,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambyte',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -623,7 +624,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamsbyte',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -633,7 +634,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamshort',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -643,7 +644,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamint',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -653,7 +654,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamlong',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -663,7 +664,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamushort',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -673,7 +674,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamuint',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -683,7 +684,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamulong',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -693,7 +694,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamfloat',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -703,7 +704,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdouble',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -713,7 +714,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambool',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -723,7 +724,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamchar',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"a\",\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -733,7 +734,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdecimal',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -744,7 +745,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -754,7 +755,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":126,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -764,7 +765,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -774,7 +775,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamint_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -784,7 +785,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -794,7 +795,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -804,7 +805,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -814,7 +815,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -824,7 +825,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -834,7 +835,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -844,7 +845,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambool_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -854,7 +855,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -864,7 +865,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -875,7 +876,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:{input1:123, input2: 67},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":67,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -885,7 +886,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:[123, 67],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":67,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -895,7 +896,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -905,7 +906,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:{input1:123, input2: 97},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":97,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -915,7 +916,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:[123, 98],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -925,7 +926,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":126,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -935,7 +936,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -945,7 +946,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -955,7 +956,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -965,7 +966,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamint_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -975,7 +976,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamint_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -985,7 +986,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamint_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -995,7 +996,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1005,7 +1006,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:[123,  671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1015,7 +1016,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1025,7 +1026,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1035,7 +1036,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:[123,  671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1045,7 +1046,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1055,7 +1056,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1065,7 +1066,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1075,7 +1076,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1085,7 +1086,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1095,7 +1096,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1105,7 +1106,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1115,7 +1116,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1125,7 +1126,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1135,7 +1136,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1145,7 +1146,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1155,7 +1156,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:[123,  671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1165,7 +1166,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1175,7 +1176,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambool_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1185,7 +1186,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambool_2x',params:[true, false],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1195,7 +1196,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParambool_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1205,7 +1206,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:{'input1':" + (int)'c' + ", 'input2':" + (int)'d' + "},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1215,7 +1216,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:[" + (int)'c' + ", " + (int)'d' + "],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1225,7 +1226,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:["+(int)'c'+"],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1235,7 +1236,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1245,7 +1246,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
@@ -1255,7 +1256,7 @@ namespace UnitTests
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = InProcessClient.Invoke(request);
+            var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
