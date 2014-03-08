@@ -15,7 +15,7 @@ using Newtonsoft.Json.Linq;
         #region Members
 
         //private static Handler current;
-        private static Dictionary<string, Handler> _sessionHandlers;
+        private static ConcurrentDictionary<string, Handler> _sessionHandlers;
         private static string _defaultSessionId;
         #endregion
 
@@ -25,8 +25,8 @@ using Newtonsoft.Json.Linq;
         {
             //current = new Handler(Guid.NewGuid().ToString());
             _defaultSessionId = Guid.NewGuid().ToString();
-            _sessionHandlers = new Dictionary<string, Handler>();
-            _sessionHandlers.Add(_defaultSessionId, new Handler(_defaultSessionId));
+            _sessionHandlers = new ConcurrentDictionary<string, Handler>();
+            _sessionHandlers[_defaultSessionId]= new Handler(_defaultSessionId);
         }
 
         private Handler(string sessionId)
@@ -53,19 +53,7 @@ using Newtonsoft.Json.Linq;
         /// <returns></returns>
         public static Handler GetSessionHandler(string sessionId)
         {
-            // double check lock. We only lock if we think we are going to add one.
-            if (_sessionHandlers.ContainsKey(sessionId) == false)
-            {
-                lock (_sessionHandlers)
-                {
-                    if (_sessionHandlers.ContainsKey(sessionId) == false)
-                    {
-                        _sessionHandlers.Add(sessionId, new Handler(sessionId));
-                    }
-                }
-            }
-
-            return _sessionHandlers[sessionId];
+            return _sessionHandlers.GetOrAdd(sessionId, new Handler(sessionId));
         }
         
         /// <summary>
@@ -74,13 +62,32 @@ using Newtonsoft.Json.Linq;
         /// <returns>The default Session Handler</returns>
         public static Handler GetSessionHandler()
         {
-            return _sessionHandlers[_defaultSessionId];
+            return GetSessionHandler(_defaultSessionId);
+        }
+
+        /// <summary>
+        /// Removes and clears the Handler with the specific sessionID from the registry of Handlers
+        /// </summary>
+        /// <param name="sessionId"></param>
+        public static void DestroySession(string sessionId)
+        {
+            Handler h;
+            _sessionHandlers.TryRemove(sessionId,out h);
+            h.Handlers.Clear();
+            h.MetaData.Services.Clear();
+        }
+        /// <summary>
+        /// Removes and clears the current Handler from the registry of Handlers
+        /// </summary>
+        public void Destroy()
+        {
+            DestroySession(SessionId);
         }
 
         /// <summary>
         /// Gets the default session handler
         /// </summary>
-        public static Handler DefaultHandler { get { return _sessionHandlers[_defaultSessionId]; } }
+        public static Handler DefaultHandler { get { return GetSessionHandler(_defaultSessionId); } }
 
         /// <summary>
         /// The sessionID of this Handler
@@ -159,6 +166,12 @@ using Newtonsoft.Json.Linq;
             }
 
             return result;
+        }
+
+        public void UnRegister(string key)
+        {
+            this.Handlers.Remove(key);
+            MetaData.Services.Remove(key);
         }
 
         /// <summary>
