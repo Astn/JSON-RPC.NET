@@ -15,7 +15,7 @@ using Newtonsoft.Json.Linq;
         #region Members
 
         //private static Handler current;
-        private static Dictionary<string, Handler> _sessionHandlers;
+        private static ConcurrentDictionary<string, Handler> _sessionHandlers;
         private static string _defaultSessionId;
         #endregion
 
@@ -25,8 +25,8 @@ using Newtonsoft.Json.Linq;
         {
             //current = new Handler(Guid.NewGuid().ToString());
             _defaultSessionId = Guid.NewGuid().ToString();
-            _sessionHandlers = new Dictionary<string, Handler>();
-            _sessionHandlers.Add(_defaultSessionId, new Handler(_defaultSessionId));
+            _sessionHandlers = new ConcurrentDictionary<string, Handler>();
+            _sessionHandlers[_defaultSessionId]= new Handler(_defaultSessionId);
         }
 
         private Handler(string sessionId)
@@ -53,19 +53,7 @@ using Newtonsoft.Json.Linq;
         /// <returns></returns>
         public static Handler GetSessionHandler(string sessionId)
         {
-            // double check lock. We only lock if we think we are going to add one.
-            if (_sessionHandlers.ContainsKey(sessionId) == false)
-            {
-                lock (_sessionHandlers)
-                {
-                    if (_sessionHandlers.ContainsKey(sessionId) == false)
-                    {
-                        _sessionHandlers.Add(sessionId, new Handler(sessionId));
-                    }
-                }
-            }
-
-            return _sessionHandlers[sessionId];
+            return _sessionHandlers.GetOrAdd(sessionId, new Handler(sessionId));
         }
         
         /// <summary>
@@ -74,13 +62,32 @@ using Newtonsoft.Json.Linq;
         /// <returns>The default Session Handler</returns>
         public static Handler GetSessionHandler()
         {
-            return _sessionHandlers[_defaultSessionId];
+            return GetSessionHandler(_defaultSessionId);
+        }
+
+        /// <summary>
+        /// Removes and clears the Handler with the specific sessionID from the registry of Handlers
+        /// </summary>
+        /// <param name="sessionId"></param>
+        public static void DestroySession(string sessionId)
+        {
+            Handler h;
+            _sessionHandlers.TryRemove(sessionId,out h);
+            h.Handlers.Clear();
+            h.MetaData.Services.Clear();
+        }
+        /// <summary>
+        /// Removes and clears the current Handler from the registry of Handlers
+        /// </summary>
+        public void Destroy()
+        {
+            DestroySession(SessionId);
         }
 
         /// <summary>
         /// Gets the default session handler
         /// </summary>
-        public static Handler DefaultHandler { get { return _sessionHandlers[_defaultSessionId]; } }
+        public static Handler DefaultHandler { get { return GetSessionHandler(_defaultSessionId); } }
 
         /// <summary>
         /// The sessionID of this Handler
@@ -132,6 +139,7 @@ using Newtonsoft.Json.Linq;
 
         private AustinHarris.JsonRpc.PreProcessHandler externalPreProcessingHandler;
         private Func<JsonRequest, JsonRpcException, JsonRpcException> externalErrorHandler;
+        private Func<string, JsonRpcException, JsonRpcException> parseErrorHandler;
         private Dictionary<string,Delegate> Handlers { get; set; }
         #endregion
 
@@ -158,6 +166,12 @@ using Newtonsoft.Json.Linq;
             }
 
             return result;
+        }
+
+        public void UnRegister(string key)
+        {
+            this.Handlers.Remove(key);
+            MetaData.Services.Remove(key);
         }
 
         /// <summary>
@@ -224,27 +238,7 @@ using Newtonsoft.Json.Linq;
                 for (int i = 0; i < loopCt; i++)
                 {
                     parameters[i] = CleanUpParameter(jarr[i], metadata.parameters[i]);
-                }
-                
-                // check if we still miss parameters compared to metadata which may include optional parameters.
-                // if the rpc-call didn't supply a value for an optional parameter, we should be assinging the default value of it.
-                if (parameters.Length < metaDataParamCount && metadata.defaultValues.Length > 0) // rpc call didn't set values for all optional parameters, so we need to assign the default values for them.
-                {
-                    var paramIndex = parameters.Length; // the index we should start storing default values of optional parameters.
-                    var missingParamsCount = metaDataParamCount - parameters.Length; // the amount of optional parameters without a value set by rpc-call.
-                    Array.Resize(ref parameters, parameters.Length + metadata.defaultValues.Length); // resize the array to include all optional parameters.
-
-                    // we need to add in reverse order as parameters can appear after all required parameters.
-                    // as some of the optional parameters could already have assigned their values in rpc-call,
-                    // by starting from the end we can make sure we only add the required default values.
-                    for (int k = missingParamsCount; k > 0; k--) 
-                    {
-                        var optionalParamIndex = k - 1; // the index of the optional parameter we will be currently setting a default value.
-                        parameters[paramIndex] = metadata.defaultValues[optionalParamIndex].Value; // set the default value for the optional parameter that rpc-call didn't set a value for.
-                        paramIndex++;
-                        paramCount++; // we need to increase the paramCount by one each time we add default-value for an optional parameter that rpc-call didn't set a value for.
-                    }
-                }
+                }                
             }
             else if (isJObject)
             {
@@ -271,6 +265,27 @@ using Newtonsoft.Json.Linq;
                         };
                     }
                     parameters[i] = CleanUpParameter(jo[metadata.parameters[i].Name], metadata.parameters[i]);
+                }
+            }
+
+            // Optional Parameter support
+            // check if we still miss parameters compared to metadata which may include optional parameters.
+            // if the rpc-call didn't supply a value for an optional parameter, we should be assinging the default value of it.
+            if (parameters.Length < metaDataParamCount && metadata.defaultValues.Length > 0) // rpc call didn't set values for all optional parameters, so we need to assign the default values for them.
+            {
+                var paramIndex = parameters.Length; // the index we should start storing default values of optional parameters.
+                var missingParamsCount = metaDataParamCount - parameters.Length; // the amount of optional parameters without a value set by rpc-call.
+                Array.Resize(ref parameters, parameters.Length + metadata.defaultValues.Length); // resize the array to include all optional parameters.
+
+                // we need to add in reverse order as parameters can appear after all required parameters.
+                // as some of the optional parameters could already have assigned their values in rpc-call,
+                // by starting from the end we can make sure we only add the required default values.
+                for (int k = missingParamsCount; k > 0; k--)
+                {
+                    var optionalParamIndex = k - 1; // the index of the optional parameter we will be currently setting a default value.
+                    parameters[paramIndex] = metadata.defaultValues[optionalParamIndex].Value; // set the default value for the optional parameter that rpc-call didn't set a value for.
+                    paramIndex++;
+                    paramCount++; // we need to increase the paramCount by one each time we add default-value for an optional parameter that rpc-call didn't set a value for.
                 }
             }
             
@@ -356,10 +371,19 @@ using Newtonsoft.Json.Linq;
                 return externalErrorHandler(req,ex);
             return ex;
         }
-
+        internal JsonRpcException ProcessParseException(string req,JsonRpcException ex)
+        {
+            if (parseErrorHandler != null)
+                return parseErrorHandler(req, ex);
+            return ex;
+        }
         internal void SetErrorHandler(Func<JsonRequest, JsonRpcException, JsonRpcException> handler)
         {
             externalErrorHandler = handler;
+        }
+        internal void SetParseErrorHandler(Func<string, JsonRpcException, JsonRpcException> handler)
+        {
+            parseErrorHandler = handler;
         }
         
         #endregion
