@@ -16,13 +16,13 @@ namespace AustinHarris.JsonRpc
         {
         }
 
-        [JsonProperty]
+        [JsonProperty("method")]
         public string Method { get; set; }
 
-        [JsonProperty]
+        [JsonProperty("params")]
         public object Params { get; set; }
 
-        [JsonProperty]
+        [JsonProperty("id")]
         public object Id { get; set; }
     }
 }
