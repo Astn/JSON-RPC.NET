@@ -41,6 +41,18 @@ namespace UnitTests
         }
 
         [TestMethod]
+        public void NullableFloatToNullableFloat3()
+        {
+            string request = @"{method:'NullableFloatToNullableFloat',params:[3.14159],id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":3.14159,\"id\":1}";
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.AreEqual(result.Result, expectedResult);
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+
+
+        [TestMethod]
         public void NullableFloatToNullableFloat2()
         {
             string request = @"{method:'NullableFloatToNullableFloat',params:[null],id:1}";
