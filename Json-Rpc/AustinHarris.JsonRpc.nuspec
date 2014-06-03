@@ -12,8 +12,7 @@
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>Core functionality for JsonRpc.Net</description>
         <summary>JSON-RPC.Net is a high performance Json-Rpc 2.0 server, leveraging the popular JSON.NET library. Host in ASP.NET, also supports sockets and pipes, oh my!</summary>
-        <releaseNotes>Can now set the exception of a JsonRpcMethod from within the method using JsonRpcContext.SetException().
-Can now use Config.SetPreProcessHandler to setup a method that is called prior to each JsonRpcMethod invocation, useful for logging or authentication.</releaseNotes>
+        <releaseNotes>Added support for optional params. Improved task usage / performance. Better float handling for non en-US cultures. Can now override ParseErrors. Can now unregister handlers. Using lower-cased property names during serialization. Many thanks to raistlinthewiz.</releaseNotes>
         <language>en-US</language>
         <tags>Json Rpc Json-Rpc.Net Json-Rpc JsonRpc Json.net</tags>
         <dependencies>
