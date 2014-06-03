@@ -1,15 +1,34 @@
-JSON-RPC.NET
+json-rpc.net
 ============
 
-.Net JSON RPC framework
+JSON-RPC.Net is a high performance Json-Rpc 2.0 server, leveraging the popular JSON.NET library. Host in ASP.NET, also supports sockets and pipes, oh my!
 
+##### Requirements
+* dotnet 4.0 or mono
 
-============
-The MIT License (MIT)
-Copyright (c) 2011 Austin W Harris
+##### License
+JSON-RPC.net is licensed under The MIT License (MIT), check the [LICENSE](https://github.com/CoiniumServ/JSON-RPC.NET/blob/master/LICENSE) file for details.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+##### Installation
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+You can start using JSON-RPC.Net with our [nuget](https://www.nuget.org/packages/AustinHarris.JsonRpc/) package.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+To install JSON-RPC.NET Core, run the following command in the Package Manager Console;
+
+```
+PM> Install-Package AustinHarris.JsonRpc
+```
+
+To install JSON-RPC.NET AspNet, run the following command in the Package Manager Console
+
+```
+PM> Install-Package AustinHarris.AspNet
+```
+
+##### Performance
+
+Under ideal conditions > 120k rpc/sec (cpu i7-2600,console server, no IO bottleneck)
+
+##### Getting Started & Documentation
+
+Check our [documentation](https://github.com/Astn/JSON-RPC.NET/wiki).
