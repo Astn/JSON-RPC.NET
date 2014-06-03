@@ -26,7 +26,7 @@ Can now use Config.SetPreProcessHandler to setup a method that is called prior t
         </frameworkAssemblies>
     </metadata>
 	<files>
-		<file src="bin\Release\AustinHarris.JsonRpc.dll" />
-		<file src="bin\Release\AustinHarris.JsonRpc.pdb" />
+		<file src="bin\Release\AustinHarris.JsonRpc.dll" target="lib\net40" />
+		<file src="bin\Release\AustinHarris.JsonRpc.pdb" target="lib\net40" />
 	</files>
 </package>
