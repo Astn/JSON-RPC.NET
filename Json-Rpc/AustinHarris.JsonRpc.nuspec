@@ -17,7 +17,7 @@
         <tags>Json Rpc Json-Rpc.Net Json-Rpc JsonRpc Json.net</tags>
         <dependencies>
             <group targetFramework=".NETFramework4.0">
-                <dependency id="Newtonsoft.Json" version="4.5.1" />
+                <dependency id="Newtonsoft.Json" version="6.0.3" />
             </group>
         </dependencies>
         <frameworkAssemblies>
