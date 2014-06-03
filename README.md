@@ -1,3 +1,5 @@
+![Screenshot](http://i.imgur.com/rxHaXLb.png)
+
 json-rpc.net
 ============
 
@@ -32,3 +34,7 @@ Under ideal conditions > 120k rpc/sec (cpu i7-2600,console server, no IO bottlen
 ##### Getting Started & Documentation
 
 Check our [documentation](https://github.com/Astn/JSON-RPC.NET/wiki).
+
+##### Old Project Site
+
+We have to github lately and host our [issues section](https://github.com/Astn/JSON-RPC.NET/issues) here, though you can still check the previous [issues](https://jsonrpc2.codeplex.com/workitem/list/basic) and [discussions](https://jsonrpc2.codeplex.com/discussions) over our old project site.
