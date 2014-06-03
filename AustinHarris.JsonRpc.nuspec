@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+    <metadata>
+        <id>AustinHarris.JsonRpc</id>
+        <version>1.0.3.0</version>
+        <title>JSON-RPC.NET Core</title>
+        <authors>Austin Harris</authors>
+        <owners />
+        <licenseUrl>http://jsonrpc2.codeplex.com/license</licenseUrl>
+        <projectUrl>http://jsonrpc2.codeplex.com/</projectUrl>
+        <iconUrl>http://download-codeplex.sec.s-msft.com/Download?ProjectName=jsonrpc2&amp;DownloadId=487107</iconUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Core functionality for JsonRpc.Net</description>
+        <summary>JSON-RPC.Net is a high performance Json-Rpc 2.0 server, leveraging the popular JSON.NET library. Host in ASP.NET, also supports sockets and pipes, oh my!</summary>
+        <releaseNotes>Can now set the exception of a JsonRpcMethod from within the method using JsonRpcContext.SetException().
+Can now use Config.SetPreProcessHandler to setup a method that is called prior to each JsonRpcMethod invocation, useful for logging or authentication.</releaseNotes>
+        <language>en-US</language>
+        <tags>Json Rpc Json-Rpc.Net Json-Rpc JsonRpc Json.net</tags>
+        <dependencies>
+            <group targetFramework=".NETFramework4.0">
+                <dependency id="Newtonsoft.Json" version="4.5.1" />
+            </group>
+        </dependencies>
+        <frameworkAssemblies>
+            <frameworkAssembly assemblyName="System" targetFramework=".NETFramework4.0" />
+        </frameworkAssemblies>
+    </metadata>
+</package>
