@@ -1,11 +1,20 @@
 ﻿using System;
 using System.IO;
+using System.IO.Compression;
+using System.Text;
 using System.Web;
 
 namespace AustinHarris.JsonRpc.Handlers.AspNet
 {
     public class JsonRpcHandler : IHttpAsyncHandler
-    {    
+    {
+        #region Fields
+        /// <summary>
+        /// UTF8 Encoding without BOM.
+        /// </summary>
+        static Encoding UTF8Encoding = new UTF8Encoding(false);
+        #endregion
+
         #region IHttpHandler Members
 
         public bool IsReusable
@@ -59,6 +68,7 @@ namespace AustinHarris.JsonRpc.Handlers.AspNet
             }
             return json;
         }
+
         /// <summary>
         /// Provides an asynchronous process End method when the process ends.
         /// </summary>
@@ -74,10 +84,51 @@ namespace AustinHarris.JsonRpc.Handlers.AspNet
                 {
                     r = string.Format("{0}({1})", callback, r);
                 }
-                ((HttpContext)state.AsyncState).Response.Write(r);
-                ((HttpContext)state.AsyncState).Response.End();
+
+                // try to compress the response data.
+                // fix me: compression filters in IHttpModule always failed for IHttpAsyncHandler
+                CompressResponseIfPossible(((HttpContext)state.AsyncState).Request, ((HttpContext)state.AsyncState).Response, r, UTF8Encoding);
             }
         }
+
+        #endregion
+
+        #region Utility methods
+
+        /// <summary>
+        /// Transfer the result data compressed when the client accepts gzip.
+        /// </summary>
+        /// <param name="request">A HttpRequest object that represents the HTTP request.</param>
+        /// <param name="response">A HttpResponse object that represents the HTTP response to be sent to the client.</param>
+        /// <param name="result">The string data to be sent to the client.</param>
+        /// <param name="encoding">The Encoding to be used to encode as the result.</param>
+        static void CompressResponseIfPossible(HttpRequest request, HttpResponse response, String result, Encoding encoding)
+        {
+            string AcceptEncoding = request.Headers["Accept-Encoding"];
+            if (AcceptEncoding != null && AcceptEncoding.Contains("gzip"))
+            {
+                //response.Headers.Remove("Content-Encoding");
+                response.AddHeader("Content-Encoding", "gzip");
+
+                using (var gstream = new GZipStream(response.OutputStream, CompressionMode.Compress))
+                using (var writer = new StreamWriter(gstream, encoding))
+                {
+                    writer.Write(result);
+                    writer.Flush();
+                }
+            }
+            else
+            {
+                using (StreamWriter writer = new StreamWriter(response.OutputStream, encoding))
+                {
+                    writer.Write(result);
+                    writer.Flush();
+                }
+            }
+
+            response.End();
+        }
+            
 
         #endregion
     }
