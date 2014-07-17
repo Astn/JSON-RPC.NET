@@ -390,7 +390,8 @@ using Newtonsoft.Json.Linq;
         private object CleanUpParameter(object p, SMDAdditionalParameters metaData)
         {
             var bob = p as JValue;
-            if (bob != null && (bob.Value == null || bob.Value.GetType() == metaData.ObjectType || bob.Type == JTokenType.Date))
+            //if (bob != null && (bob.Value == null || bob.Value.GetType() == metaData.ObjectType))
+            if (bob != null && (bob.Value == null || metaData.ObjectType.IsAssignableFrom(bob.Value.GetType())))
             {
                 return bob.Value;
             }
