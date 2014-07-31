@@ -30,6 +30,17 @@ namespace UnitTests
         }
 
         [TestMethod]
+        public void NullableDateTimeToNullableDateTime()
+        {
+            string request = @"{method:'NullableDateTimeToNullableDateTime',params:['2014-06-30T14:50:38.5208399+09:00'],id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"2014-06-30T14:50:38.5208399+09:00\",\"id\":1}";
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.AreEqual(result.Result, expectedResult);
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+
+        [TestMethod]
         public void NullableFloatToNullableFloat()
         {
             string request = @"{method:'NullableFloatToNullableFloat',params:[1.2345],id:1}";

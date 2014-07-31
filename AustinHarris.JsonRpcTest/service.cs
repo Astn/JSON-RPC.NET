@@ -15,6 +15,12 @@ namespace UnitTests
         }
 
         [JsonRpcMethod]
+        public DateTime? NullableDateTimeToNullableDateTime(DateTime? dt)
+        {
+            return dt;
+        }
+
+        [JsonRpcMethod]
         public float? NullableFloatToNullableFloat(float? a)
         {
             return a;
