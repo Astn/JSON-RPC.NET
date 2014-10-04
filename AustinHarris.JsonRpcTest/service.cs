@@ -283,7 +283,15 @@ namespace UnitTests
         {
             return input2;
         }
-
+        [JsonRpcMethod]
+        private IList<string> TestOptionalParameters_Strings(string input1 = null, string input2 = null)
+        {
+            return new List<string>()
+            {
+                input1,
+                input2
+            };
+        }
 
     }
 }

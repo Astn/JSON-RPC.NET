@@ -275,7 +275,7 @@ using Newtonsoft.Json.Linq;
             {
                 var paramIndex = parameters.Length; // the index we should start storing default values of optional parameters.
                 var missingParamsCount = metaDataParamCount - parameters.Length; // the amount of optional parameters without a value set by rpc-call.
-                Array.Resize(ref parameters, parameters.Length + metadata.defaultValues.Length); // resize the array to include all optional parameters.
+                Array.Resize(ref parameters, parameters.Length + missingParamsCount); // resize the array to include all optional parameters.
 
                 // we need to add in reverse order as parameters can appear after all required parameters.
                 // as some of the optional parameters could already have assigned their values in rpc-call,

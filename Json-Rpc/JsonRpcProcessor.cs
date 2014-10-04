@@ -221,10 +221,6 @@ namespace AustinHarris.JsonRpc
         {
             var task = Task<string>.Factory.StartNew((_) => 
             {
-                // use invariant culture - we have to set it explicitly for every thread we create to 
-                // prevent any floating-point problems (mostly because of number formats in non en-US cultures).
-                Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-                
                 var tup = (Tuple<string,string,object>)_;
                 string _sessionId;
                 string _jsonRpc;

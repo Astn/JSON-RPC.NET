@@ -1285,6 +1285,40 @@ namespace UnitTests
             Assert.AreEqual(expectedResult, result.Result);
         }
 
+        [TestMethod]
+        public void TestOptionalParametersStrings_BothMissing()
+        {
+            string request = @"{method:'TestOptionalParameters_Strings',params:[],id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[null,null],\"id\":1}";
 
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+
+        [TestMethod]
+        public void TestOptionalParametersStrings_SecondMissing()
+        {
+            string request = @"{method:'TestOptionalParameters_Strings',params:['first'],id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"first\",null],\"id\":1}";
+
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
+
+        [TestMethod]
+        public void TestOptionalParametersStrings_BothExists()
+        {
+            string request = @"{method:'TestOptionalParameters_Strings',params:['first','second'],id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"first\",\"second\"],\"id\":1}";
+
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
     }
 }
