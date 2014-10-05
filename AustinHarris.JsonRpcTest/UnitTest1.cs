@@ -34,10 +34,11 @@ namespace UnitTests
         {
             string request = @"{method:'NullableDateTimeToNullableDateTime',params:['2014-06-30T14:50:38.5208399+09:00'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"2014-06-30T14:50:38.5208399+09:00\",\"id\":1}";
+            var expectedDate = DateTime.Parse("2014-06-30T14:50:38.5208399+09:00");
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
-            Assert.AreEqual(result.Result, expectedResult);
-            Assert.AreEqual(expectedResult, result.Result);
+            var acutalDate = DateTime.Parse(result.Result.Substring(27, 33));
+            Assert.AreEqual(expectedDate, acutalDate);
         }
 
         [TestMethod]
