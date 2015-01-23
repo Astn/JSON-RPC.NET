@@ -1321,5 +1321,17 @@ namespace UnitTests
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
         }
+        [TestMethod]
+        public void TestOptionalParametersBoolsAndStrings()
+        {
+            string request =
+                "{\"jsonrpc\":\"2.0\",\"method\":\"TestOptionalParametersBoolsAndStrings\",\"params\":{\"input1\":\"murkel\"},\"Id\":1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
+
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.IsFalse(result.Result.Contains("error"));
+            Assert.AreEqual(expectedResult, result.Result);
+        }
     }
 }

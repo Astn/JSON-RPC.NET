@@ -273,19 +273,30 @@ using Newtonsoft.Json.Linq;
             // if the rpc-call didn't supply a value for an optional parameter, we should be assinging the default value of it.
             if (parameters.Length < metaDataParamCount && metadata.defaultValues.Length > 0) // rpc call didn't set values for all optional parameters, so we need to assign the default values for them.
             {
-                var paramIndex = parameters.Length; // the index we should start storing default values of optional parameters.
+                var suppliedParamsCount = parameters.Length; // the index we should start storing default values of optional parameters.
                 var missingParamsCount = metaDataParamCount - parameters.Length; // the amount of optional parameters without a value set by rpc-call.
                 Array.Resize(ref parameters, parameters.Length + missingParamsCount); // resize the array to include all optional parameters.
 
-                // we need to add in reverse order as parameters can appear after all required parameters.
-                // as some of the optional parameters could already have assigned their values in rpc-call,
-                // by starting from the end we can make sure we only add the required default values.
-                for (int k = missingParamsCount; k > 0; k--)
+                for (int paramIndex = parameters.Length - 1, defaultIndex = metadata.defaultValues.Length - 1;     // fill missing parameters from the back 
+                    paramIndex >= suppliedParamsCount && defaultIndex >= 0;                                        // to don't overwrite supplied ones.
+                    paramIndex--, defaultIndex--)
                 {
-                    var optionalParamIndex = k - 1; // the index of the optional parameter we will be currently setting a default value.
-                    parameters[paramIndex] = metadata.defaultValues[optionalParamIndex].Value; // set the default value for the optional parameter that rpc-call didn't set a value for.
-                    paramIndex++;
-                    paramCount++; // we need to increase the paramCount by one each time we add default-value for an optional parameter that rpc-call didn't set a value for.
+                    parameters[paramIndex] = metadata.defaultValues[defaultIndex].Value;
+                }
+
+                if (missingParamsCount > metadata.defaultValues.Length)
+                {
+                    return new JsonResponse
+                    {
+                        Error = ProcessException(Rpc,
+                            new JsonRpcException(-32602,
+                                "Invalid params",
+                                string.Format(
+                                    "Number of default parameters {0} not sufficient to fill all missing parameters {1}",
+                                    metadata.defaultValues.Length, missingParamsCount)
+                                )),
+                        Id = Rpc.Id
+                    };
                 }
             }
             

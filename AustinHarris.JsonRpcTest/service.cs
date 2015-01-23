@@ -292,6 +292,11 @@ namespace UnitTests
                 input2
             };
         }
+        [JsonRpcMethod]
+        public bool TestOptionalParametersBoolsAndStrings(string input1, bool input2 = true, string input3 = "")
+        {
+            return input2;
+        }
 
     }
 }
