@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Reflection;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace AustinHarris.JsonRpc
@@ -13,10 +14,10 @@ namespace AustinHarris.JsonRpc
     {
         public static void Process(JsonRpcStateAsync async, object context = null)
         {
-            var t = Task.Factory.StartNew((_async) =>
+            Task.Factory.StartNew((_async) =>
             {
-                var i = (Tuple<JsonRpcStateAsync, object>)_async;
-                ProcessJsonRpcState(i.Item1,i.Item2);
+                var tuple = (Tuple<JsonRpcStateAsync, object>)_async;
+                ProcessJsonRpcState(tuple.Item1, tuple.Item2);
             }, new Tuple<JsonRpcStateAsync,object>(async,context));
             
         }
@@ -36,181 +37,8 @@ namespace AustinHarris.JsonRpc
         }
         internal static void ProcessJsonRpcState(string sessionId, JsonRpcStateAsync async, object jsonRpcContext = null)
         {
-            var context = async.AsyncState;
-
-            JsonRequest[] rpcBatch = null;
-            JsonResponse[] responseBatch = null;
-
-            JsonRequest rpc = null;
-            var handler = Handler.GetSessionHandler(sessionId);
-            var callback = string.Empty;
-
-            var response = new JsonResponse();
-
-            response.Result = null;
-            response.Error = null;
-
-                string json = async.JsonRpc; 
-                                
-                if (isSingleRpc(json))
-                {
-                    try
-                    {
-                        if (json.Length > 0)
-                        {
-                            rpc = Newtonsoft.Json.JsonConvert.DeserializeObject<JsonRequest>(json);
-                            if (rpc == null)
-                            {
-                                response.Result = null;
-                                response.Id = null;
-                                response.Error = handler.ProcessParseException(json, new JsonRpcException(-32700, "Parse error", "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
-                            }
-                            else
-                            {
-                                response.Id = rpc.Id;
-                                if (rpc.Method == null)
-                                {
-                                    response.Result = null;
-                                    response.Id = rpc.Id;
-                                    response.Error = handler.ProcessParseException(json, new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            response.Result = null;
-                            response.Id = null;
-                            response.Error = handler.ProcessParseException(json, new JsonRpcException(-32600, "Invalid Request", "The JSON sent is not a valid Request object."));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        response.Result = null;
-                        if (rpc != null) response.Id = rpc.Id;
-                        response.Error = handler.ProcessParseException(json, new JsonRpcException(-32700, "Parse error", ex));
-                        var result = Newtonsoft.Json.JsonConvert.SerializeObject(response);
-                        async.Result = result;                        
-                        async.SetCompleted();
-                        return;
-                    }
-                    
-                    if (response.Error == null
-                        && rpc != null
-                        && rpc.Method != null)
-                    {
-                        var data = Handler.GetSessionHandler(sessionId).Handle(rpc, jsonRpcContext);
-                        if (data != null)
-                        {
-                            response.Error = data.Error;
-                            response.Result = data.Result;
-                            var result = "";
-                            if (response.Id != null)// dont return a result for notifications
-                            {
-                                result=Newtonsoft.Json.JsonConvert.SerializeObject(response);
-                            }
-                            async.Result = result;
-                            async.SetCompleted();
-                            return;
-                        }
-                    }
-
-                    var err = Newtonsoft.Json.JsonConvert.SerializeObject(response);
-
-                    async.Result = err;
-                    async.SetCompleted();
-                }
-                else // this is a batch of requests
-                {
-                    try
-                    {
-                        rpcBatch = Newtonsoft.Json.JsonConvert.DeserializeObject<JsonRequest[]>(json);
-                        responseBatch = new JsonResponse[rpcBatch.Length];
-                        
-                        for (int i = 0; i < rpcBatch.Length; i++)
-                        {
-                            responseBatch[i] = new JsonResponse();
-                            if (rpcBatch[i] == null)
-                            {
-                                responseBatch[i].Result = null;
-                                responseBatch[i].Id = null;
-                                responseBatch[i].Error = handler.ProcessParseException(json, new JsonRpcException(-32700, "Parse error", "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
-                            }
-                            else
-                            {
-                                responseBatch[i].Id = rpcBatch[i].Id;
-                                if (rpcBatch[i].Method == null)
-                                {
-                                    responseBatch[i].Result = null;
-                                    responseBatch[i].Error =handler.ProcessParseException(json,  new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
-                                }
-                            }
-                        }                        
-                    }
-                    catch (Exception ex)
-                    {
-                        response.Result = null;
-                        if (rpc != null) response.Id = rpc.Id;
-                        response.Error = handler.ProcessParseException(json, new JsonRpcException(-32700, "Parse error", ex));
-                        var result = Newtonsoft.Json.JsonConvert.SerializeObject(response);
-                        async.Result = result;
-                        async.SetCompleted();
-                        return;
-                    }
-
-                    // we should have a batch of RPC at this point
-                    var respBuilder = new StringBuilder();
-                    for (int i = 0; i < rpcBatch.Length; i++)
-                    {
-                        if (i == 0)
-                        {
-                            respBuilder.Append("[");
-                        }
-
-                        if (rpcBatch[i] == null || rpcBatch[i].Method == null)
-                        {
-                            responseBatch[i].Error = handler.ProcessParseException(json, new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
-                        }
-                        else if (responseBatch[i].Error == null)
-                        {
-                            var data = handler.Handle(rpcBatch[i], jsonRpcContext);
-                            if (data != null)
-                            {
-                                responseBatch[i].Error = data.Error;
-                                responseBatch[i].Result = data.Result;
-                                                            
-                            }
-                        }
-                        // dont return a response for notifications.
-                        if (responseBatch[i].Id != null || responseBatch[i].Error != null)
-                        {
-                            var result = Newtonsoft.Json.JsonConvert.SerializeObject(responseBatch[i]);
-                            respBuilder.Append(result);
-                            if (i != rpcBatch.Length - 1)
-                            {
-                                respBuilder.Append(',');
-                            }
-                        }
-
-                        if (i == rpcBatch.Length - 1)
-                        {
-                            respBuilder.Append("]");
-                            var str = respBuilder.ToString();
-                            async.Result = str;
-                            async.SetCompleted(); // let IIS think we are completed now.
-                            return;
-                        }
-                    }
-
-                    // if we made it this far, then there were no items in the array
-                    response.Id = null;
-                    response.Result = null;
-                    response.Error = handler.ProcessParseException(json, new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty."));
-
-                    var err = Newtonsoft.Json.JsonConvert.SerializeObject(response);
-
-                    async.Result = err;
-                    async.SetCompleted();
-                }     
+            async.Result = ProcessInternal(sessionId, async.JsonRpc, jsonRpcContext);
+            async.SetCompleted();
         }
 
         public static Task<string> Process(string jsonRpc, object context = null)
@@ -219,183 +47,82 @@ namespace AustinHarris.JsonRpc
         }
         public static Task<string> Process(string sessionId, string jsonRpc, object context = null)
         {
-            var task = Task<string>.Factory.StartNew((_) => 
+            return Task<string>.Factory.StartNew((_) =>
             {
-                var tup = (Tuple<string,string,object>)_;
-                string _sessionId;
-                string _jsonRpc;
-                object _jsonRpcContext = null;
-                _sessionId = tup.Item1;
-                _jsonRpc = tup.Item2;
-                _jsonRpcContext = tup.Item3;
-                var handler = Handler.GetSessionHandler(_sessionId);
+                var tuple = (Tuple<string, string, object>) _;
+                return ProcessInternal(tuple.Item1, tuple.Item2, tuple.Item3);
+            }, new Tuple<string, string, object>(sessionId, jsonRpc, context));
+        }
 
+        private static string ProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext)
+        {
+            var handler = Handler.GetSessionHandler(sessionId);
 
-                JsonRequest[] rpcBatch = null;
-                JsonResponse[] responseBatch = null;
-
-                JsonRequest rpc = null;
-
-                var callback = string.Empty;
-
-                var response = new JsonResponse();
-
-                response.Result = null;
-                response.Error = null;
-
-                string json = _jsonRpc;
-
-                if (isSingleRpc(json))
+            try
+            {
+                if (isSingleRpc(jsonRpc))
                 {
-                    try
+                    jsonRpc = string.Format("[{0}]", jsonRpc);
+                }
+
+                var batch =
+                    Newtonsoft.Json.JsonConvert.DeserializeObject<JsonRequest[]>(jsonRpc)
+                        .Select(request => new Tuple<JsonRequest, JsonResponse>(request, new JsonResponse())).ToArray();
+
+                if (batch.Length == 0)
+                {
+                    return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
                     {
-                        if (json.Length > 0)
+                        Error = handler.ProcessParseException(jsonRpc,
+                            new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty."))
+                    });
+                }
+
+                foreach (var tuple in batch)
+                {
+                    var jsonRequest = tuple.Item1;
+                    var jsonResponse = tuple.Item2;
+
+                    if (jsonRequest == null)
+                    {
+                        jsonResponse.Error = handler.ProcessParseException(jsonRpc,
+                            new JsonRpcException(-32700, "Parse error",
+                                "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
+                    }
+                    else
+                    {
+                        jsonResponse.Id = jsonRequest.Id;
+
+                        if (jsonRequest.Method == null)
                         {
-                            rpc = Newtonsoft.Json.JsonConvert.DeserializeObject<JsonRequest>(json);
-                            if (rpc == null)
-                            {
-                                response.Result = null;
-                                response.Id = null;
-                                response.Error = handler.ProcessParseException(json, new JsonRpcException(-32700, "Parse error", "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
-                            }
-                            else
-                            {
-                                response.Id = rpc.Id;
-                                if (rpc.Method == null)
-                                {
-                                    response.Result = null;
-                                    response.Id = rpc.Id;
-                                    response.Error = handler.ProcessParseException(json, new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
-                                }
-                            }
+                            jsonResponse.Error = handler.ProcessParseException(jsonRpc,
+                                new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
                         }
                         else
                         {
-                            response.Result = null;
-                            response.Id = null;
-                            response.Error = handler.ProcessParseException(json, new JsonRpcException(-32600, "Invalid Request", "The JSON sent is not a valid Request object."));
+                            var data = handler.Handle(jsonRequest, jsonRpcContext);
+
+                            if (data == null) continue;
+
+                            jsonResponse.Error = data.Error;
+                            jsonResponse.Result = data.Result;
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        response.Result = null;
-                        if (rpc != null) response.Id = rpc.Id;
-                        response.Error = handler.ProcessParseException(json, new JsonRpcException(-32700, "Parse error", ex));
-                        var result = Newtonsoft.Json.JsonConvert.SerializeObject(response);
-                        return result;
-                    }
-
-                    if (response.Error == null
-                        && rpc != null
-                        && rpc.Method != null)
-                    {
-                        var data = handler.Handle(rpc, _jsonRpcContext);
-                        if (data != null)
-                        {
-                            response.Error = data.Error;
-                            response.Result = data.Result;
-                            var result = "";
-                            if (response.Id != null)// dont return a result for notifications
-                            {
-                                result = Newtonsoft.Json.JsonConvert.SerializeObject(response);
-                            }
-                            return result;
-                        }
-                    }
-
-                    var err = Newtonsoft.Json.JsonConvert.SerializeObject(response);
-
-                    return err;
                 }
-                else // this is a batch of requests
+
+                var responses = batch.Select(tuple => tuple.Item2)
+                    .Where(resp => resp.Id != null || resp.Error != null)
+                    .Select(Newtonsoft.Json.JsonConvert.SerializeObject).ToArray();
+
+                return responses.Count() > 1 ? string.Format("[{0}]", string.Join(",", responses)) : responses.First();
+            }
+            catch (Exception ex)
+            {
+                return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
                 {
-                    try
-                    {
-                        rpcBatch = Newtonsoft.Json.JsonConvert.DeserializeObject<JsonRequest[]>(json);
-                        responseBatch = new JsonResponse[rpcBatch.Length];
-
-                        for (int i = 0; i < rpcBatch.Length; i++)
-                        {
-                            responseBatch[i] = new JsonResponse();
-                            if (rpcBatch[i] == null)
-                            {
-                                responseBatch[i].Result = null;
-                                responseBatch[i].Id = null;
-                                responseBatch[i].Error = handler.ProcessParseException(json, new JsonRpcException(-32700, "Parse error", "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
-                            }
-                            else
-                            {
-                                responseBatch[i].Id = rpcBatch[i].Id;
-                                if (rpcBatch[i].Method == null)
-                                {
-                                    responseBatch[i].Result = null;
-                                    responseBatch[i].Error = handler.ProcessParseException(json, new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        response.Result = null;
-                        if (rpc != null) response.Id = rpc.Id;
-                        response.Error = handler.ProcessParseException(json, new JsonRpcException(-32700, "Parse error", ex));
-                        var result = Newtonsoft.Json.JsonConvert.SerializeObject(response);
-                        return result; 
-                    }
-
-                    // we should have a batch of RPC at this point
-                    var respBuilder = new StringBuilder();
-                    for (int i = 0; i < rpcBatch.Length; i++)
-                    {
-                        if (i == 0)
-                        {
-                            respBuilder.Append("[");
-                        }
-
-                        if (rpcBatch[i] == null || rpcBatch[i].Method == null)
-                        {
-                            responseBatch[i].Error = handler.ProcessParseException(json, new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
-                        }
-                        else if (responseBatch[i].Error == null)
-                        {
-                            var data = Handler.GetSessionHandler(_sessionId).Handle(rpcBatch[i], _jsonRpcContext);
-                            if (data != null)
-                            {
-                                responseBatch[i].Error = data.Error;
-                                responseBatch[i].Result = data.Result;
-
-                            }
-                        }
-                        // dont return a response for notifications.
-                        if (responseBatch[i].Id != null || responseBatch[i].Error != null)
-                        {
-                            var result = Newtonsoft.Json.JsonConvert.SerializeObject(responseBatch[i]);
-                            respBuilder.Append(result);
-                            if (i != rpcBatch.Length - 1)
-                            {
-                                respBuilder.Append(',');
-                            }
-                        }
-
-                        if (i == rpcBatch.Length - 1)
-                        {
-                            respBuilder.Append("]");
-                            var str = respBuilder.ToString();
-                            return str;
-                        }
-                    }
-
-                    // if we made it this far, then there were no items in the array
-                    response.Id = null;
-                    response.Result = null;
-                    response.Error = handler.ProcessParseException(json, new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty."));
-
-                    var err = Newtonsoft.Json.JsonConvert.SerializeObject(response);
-
-                    return err;
-                }
-            }, new Tuple<string, string, object>(sessionId, jsonRpc, context));
-            return task;
+                    Error = handler.ProcessParseException(jsonRpc, new JsonRpcException(-32700, "Parse error", ex))
+                });
+            }
         }
 
         private static bool isSingleRpc(string json)

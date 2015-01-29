@@ -1,6 +1,7 @@
 ﻿using AustinHarris.JsonRpc;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -293,5 +294,10 @@ namespace UnitTests
             };
         }
 
+        [JsonRpcMethod]
+        public void Notify(string message)
+        {
+            Trace.WriteLine(string.Format("Notified about: {0}", message));
+        }
     }
 }
