@@ -318,7 +318,7 @@ using Newtonsoft.Json.Linq;
             try
             {
                 var results = handle.DynamicInvoke(parameters);
-                var last = parameters.Length>0 ? parameters[paramCount - 1]:null;
+                var last = parameters.LastOrDefault();
                 JsonRpcException contextException;
                 if (Task.CurrentId.HasValue && RpcExceptions.TryRemove(Task.CurrentId.Value, out contextException))
                 {
