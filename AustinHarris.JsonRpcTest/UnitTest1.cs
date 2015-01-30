@@ -1,7 +1,6 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using AustinHarris.JsonRpc.Client;
+using System;
 using AustinHarris.JsonRpc;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace UnitTests
 {
@@ -1321,6 +1320,7 @@ namespace UnitTests
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
         }
+
         [TestMethod]
         public void TestOptionalParametersBoolsAndStrings()
         {
@@ -1332,6 +1332,18 @@ namespace UnitTests
             result.Wait();
             Assert.IsFalse(result.Result.Contains("error"));
             Assert.AreEqual(expectedResult, result.Result);
+        }
+
+        [TestMethod]
+        public void TestBatchResult()
+        {
+            string request =
+                @"[{},{""jsonrpc"":""2.0"",""id"":4},{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1},{""jsonrpc"":""2.0"",""method"":""Notify"",""params"":[""Hello World!""]}]";
+
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+
+            Assert.IsFalse(result.Result.EndsWith(@",]"), "result.Result.EndsWith(@',]')");
         }
     }
 }
