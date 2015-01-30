@@ -7,6 +7,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace AustinHarris.JsonRpc
 {
@@ -60,18 +61,18 @@ namespace AustinHarris.JsonRpc
 
             try
             {
+                Tuple<JsonRequest, JsonResponse>[] batch = null;
                 if (isSingleRpc(jsonRpc))
                 {
-                    var sbAddBrackets = new StringBuilder("[", jsonRpc.Length + 2);
-                    sbAddBrackets.Append(jsonRpc);
-                    sbAddBrackets.Append("]");
-                    jsonRpc = sbAddBrackets.ToString();
+                    batch = new [] { Tuple.Create(JsonConvert.DeserializeObject<JsonRequest>(jsonRpc), new JsonResponse()) };
                 }
-
-                var batch =
-                    Newtonsoft.Json.JsonConvert.DeserializeObject<JsonRequest[]>(jsonRpc)
-                        .Select(request => new Tuple<JsonRequest, JsonResponse>(request, new JsonResponse())).ToArray();
-
+                else
+                {
+                    batch = JsonConvert.DeserializeObject<JsonRequest[]>(jsonRpc)
+                            .Select(request => new Tuple<JsonRequest, JsonResponse>(request, new JsonResponse()))
+                            .ToArray();
+                }
+            
                 if (batch.Length == 0)
                 {
                     return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
