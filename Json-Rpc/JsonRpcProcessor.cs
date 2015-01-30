@@ -114,11 +114,14 @@ namespace AustinHarris.JsonRpc
                     }
                 }
 
-                var responses = batch.Select(tuple => tuple.Item2)
-                    .Where(resp => resp.Id != null || resp.Error != null)
-                    .Select(Newtonsoft.Json.JsonConvert.SerializeObject).ToArray();
+                var responses = new string[batch.Count(x=>x.Item2.Id!=null || x.Item2.Error != null)];
+                var idx = 0;
+                foreach (var resp in batch.Where(x => x.Item2.Id != null || x.Item2.Error != null))
+                {
+                    responses[idx++] = JsonConvert.SerializeObject(resp.Item2);
+                }
 
-                return responses.Count() > 1 ? string.Format("[{0}]", string.Join(",", responses)) : responses.First();
+                return responses.Length == 1 ? responses[0] : string.Format("[{0}]", string.Join(",", responses));
             }
             catch (Exception ex)
             {
