@@ -62,7 +62,10 @@ namespace AustinHarris.JsonRpc
             {
                 if (isSingleRpc(jsonRpc))
                 {
-                    jsonRpc = string.Format("[{0}]", jsonRpc);
+                    var sbAddBrackets = new StringBuilder("[", jsonRpc.Length + 2);
+                    sbAddBrackets.Append(jsonRpc);
+                    sbAddBrackets.Append("]");
+                    jsonRpc = sbAddBrackets.ToString();
                 }
 
                 var batch =
