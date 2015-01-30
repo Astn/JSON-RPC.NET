@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using AustinHarris.JsonRpc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
