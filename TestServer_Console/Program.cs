@@ -72,10 +72,26 @@ namespace TestServer_Console
                         }
                     });
 
-                for (int i = 0; i < cnt; i++)
+                for (int i = 0; i < cnt; i+=5)
                 {
                     var async = new JsonRpcStateAsync(rpcResultHandler, null);
                     async.JsonRpc = "{'method':'add','params':[1,2],'id':1}";
+                    JsonRpcProcessor.Process(async);
+
+                    async = new JsonRpcStateAsync(rpcResultHandler, null);
+                    async.JsonRpc = "{'method':'addInt','params':[1,7],'id':2}";
+                    JsonRpcProcessor.Process(async);
+
+                    async = new JsonRpcStateAsync(rpcResultHandler, null);
+                    async.JsonRpc = "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}";
+                    JsonRpcProcessor.Process(async);
+
+                    async = new JsonRpcStateAsync(rpcResultHandler, null);
+                    async.JsonRpc = "{'method':'Test2','params':[3.456],'id':4}";
+                    JsonRpcProcessor.Process(async);
+
+                    async = new JsonRpcStateAsync(rpcResultHandler, null);
+                    async.JsonRpc = "{'method':'StringMe','params':['Foo'],'id':5}";
                     JsonRpcProcessor.Process(async);
                 }
                 are.WaitOne();
