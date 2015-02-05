@@ -121,7 +121,7 @@ namespace AustinHarris.JsonRpc
                     responses[idx++] = JsonConvert.SerializeObject(resp.Item2);
                 }
 
-                return responses.Length == 1 ? responses[0] : string.Format("[{0}]", string.Join(",", responses));
+                return responses.Length == 0 ? string.Empty : responses.Length == 1 ? responses[0] : string.Format("[{0}]", string.Join(",", responses));
             }
             catch (Exception ex)
             {
