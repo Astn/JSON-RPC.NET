@@ -1350,6 +1350,17 @@ namespace UnitTests
             result.Wait();
 
             Assert.IsTrue(string.IsNullOrEmpty(result.Result));
+
+            result = JsonRpcProcessor.Process(@"[{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1},{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
+            result.Wait();
+
+            Assert.IsTrue(result.Result.EndsWith("]"));
+
+            result =
+                JsonRpcProcessor.Process(@"{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
+            result.Wait();
+            Assert.IsFalse(result.Result.EndsWith("]"));
         }
     }
 }
+
