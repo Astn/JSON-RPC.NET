@@ -1,4 +1,7 @@
 using System;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using AustinHarris.JsonRpc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -1335,28 +1338,54 @@ namespace UnitTests
         }
 
         [TestMethod]
-        public void TestBatchResult()
+        public void TestBatchResultWrongRequests()
+        {
+            string request = @"[{},{""jsonrpc"":""2.0"",""id"":4}]";
+
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+
+            Assert.IsTrue(Regex.IsMatch(result.Result, @"\[(\{.*""error"":.*?,""id"":.*?\}),(\{.*""error"":.*?,""id"":.*?\})\]"), "Should have two errors.");
+        }
+
+        [TestMethod]
+        public void TestBatchResultMultipleMethodCallsNotificationAtLast()
         {
             string request =
-                @"[{},{""jsonrpc"":""2.0"",""id"":4},{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1},{""jsonrpc"":""2.0"",""method"":""Notify"",""params"":[""Hello World!""]}]";
+                @"[{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1},{""jsonrpc"":""2.0"",""method"":""Notify"",""params"":[""Hello World!""]}]";
 
-            var secondRequest = @"{""jsonrpc"":""2.0"",""method"":""Notify"",""params"":[""Hello World!""]}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
 
             Assert.IsFalse(result.Result.EndsWith(@",]"), "result.Result.EndsWith(@',]')");
 
-            result = JsonRpcProcessor.Process(secondRequest);
+        }
+
+        [TestMethod]
+        public void TestEmptyBatchResult()
+        {
+            var secondRequest = @"{""jsonrpc"":""2.0"",""method"":""Notify"",""params"":[""Hello World!""]}";
+            var result = JsonRpcProcessor.Process(secondRequest);
             result.Wait();
 
             Assert.IsTrue(string.IsNullOrEmpty(result.Result));
+        }
 
-            result = JsonRpcProcessor.Process(@"[{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1},{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
+        [TestMethod]
+        public void TestMultipleResults()
+        {
+            var result =
+                JsonRpcProcessor.Process(
+                    @"[{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1},{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
             result.Wait();
 
             Assert.IsTrue(result.Result.EndsWith("]"));
+        }
 
-            result =
+        [TestMethod]
+        public void TestSingleResultBatch()
+        { 
+            var result =
                 JsonRpcProcessor.Process(@"{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
             result.Wait();
             Assert.IsFalse(result.Result.EndsWith("]"));
