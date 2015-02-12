@@ -1372,6 +1372,18 @@ namespace UnitTests
         }
 
         [TestMethod]
+        public void TestLeftOutParams()
+        {
+            var request =
+                @"{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""id"":1}";
+
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+
+            Assert.IsFalse(result.Result.Contains(@"error"":{""code"":-32602"), @"According to JSON-RPC 2.0 the ""params"" member MAY be omitted.");
+        }
+
+        [TestMethod]
         public void TestMultipleResults()
         {
             var result =
