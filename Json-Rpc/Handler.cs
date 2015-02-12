@@ -200,16 +200,6 @@ using Newtonsoft.Json.Linq;
             {
                 return new JsonResponse() { Result = null, Error = new JsonRpcException(-32601, "Method not found", "The method does not exist / is not available."), Id = Rpc.Id };
             }
-            if (Rpc.Params is ICollection == false)
-            {
-                return new JsonResponse()
-                {
-                    Result = null,
-                    Error = new JsonRpcException(-32602,
-                        "Invalid params", "The number of parameters could not be counted"),
-                    Id = Rpc.Id
-                };
-            }
 
             bool isJObject = Rpc.Params is Newtonsoft.Json.Linq.JObject;
             bool isJArray = Rpc.Params is Newtonsoft.Json.Linq.JArray;
@@ -218,7 +208,13 @@ using Newtonsoft.Json.Linq;
             var metaDataParamCount = metadata.parameters.Count(x => x != null);
             
             var getCount = Rpc.Params as ICollection;
-            var loopCt = getCount.Count;
+            var loopCt = 0;
+            
+            if (getCount != null)
+            {
+                loopCt = getCount.Count;
+            }
+
             var paramCount = loopCt;
             if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount-1].ObjectType.Name.Contains(typeof(JsonRpcException).Name))
             {
