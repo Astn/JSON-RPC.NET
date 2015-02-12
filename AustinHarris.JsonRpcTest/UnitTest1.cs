@@ -1398,7 +1398,7 @@ namespace UnitTests
         public void TestSingleResultBatch()
         { 
             var result =
-                JsonRpcProcessor.Process(@"{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
+                JsonRpcProcessor.Process(@"[{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
             result.Wait();
             Assert.IsFalse(result.Result.EndsWith("]"));
         }
