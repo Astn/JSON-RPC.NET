@@ -8,7 +8,8 @@
     using Newtonsoft.Json;
     using System.Threading.Tasks;
     using System.Collections.Concurrent;
-using Newtonsoft.Json.Linq;
+    using Newtonsoft.Json.Linq;
+    using System.Threading;
 
     public class Handler
     {
@@ -26,7 +27,7 @@ using Newtonsoft.Json.Linq;
             //current = new Handler(Guid.NewGuid().ToString());
             _defaultSessionId = Guid.NewGuid().ToString();
             _sessionHandlers = new ConcurrentDictionary<string, Handler>();
-            _sessionHandlers[_defaultSessionId]= new Handler(_defaultSessionId);
+            _sessionHandlers[_defaultSessionId] = new Handler(_defaultSessionId);
         }
 
         private Handler(string sessionId)
@@ -55,7 +56,7 @@ using Newtonsoft.Json.Linq;
         {
             return _sessionHandlers.GetOrAdd(sessionId, new Handler(sessionId));
         }
-        
+
         /// <summary>
         /// gets the default session
         /// </summary>
@@ -72,7 +73,7 @@ using Newtonsoft.Json.Linq;
         public static void DestroySession(string sessionId)
         {
             Handler h;
-            _sessionHandlers.TryRemove(sessionId,out h);
+            _sessionHandlers.TryRemove(sessionId, out h);
             h.Handlers.Clear();
             h.MetaData.Services.Clear();
         }
@@ -92,7 +93,7 @@ using Newtonsoft.Json.Linq;
         /// <summary>
         /// The sessionID of this Handler
         /// </summary>
-        public string SessionId { get; private set; } 
+        public string SessionId { get; private set; }
 
         private static ConcurrentDictionary<int, object> RpcContexts = new ConcurrentDictionary<int, object>();
         private static ConcurrentDictionary<int, JsonRpcException> RpcExceptions = new ConcurrentDictionary<int, JsonRpcException>();
@@ -104,7 +105,7 @@ using Newtonsoft.Json.Linq;
         /// <returns></returns>
         public static object RpcContext()
         {
-            if (Task.CurrentId == null) 
+            if (Task.CurrentId == null)
                 return null;
 
             if (RpcContexts.ContainsKey(Task.CurrentId.Value) == false)
@@ -140,7 +141,7 @@ using Newtonsoft.Json.Linq;
         private AustinHarris.JsonRpc.PreProcessHandler externalPreProcessingHandler;
         private Func<JsonRequest, JsonRpcException, JsonRpcException> externalErrorHandler;
         private Func<string, JsonRpcException, JsonRpcException> parseErrorHandler;
-        private Dictionary<string,Delegate> Handlers { get; set; }
+        private Dictionary<string, Delegate> Handlers { get; set; }
         #endregion
 
         /// <summary>
@@ -180,15 +181,26 @@ using Newtonsoft.Json.Linq;
         /// <param name="Rpc">JsonRpc Request to be processed</param>
         /// <param name="RpcContext">Optional context that will be available from within the jsonRpcMethod.</param>
         /// <returns></returns>
-        public JsonResponse Handle(JsonRequest Rpc, Object RpcContext = null)
+        public JsonResponse Handle(JsonRequest Rpc, Object RpcContext = null, Action<JsonResponse> callback = null)
         {
+            //empty delegate declaration if callback is not provided
+            if (null == callback)
+            {
+                callback = delegate(JsonResponse a) { };
+            }
+
             AddRpcContext(RpcContext);
 
             var preProcessingException = PreProcess(Rpc, RpcContext);
             if (preProcessingException != null)
             {
-                return new JsonResponse() { Error = preProcessingException,
-                    Id = Rpc.Id };
+                JsonResponse response = new JsonResponse()
+                {
+                    Error = preProcessingException,
+                    Id = Rpc.Id
+                };
+                callback.Invoke(response);
+                return response;
             }
 
             SMDService metadata = null;
@@ -198,7 +210,14 @@ using Newtonsoft.Json.Linq;
 
             if (haveDelegate == false || haveMetadata == false || metadata == null || handle == null)
             {
-                return new JsonResponse() { Result = null, Error = new JsonRpcException(-32601, "Method not found", "The method does not exist / is not available."), Id = Rpc.Id };
+                JsonResponse response = new JsonResponse()
+                {
+                    Result = null,
+                    Error = new JsonRpcException(-32601, "Method not found", "The method does not exist / is not available."),
+                    Id = Rpc.Id
+                };
+                callback.Invoke(response);
+                return response;
             }
 
             bool isJObject = Rpc.Params is Newtonsoft.Json.Linq.JObject;
@@ -206,17 +225,17 @@ using Newtonsoft.Json.Linq;
             object[] parameters = null;
             bool expectsRefException = false;
             var metaDataParamCount = metadata.parameters.Count(x => x != null);
-            
+
             var getCount = Rpc.Params as ICollection;
             var loopCt = 0;
-            
+
             if (getCount != null)
             {
                 loopCt = getCount.Count;
             }
 
             var paramCount = loopCt;
-            if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount-1].ObjectType.Name.Contains(typeof(JsonRpcException).Name))
+            if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount - 1].ObjectType.Name.Contains(typeof(JsonRpcException).Name))
             {
                 paramCount++;
                 expectsRefException = true;
@@ -234,7 +253,7 @@ using Newtonsoft.Json.Linq;
                 for (int i = 0; i < loopCt; i++)
                 {
                     parameters[i] = CleanUpParameter(jarr[i], metadata.parameters[i]);
-                }                
+                }
             }
             else if (isJObject)
             {
@@ -249,16 +268,18 @@ using Newtonsoft.Json.Linq;
                 {
                     if (asDict.ContainsKey(metadata.parameters[i].Name) == false)
                     {
-                        return new JsonResponse()
+                        JsonResponse response = new JsonResponse()
                         {
                             Error = ProcessException(Rpc,
                             new JsonRpcException(-32602,
                                 "Invalid params",
                                 string.Format("Named parameter '{0}' was not present.",
                                                 metadata.parameters[i].Name)
-                                ))
-                                ,Id = Rpc.Id
+                                )),
+                            Id = Rpc.Id
                         };
+                        callback.Invoke(response);
+                        return response;
                     }
                     parameters[i] = CleanUpParameter(jo[metadata.parameters[i].Name], metadata.parameters[i]);
                 }
@@ -282,7 +303,7 @@ using Newtonsoft.Json.Linq;
 
                 if (missingParamsCount > metadata.defaultValues.Length)
                 {
-                    return new JsonResponse
+                    JsonResponse response = new JsonResponse
                     {
                         Error = ProcessException(Rpc,
                             new JsonRpcException(-32602,
@@ -293,12 +314,14 @@ using Newtonsoft.Json.Linq;
                                 )),
                         Id = Rpc.Id
                     };
+                    callback.Invoke(response);
+                    return response;
                 }
             }
-            
+
             if (parameters.Length != metaDataParamCount)
             {
-                return new JsonResponse()
+                JsonResponse response = new JsonResponse()
                 {
                     Error = ProcessException(Rpc,
                     new JsonRpcException(-32602,
@@ -309,46 +332,68 @@ using Newtonsoft.Json.Linq;
                         )),
                     Id = Rpc.Id
                 };
+                callback.Invoke(response);
+                return response;
             }
 
             try
             {
+                //callback is stored to thread's local storage in order to get it directly from concrete JsonRpcService method implementation
+                if (null != callback)
+                {
+                    Thread.SetData(Thread.GetNamedDataSlot("Callback"), callback);
+                }
                 var results = handle.DynamicInvoke(parameters);
                 var last = parameters.LastOrDefault();
                 JsonRpcException contextException;
                 if (Task.CurrentId.HasValue && RpcExceptions.TryRemove(Task.CurrentId.Value, out contextException))
                 {
-                    return new JsonResponse() { Error = ProcessException(Rpc, contextException), Id = Rpc.Id };
+                    JsonResponse response = new JsonResponse() { Error = ProcessException(Rpc, contextException), Id = Rpc.Id };
+                    callback.Invoke(response);
+                    return response;
                 }
                 if (expectsRefException && last != null && last is JsonRpcException)
                 {
-                    return new JsonResponse() { Error = ProcessException(Rpc, last as JsonRpcException), Id = Rpc.Id };
+                    JsonResponse response = new JsonResponse() { Error = ProcessException(Rpc, last as JsonRpcException), Id = Rpc.Id };
+                    callback.Invoke(response);
+                    return response;
                 }
 
                 return new JsonResponse() { Result = results };
             }
             catch (Exception ex)
             {
+                JsonResponse response;
                 if (ex is TargetParameterCountException)
                 {
-                    return new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32602, "Invalid params", ex)) };
+                    response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32602, "Invalid params", ex)) };
+                    callback.Invoke(response);
+                    return response;
                 }
 
                 // We really dont care about the TargetInvocationException, just pass on the inner exception
                 if (ex is JsonRpcException)
                 {
-                    return new JsonResponse() { Error = ProcessException(Rpc, ex as JsonRpcException) };
+                    response = new JsonResponse() { Error = ProcessException(Rpc, ex as JsonRpcException) };
+                    callback.Invoke(response);
+                    return response;
                 }
                 if (ex.InnerException != null && ex.InnerException is JsonRpcException)
                 {
-                    return new JsonResponse() { Error = ProcessException(Rpc, ex.InnerException as JsonRpcException) };
+                    response = new JsonResponse() { Error = ProcessException(Rpc, ex.InnerException as JsonRpcException) };
+                    callback.Invoke(response);
+                    return response;
                 }
                 else if (ex.InnerException != null)
                 {
-                    return new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex.InnerException)) };
+                    response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex.InnerException)) };
+                    callback.Invoke(response);
+                    return response;
                 }
 
-                return new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex)) };
+                response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex)) };
+                callback.Invoke(response);
+                return response;
             }
             finally
             {
@@ -371,14 +416,14 @@ using Newtonsoft.Json.Linq;
                 RpcContexts.TryRemove(id, out va);
             }
         }
-        
-        private JsonRpcException ProcessException(JsonRequest req,JsonRpcException ex)
+
+        private JsonRpcException ProcessException(JsonRequest req, JsonRpcException ex)
         {
-            if(externalErrorHandler!=null)
-                return externalErrorHandler(req,ex);
+            if (externalErrorHandler != null)
+                return externalErrorHandler(req, ex);
             return ex;
         }
-        internal JsonRpcException ProcessParseException(string req,JsonRpcException ex)
+        internal JsonRpcException ProcessParseException(string req, JsonRpcException ex)
         {
             if (parseErrorHandler != null)
                 return parseErrorHandler(req, ex);
@@ -392,7 +437,7 @@ using Newtonsoft.Json.Linq;
         {
             parseErrorHandler = handler;
         }
-        
+
         #endregion
         private object CleanUpParameter(object p, SMDAdditionalParameters metaData)
         {
@@ -404,7 +449,7 @@ using Newtonsoft.Json.Linq;
             }
             if (bob != null)
             {
-                
+
                 // Avoid calling DeserializeObject on types that JValue has an explicit converter for
                 // try to optimize for the most common types
                 if (metaData.ObjectType == typeof(string)) return (string)bob;
@@ -442,8 +487,8 @@ using Newtonsoft.Json.Linq;
             {
                 try
                 {
-                    if(p is string)
-                        return JsonConvert.DeserializeObject((string) p, metaData.ObjectType);
+                    if (p is string)
+                        return JsonConvert.DeserializeObject((string)p, metaData.ObjectType);
                     return JsonConvert.DeserializeObject(p.ToString(), metaData.ObjectType);
                 }
                 catch (Exception ex)

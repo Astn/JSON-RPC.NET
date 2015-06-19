@@ -13,14 +13,91 @@ namespace AustinHarris.JsonRpc
 {
     public static class JsonRpcProcessor
     {
+        public static void AsyncProcess(string jsonRpc, Action<string> callback, object context = null)
+        {
+            Task.Factory.StartNew(() => AsyncProcessInternal(Handler.DefaultSessionId(), jsonRpc, context, callback));
+        }
+
+        private static void AsyncProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext, Action<string> callback)
+        {
+            Handler handler = Handler.GetSessionHandler(sessionId);
+
+            try
+            {
+                Tuple<JsonRequest>[] batch = null;
+                if (isSingleRpc(jsonRpc))
+                {
+                    batch = new[] { Tuple.Create(JsonConvert.DeserializeObject<JsonRequest>(jsonRpc)) };
+                }
+                else
+                {
+                    batch = JsonConvert.DeserializeObject<JsonRequest[]>(jsonRpc)
+                            .Select(request => new Tuple<JsonRequest>(request))
+                            .ToArray();
+                }
+
+                if (batch.Length == 0)
+                {
+                    callback.Invoke(Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
+                    {
+                        Error = handler.ProcessParseException(jsonRpc,
+                            new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty."))
+                    }));
+                }
+
+                foreach (var tuple in batch)
+                {
+                    JsonRequest jsonRequest = tuple.Item1;
+                    JsonResponse jsonResponse = new JsonResponse();
+
+                    if (jsonRequest == null)
+                    {
+                        jsonResponse.Error = handler.ProcessParseException(jsonRpc,
+                            new JsonRpcException(-32700, "Parse error",
+                                "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
+                    }
+                    else
+                    {
+                        jsonResponse.Id = jsonRequest.Id;
+
+                        if (jsonRequest.Method == null)
+                        {
+                            jsonResponse.Error = handler.ProcessParseException(jsonRpc,
+                                new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
+                        }
+                        else
+                        {
+                            handler.Handle(jsonRequest, jsonRpcContext, 
+                                delegate(JsonResponse a) 
+                                {
+                                    a.Id = jsonRequest.Id;
+                                    if (a.Id != null || a.Error != null)
+                                    {                                       
+                                        callback.Invoke(JsonConvert.SerializeObject(a));
+                                    }
+                                }
+                            );
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                callback.Invoke(Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
+                {
+                    Error = handler.ProcessParseException(jsonRpc, new JsonRpcException(-32700, "Parse error", ex))
+                }));
+            }
+        }
+
         public static void Process(JsonRpcStateAsync async, object context = null)
         {
             Task.Factory.StartNew((_async) =>
             {
                 var tuple = (Tuple<JsonRpcStateAsync, object>)_async;
                 ProcessJsonRpcState(tuple.Item1, tuple.Item2);
-            }, new Tuple<JsonRpcStateAsync,object>(async,context));
-            
+            }, new Tuple<JsonRpcStateAsync, object>(async, context));
+
         }
 
         public static void Process(string sessionId, JsonRpcStateAsync async, object context = null)
@@ -50,7 +127,7 @@ namespace AustinHarris.JsonRpc
         {
             return Task<string>.Factory.StartNew((_) =>
             {
-                var tuple = (Tuple<string, string, object>) _;
+                var tuple = (Tuple<string, string, object>)_;
                 return ProcessInternal(tuple.Item1, tuple.Item2, tuple.Item3);
             }, new Tuple<string, string, object>(sessionId, jsonRpc, context));
         }
@@ -64,7 +141,7 @@ namespace AustinHarris.JsonRpc
                 Tuple<JsonRequest, JsonResponse>[] batch = null;
                 if (isSingleRpc(jsonRpc))
                 {
-                    batch = new [] { Tuple.Create(JsonConvert.DeserializeObject<JsonRequest>(jsonRpc), new JsonResponse()) };
+                    batch = new[] { Tuple.Create(JsonConvert.DeserializeObject<JsonRequest>(jsonRpc), new JsonResponse()) };
                 }
                 else
                 {
@@ -72,7 +149,7 @@ namespace AustinHarris.JsonRpc
                             .Select(request => new Tuple<JsonRequest, JsonResponse>(request, new JsonResponse()))
                             .ToArray();
                 }
-            
+
                 if (batch.Length == 0)
                 {
                     return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
@@ -114,7 +191,7 @@ namespace AustinHarris.JsonRpc
                     }
                 }
 
-                var responses = new string[batch.Count(x=>x.Item2.Id!=null || x.Item2.Error != null)];
+                var responses = new string[batch.Count(x => x.Item2.Id != null || x.Item2.Error != null)];
                 var idx = 0;
                 foreach (var resp in batch.Where(x => x.Item2.Id != null || x.Item2.Error != null))
                 {
