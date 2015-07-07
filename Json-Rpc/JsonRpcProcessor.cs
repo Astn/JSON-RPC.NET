@@ -18,6 +18,33 @@ namespace AustinHarris.JsonRpc
             Task.Factory.StartNew(() => AsyncProcessInternal(Handler.DefaultSessionId(), jsonRpc, context, callback));
         }
 
+        public static void AsyncProcess(string sessionId,string jsonRpc, Action<string> callback, object context = null)
+        {
+            Task.Factory.StartNew(() => AsyncProcessInternal(sessionId, jsonRpc, context, callback));
+        }
+
+        /// <summary>
+        /// The callback will be returned to the user, who needs to invoke it in concrete
+        /// service implementation. Call should be made directly from same thread as
+        /// service method is executed. 
+        /// </summary>
+        /// <param name="sessionId">Handler session id</param>
+        /// <returns></returns>
+        public static Action<JsonResponse> GetAsyncProcessCallback(string sessionId = "")
+        {
+            Handler handler;
+            if ("" == sessionId)
+            {
+                handler = Handler.GetSessionHandler(Handler.DefaultSessionId());
+            }
+            else 
+            {
+                handler = Handler.GetSessionHandler(sessionId);
+            } 
+
+            return handler.GetAsyncCallback();
+        }
+
         private static void AsyncProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext, Action<string> callback)
         {
             Handler handler = Handler.GetSessionHandler(sessionId);

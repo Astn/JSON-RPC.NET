@@ -149,6 +149,8 @@
         /// </summary>
         public SMD MetaData { get; set; }
 
+        private const string THREAD_CALLBACK_SLOT_NAME ="Callback";
+
         #region Public Methods
 
         /// <summary>
@@ -199,7 +201,9 @@
                     Error = preProcessingException,
                     Id = Rpc.Id
                 };
+                //callback is called - if it is empty then nothing will be done
                 callback.Invoke(response);
+                //return response always- if callback is empty or not
                 return response;
             }
 
@@ -339,11 +343,12 @@
             try
             {
                 //callback is stored to thread's local storage in order to get it directly from concrete JsonRpcService method implementation
-                if (null != callback)
-                {
-                    Thread.SetData(Thread.GetNamedDataSlot("Callback"), callback);
-                }
+                //where callback is just returned from method
+               Thread.SetData(Thread.GetNamedDataSlot(THREAD_CALLBACK_SLOT_NAME), callback);
+               
+                
                 var results = handle.DynamicInvoke(parameters);
+                
                 var last = parameters.LastOrDefault();
                 JsonRpcException contextException;
                 if (Task.CurrentId.HasValue && RpcExceptions.TryRemove(Task.CurrentId.Value, out contextException))
@@ -358,7 +363,8 @@
                     callback.Invoke(response);
                     return response;
                 }
-
+                //return response, if callback is set (method is asynchronous) - result could be empty string and future result operations
+                //will be processed in the callback
                 return new JsonResponse() { Result = results };
             }
             catch (Exception ex)
@@ -399,6 +405,26 @@
             {
                 RemoveRpcContext();
             }
+        }
+
+        /// <summary>
+        /// Method returns the actual callback set to this thread in Handle() method.
+        /// If callback is not set, then empty callback is returned.
+        /// </summary>
+        /// <returns></returns>
+        internal Action<JsonResponse> GetAsyncCallback()
+        {
+            object o = Thread.GetData(Thread.GetNamedDataSlot(THREAD_CALLBACK_SLOT_NAME));
+            Action<JsonResponse> callback;
+            if(o is Action<JsonResponse>)
+            {
+                callback = o as Action<JsonResponse>;
+            }
+            else
+            {
+                callback = delegate(JsonResponse a) { };
+            }
+            return callback;
         }
 
         private void AddRpcContext(object RpcContext)
