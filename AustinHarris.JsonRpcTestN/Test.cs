@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using AustinHarris.JsonRpc;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
 
 namespace AustinHarris.JsonRpcTestN
 {
@@ -40,16 +41,17 @@ namespace AustinHarris.JsonRpcTestN
 			var result =  JsonRpcProcessor.Process("this one", request);
 			result.Wait();
 
-			StringAssert.StartsWith(expectedResult, result.Result);
-			Assert.AreEqual(expectedResult, result.Result);
+
+			var actual1 = JObject.Parse (result.Result);
+			var expected1 = JObject.Parse (expectedResult);
+			Assert.AreEqual(expected1, actual1);
 
 			h.Destroy ();
 
 			var result2 =  JsonRpcProcessor.Process("this one", request);
 			result2.Wait();
 
-			StringAssert.StartsWith(expectedResultAfterDestroy, result2.Result);
-			Assert.AreEqual(expectedResultAfterDestroy, result2.Result);
+			Assert.AreEqual(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result));
 		}
 
 		[Test ()]
@@ -147,10 +149,9 @@ namespace AustinHarris.JsonRpcTestN
 		public void StringToThrowingException()
 		{
 			string request = @"{method:'StringToThrowingException',params:['some string'],id:1}";
-			string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Internal Error\",\"code\":-32603,\"data\":";
 			var result =  JsonRpcProcessor.Process(request);
 			result.Wait();
-			StringAssert.StartsWith (expectedResult, result.Result);
+			StringAssert.Contains ("-32603", result.Result);
 		}
 
 		[Test ()]
@@ -160,8 +161,7 @@ namespace AustinHarris.JsonRpcTestN
 			string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"refException worked\",\"code\":-1,\"data\":null},\"id\":1}";
 			var result =  JsonRpcProcessor.Process(request);
 			result.Wait();
-			StringAssert.StartsWith (expectedResult, result.Result);
-			Assert.AreEqual(expectedResult, result.Result);
+			Assert.AreEqual(JObject.Parse(expectedResult),JObject.Parse( result.Result));
 		}
 
 		[Test ()]
