@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-namespace UnitTests
+namespace AustinHarris.JsonRpcTestN
 {
     public class CalculatorService : JsonRpcService
     {
@@ -43,7 +43,6 @@ namespace UnitTests
         private List<string> StringToThrowingException(string input)
         {
             throw new Exception("Throwing Exception");
-            return new List<string>() { "one", "two", "three", input };
         }
 
         public class CustomString
