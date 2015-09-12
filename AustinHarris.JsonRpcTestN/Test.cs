@@ -168,10 +168,9 @@ namespace AustinHarris.JsonRpcTestN
 		public void StringToThrowJsonRpcException()
 		{
 			string request = @"{method:'StringToThrowJsonRpcException',params:['some string'],id:1}";
-			string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Just some testing\",\"code\":-27000,";
 			var result =  JsonRpcProcessor.Process(request);
 			result.Wait();
-			StringAssert.StartsWith (expectedResult, result.Result);
+			StringAssert.Contains ("-2700", result.Result);
 		}
 
 		[Test ()]
