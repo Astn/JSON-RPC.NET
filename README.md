@@ -1,6 +1,6 @@
 ![Screenshot](http://i.imgur.com/rxHaXLb.png)
 
-json-rpc.net
+json-rpc.net [![astn-jsonrpc MyGet Build Status](https://www.myget.org/BuildSource/Badge/astn-jsonrpc?identifier=e8ccb637-ccd4-4940-b62c-bc1283cd9ddc)](https://www.myget.org/feed/Activity/astn-jsonrpc)
 ============
 
 JSON-RPC.Net is a high performance Json-Rpc 2.0 server, leveraging the popular JSON.NET library. Host in ASP.NET, also supports sockets and pipes, oh my!
