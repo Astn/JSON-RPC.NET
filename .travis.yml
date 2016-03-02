@@ -1,0 +1,14 @@
+language: csharp
+solution: AustinHarris.JsonRpc.sln
+mono:
+  - latest
+  - 3.12.0
+  - 3.10.0
+  - 3.8.0
+  - 3.2.8
+install:
+  - nuget restore AustinHarris.JsonRpc.sln
+  - nuget install NUnit.Runners -Version 2.6.4 -OutputDirectory testrunner
+script:
+  - xbuild /p:Configuration=Release AustinHarris.JsonRpc.sln
+  - mono ./testrunner/NUnit.Runners.2.6.4/tools/nunit-console.exe ./AustinHarris.JsonRpcTestN/bin/Release/AustinHarris.JsonRpcTestN.dll
