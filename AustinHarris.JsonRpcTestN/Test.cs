@@ -7,6 +7,23 @@ using Newtonsoft.Json.Linq;
 
 namespace AustinHarris.JsonRpcTestN
 {
+    public class Poco
+    {
+        public static Poco WithOffset(int offset)
+        {
+            return new Poco(offset);
+        }
+
+        readonly int _offset;
+        public Poco(int offset)
+        {
+            _offset = offset;
+        }
+
+        [JsonRpcMethod("add")]
+        public int Add(int input) { return input + _offset; } 
+    }
+
 	[TestFixture ()]
 	public class Test
 	{
@@ -21,6 +38,27 @@ namespace AustinHarris.JsonRpcTestN
 			services = new object[] {
 				new CalculatorService()};
 		}
+
+        [Test()]
+        public void TestCanCreateMultipleServicesOfSameTypeInTheirOwnSessions()
+        {
+            Func<int,string> request = (int param) => String.Format("{{method:'add',params:[{0}],id:1}}", param);
+            Func<int,string> expectedResult = (int param) => String.Format("{{\"jsonrpc\":\"2.0\",\"result\":{0},\"id\":1}}", param);
+
+            for (int i = 0; i < 100; i++)
+            {
+                ServiceBinder.bindService(i.ToString(), () => Poco.WithOffset(i));
+            }
+
+            for (int i = 0; i < 100; i++)
+            {
+                var result = JsonRpcProcessor.Process(i.ToString(), request(10));
+                result.Wait();
+                var actual1 = JObject.Parse(result.Result);
+                var expected1 = JObject.Parse(expectedResult(10 + i));
+                Assert.AreEqual(expected1, actual1);
+            }
+        }
 
 		[Test ()]
 		public void TestCanCreateAndRemoveSession()
