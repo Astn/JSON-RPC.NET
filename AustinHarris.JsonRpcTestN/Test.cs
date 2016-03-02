@@ -7,7 +7,6 @@ using Newtonsoft.Json.Linq;
 
 namespace AustinHarris.JsonRpcTestN
 {
-<<<<<<< HEAD
     public class Poco
     {
         public static Poco WithOffset(int offset)
@@ -25,8 +24,6 @@ namespace AustinHarris.JsonRpcTestN
         public int Add(int input) { return input + _offset; } 
     }
 
-=======
->>>>>>> c0a6d05741c6197a3ffaccbe2ee414b049d7d7d1
 	[TestFixture ()]
 	public class Test
 	{
@@ -42,7 +39,6 @@ namespace AustinHarris.JsonRpcTestN
 				new CalculatorService()};
 		}
 
-<<<<<<< HEAD
         [Test()]
         public void TestCanCreateMultipleServicesOfSameTypeInTheirOwnSessions()
         {
@@ -64,8 +60,6 @@ namespace AustinHarris.JsonRpcTestN
             }
         }
 
-=======
->>>>>>> c0a6d05741c6197a3ffaccbe2ee414b049d7d7d1
 		[Test ()]
 		public void TestCanCreateAndRemoveSession()
 		{

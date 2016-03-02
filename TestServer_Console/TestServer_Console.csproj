@@ -84,7 +84,6 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-<<<<<<< HEAD
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -92,9 +91,4 @@
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
-=======
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
->>>>>>> c0a6d05741c6197a3ffaccbe2ee414b049d7d7d1
 </Project>
