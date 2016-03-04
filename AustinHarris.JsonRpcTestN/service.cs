@@ -292,6 +292,7 @@ namespace AustinHarris.JsonRpcTestN
                 input2
             };
         }
+
         [JsonRpcMethod]
         public bool TestOptionalParametersBoolsAndStrings(string input1, bool input2 = true, string input3 = "")
         {
@@ -302,6 +303,56 @@ namespace AustinHarris.JsonRpcTestN
         public void Notify(string message)
         {
             Trace.WriteLine(string.Format("Notified about: {0}", message));
+        }
+
+        [JsonRpcMethod]
+        public string TestPreProcessor(string inputValue)
+        {
+            return "Success!";
+        }
+
+        [JsonRpcMethod]
+        public string TestPreProcessorThrowsJsonRPCException(string inputValue)
+        {
+            throw new JsonRpcException(-27000, "Just some testing", null);
+        }
+
+        [JsonRpcMethod]
+        public string TestPreProcessorThrowsException(string inputValue)
+        {
+            throw new Exception("TestException");
+        }
+
+        [JsonRpcMethod]
+        public string TestPreProcessorSetsException(string inputValue)
+        {
+            JsonRpcContext.SetException(new JsonRpcException(-27000, "This exception was thrown using: JsonRpcContext.SetException()", null));
+            return null;
+        }
+
+        [JsonRpcMethod]
+        public string TestPostProcessor(string inputValue)
+        {
+            return "Success!";
+        }
+
+        [JsonRpcMethod]
+        public string TestPostProcessorThrowsJsonRPCException(string inputValue)
+        {
+            throw new JsonRpcException(-27000, "Just some testing", null);
+        }
+
+        [JsonRpcMethod]
+        public string TestPostProcessorThrowsException(string inputValue)
+        {
+            throw new Exception("TestException");
+        }
+
+        [JsonRpcMethod]
+        public string TestPostProcessorSetsException(string inputValue)
+        {
+            JsonRpcContext.SetException(new JsonRpcException(-27001, "This exception was thrown using: JsonRpcContext.SetException()", null));
+            return null;
         }
     }
 }
