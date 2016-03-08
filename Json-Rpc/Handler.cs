@@ -139,6 +139,7 @@
         }
 
         private AustinHarris.JsonRpc.PreProcessHandler externalPreProcessingHandler;
+        private AustinHarris.JsonRpc.PostProcessHandler externalPostProcessingHandler;
         private Func<JsonRequest, JsonRpcException, JsonRpcException> externalErrorHandler;
         private Func<string, JsonRpcException, JsonRpcException> parseErrorHandler;
         private Dictionary<string, Delegate> Handlers { get; set; }
@@ -185,12 +186,6 @@
         /// <returns></returns>
         public JsonResponse Handle(JsonRequest Rpc, Object RpcContext = null, Action<JsonResponse> callback = null)
         {
-            //empty delegate declaration if callback is not provided
-            if (null == callback)
-            {
-                callback = delegate(JsonResponse a) { };
-            }
-
             AddRpcContext(RpcContext);
 
             var preProcessingException = PreProcess(Rpc, RpcContext);
@@ -202,9 +197,8 @@
                     Id = Rpc.Id
                 };
                 //callback is called - if it is empty then nothing will be done
-                callback.Invoke(response);
                 //return response always- if callback is empty or not
-                return response;
+                return PostProcess(callback, Rpc, response, RpcContext);
             }
 
             SMDService metadata = null;
@@ -220,8 +214,7 @@
                     Error = new JsonRpcException(-32601, "Method not found", "The method does not exist / is not available."),
                     Id = Rpc.Id
                 };
-                callback.Invoke(response);
-                return response;
+                return PostProcess(callback, Rpc, response, RpcContext);
             }
 
             bool isJObject = Rpc.Params is Newtonsoft.Json.Linq.JObject;
@@ -282,8 +275,7 @@
                                 )),
                             Id = Rpc.Id
                         };
-                        callback.Invoke(response);
-                        return response;
+                        return PostProcess(callback, Rpc, response, RpcContext);
                     }
                     parameters[i] = CleanUpParameter(jo[metadata.parameters[i].Name], metadata.parameters[i]);
                 }
@@ -318,8 +310,7 @@
                                 )),
                         Id = Rpc.Id
                     };
-                    callback.Invoke(response);
-                    return response;
+                    return PostProcess(callback, Rpc, response, RpcContext);
                 }
             }
 
@@ -336,8 +327,7 @@
                         )),
                     Id = Rpc.Id
                 };
-                callback.Invoke(response);
-                return response;
+                return PostProcess(callback, Rpc, response, RpcContext);
             }
 
             try
@@ -354,18 +344,16 @@
                 if (Task.CurrentId.HasValue && RpcExceptions.TryRemove(Task.CurrentId.Value, out contextException))
                 {
                     JsonResponse response = new JsonResponse() { Error = ProcessException(Rpc, contextException), Id = Rpc.Id };
-                    callback.Invoke(response);
-                    return response;
+                    return PostProcess(callback, Rpc, response, RpcContext);
                 }
                 if (expectsRefException && last != null && last is JsonRpcException)
                 {
                     JsonResponse response = new JsonResponse() { Error = ProcessException(Rpc, last as JsonRpcException), Id = Rpc.Id };
-                    callback.Invoke(response);
-                    return response;
+                    return PostProcess(callback, Rpc, response, RpcContext);
                 }
                 //return response, if callback is set (method is asynchronous) - result could be empty string and future result operations
                 //will be processed in the callback
-                return new JsonResponse() { Result = results };
+                return PostProcess(null, Rpc, new JsonResponse() { Result = results }, RpcContext);
             }
             catch (Exception ex)
             {
@@ -373,33 +361,28 @@
                 if (ex is TargetParameterCountException)
                 {
                     response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32602, "Invalid params", ex)) };
-                    callback.Invoke(response);
-                    return response;
+                    return PostProcess(callback, Rpc, response, RpcContext);
                 }
 
                 // We really dont care about the TargetInvocationException, just pass on the inner exception
                 if (ex is JsonRpcException)
                 {
                     response = new JsonResponse() { Error = ProcessException(Rpc, ex as JsonRpcException) };
-                    callback.Invoke(response);
-                    return response;
+                    return PostProcess(callback, Rpc, response, RpcContext);
                 }
                 if (ex.InnerException != null && ex.InnerException is JsonRpcException)
                 {
                     response = new JsonResponse() { Error = ProcessException(Rpc, ex.InnerException as JsonRpcException) };
-                    callback.Invoke(response);
-                    return response;
+                    return PostProcess(callback, Rpc, response, RpcContext);
                 }
                 else if (ex.InnerException != null)
                 {
                     response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex.InnerException)) };
-                    callback.Invoke(response);
-                    return response;
+                    return PostProcess(callback, Rpc, response, RpcContext);
                 }
 
                 response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex)) };
-                callback.Invoke(response);
-                return response;
+                return PostProcess(callback, Rpc, response, RpcContext);
             }
             finally
             {
@@ -534,9 +517,38 @@
             return externalPreProcessingHandler(request, context);
         }
 
-        internal void SetPreProcessHandler(AustinHarris.JsonRpc.PreProcessHandler handler)
+        private JsonResponse PostProcess(Action<JsonResponse> callback, JsonRequest request, JsonResponse response, object context)
+        {
+            if (externalPostProcessingHandler != null)
+            {
+                try
+                {
+                    JsonRpcException exception = externalPostProcessingHandler(request, response, context);
+                    if (exception != null)
+                    {
+                        response = new JsonResponse() { Error = exception };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    response = new JsonResponse() { Error = ProcessException(request, new JsonRpcException(-32603, "Internal Error", ex)) };
+                }
+            }
+
+            if (callback != null)
+                callback.Invoke(response);
+
+            return response;
+        }
+
+        public void SetPreProcessHandler(AustinHarris.JsonRpc.PreProcessHandler handler)
         {
             externalPreProcessingHandler = handler;
+        }
+
+        public void SetPostProcessHandler(AustinHarris.JsonRpc.PostProcessHandler handler)
+        {
+            externalPostProcessingHandler = handler;
         }
     }
 

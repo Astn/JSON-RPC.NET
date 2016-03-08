@@ -13,6 +13,16 @@ namespace AustinHarris.JsonRpc
     /// <param name="context">The context associated with this request</param>
     /// <returns>Any non-null result causes the operation to be aborted, and the JsonRpcException is returned to the caller.</returns>
     public delegate JsonRpcException PreProcessHandler(JsonRequest request, object context);
+    /// <summary>
+    /// The PostProcessHandler is called after the response has been created and prior to returning the data to the caller.
+    /// If any non-null result is returned from the PostProcessHandler, the current return value is discared and the new return value used
+    /// in preference.
+    /// </summary>
+    /// <param name="request">The jsonRpc Request that has been processed.</param>
+    /// <param name="response">The jsonRpc Response that has been created.</param>
+    /// <param name="context">The context associated with this request/response pair</param>
+    /// <returns>Any non-null result causes the result to be discarded and the JsonRpcException is returned to the caller.</returns>
+    public delegate JsonRpcException PostProcessHandler(JsonRequest request, JsonResponse response, object context);
 
     /// <summary>
     /// Global configurations for JsonRpc
@@ -26,6 +36,15 @@ namespace AustinHarris.JsonRpc
         public static void SetPreProcessHandler(PreProcessHandler handler)
         {
             Handler.DefaultHandler.SetPreProcessHandler(handler);
+        }
+
+        /// <summary>
+        /// Sets the the PostProcessing Handler on the default session.
+        /// </summary>
+        /// <param name="handler"></param>
+        public static void SetPostProcessHandler(PostProcessHandler handler)
+        {
+            Handler.DefaultHandler.SetPostProcessHandler(handler);
         }
 
         /// <summary>
