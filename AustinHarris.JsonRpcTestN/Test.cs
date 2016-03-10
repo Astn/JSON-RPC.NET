@@ -1852,6 +1852,23 @@ namespace AustinHarris.JsonRpcTestN
             Assert.AreEqual(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result));
         }
 
+        [Test()]
+        public void TestCustomParameterName()
+        {
+            Func<string, string> request = (string paramName) => String.Format("{{method:'TestCustomParameterName',params:{{ {0}:'some string'}},id:1}}", paramName);
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
+
+            // Check custom param name specified in attribute works
+            var result = JsonRpcProcessor.Process(request("myCustomParameter"));
+            result.Wait();
+            Assert.AreEqual(JObject.Parse(expectedResult), JObject.Parse(result.Result));
+
+            // Check method can't be used with its actual parameter name
+            result = JsonRpcProcessor.Process(request("arg"));
+            result.Wait();
+            StringAssert.Contains("-32602", result.Result); // check for 'invalid params' error code
+        }
+
         private static void AssertJsonAreEqual(string expectedJson, string actualJson)
         {
             Newtonsoft.Json.Linq.JObject expected = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(expectedJson);

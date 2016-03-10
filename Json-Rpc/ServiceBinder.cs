@@ -25,12 +25,23 @@
                 List<Type> parameterTypeArray = new List<Type>();
                 for (int i = 0; i < paramzs.Length; i++)
                 {
+                    string paramName;
+                    var paramAttrs = paramzs[i].GetCustomAttributes(typeof(JsonRpcParamAttribute), false);
+                    if (paramAttrs.Length > 0)
+                    {
+                        paramName = ((JsonRpcParamAttribute)paramAttrs[0]).JsonParamName;
+                    }
+                    else
+                    {
+                        paramName = paramzs[i].Name;
+                    }
+
                     // reflection attribute information for optional parameters
                     //http://stackoverflow.com/questions/2421994/invoking-methods-with-optional-parameters-through-reflection
-                    paras.Add(paramzs[i].Name, paramzs[i].ParameterType);
+                    paras.Add(paramName, paramzs[i].ParameterType);
 
                     if (paramzs[i].IsOptional) // if the parameter is an optional, add the default value to our default values dictionary.
-                        defaultValues.Add(paramzs[i].Name, paramzs[i].DefaultValue);
+                        defaultValues.Add(paramName, paramzs[i].DefaultValue);
                 }
 
                 var resType = meth.ReturnType;
