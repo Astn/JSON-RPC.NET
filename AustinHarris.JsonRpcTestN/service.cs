@@ -78,6 +78,12 @@ namespace AustinHarris.JsonRpcTestN
             return true;
         }
 
+        [JsonRpcMethod]
+        private bool TestCustomParameterWithNoSpecificName([JsonRpcParam] string arg)
+        {
+            return true;
+        }
+
 
         [JsonRpcMethod]
         private string StringToRefException(string s, ref JsonRpcException refException)

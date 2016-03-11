@@ -30,6 +30,8 @@
                     if (paramAttrs.Length > 0)
                     {
                         paramName = ((JsonRpcParamAttribute)paramAttrs[0]).JsonParamName;
+                        if (string.IsNullOrEmpty(paramName))
+                            paramName = paramzs[i].Name;
                     }
                     else
                     {
