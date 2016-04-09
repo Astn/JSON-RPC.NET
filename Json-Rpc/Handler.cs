@@ -261,7 +261,7 @@
                 //    pCount++;
                 //parameters = new object[pCount];
                 var asDict = jo as IDictionary<string, Newtonsoft.Json.Linq.JToken>;
-                for (int i = 0; i < loopCt; i++)
+                for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
                 {
                     if (asDict.ContainsKey(metadata.parameters[i].Name) == false)
                     {
