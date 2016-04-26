@@ -1852,6 +1852,16 @@ namespace AustinHarris.JsonRpcTestN
             Assert.AreEqual(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result));
         }
 
+        [Test()]
+        public void TestExtraParameters()
+        {
+            string request = @"{method:'ReturnsDateTime',params:{extra:'mytext'},id:1}";
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.IsTrue(result.Result.Contains("error"));
+            Assert.IsTrue(result.Result.Contains("\"code\":-32602"));
+        }
+
         private static void AssertJsonAreEqual(string expectedJson, string actualJson)
         {
             Newtonsoft.Json.Linq.JObject expected = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(expectedJson);
