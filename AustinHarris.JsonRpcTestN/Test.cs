@@ -1862,6 +1862,16 @@ namespace AustinHarris.JsonRpcTestN
             Assert.IsTrue(result.Result.Contains("\"code\":-32602"));
         }
 
+        [Test]
+        public void TestNestedReturnType()
+        {
+            var request = @"{""jsonrpc"":""2.0"",""method"":""TestNestedReturnType"",""id"":1}";
+            var expected = @"{""jsonrpc"":""2.0"",""result"":{""NodeId"":1,""Leafs"":[{""NodeId"":2,""Leafs"":[]},{""NodeId"":3,""Leafs"":[]}]},""id"":1}";
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.AreEqual(expected, result.Result);
+        }
+
         private static void AssertJsonAreEqual(string expectedJson, string actualJson)
         {
             Newtonsoft.Json.Linq.JObject expected = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(expectedJson);
