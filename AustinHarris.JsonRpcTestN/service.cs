@@ -7,6 +7,13 @@ using System.Text;
 
 namespace AustinHarris.JsonRpcTestN
 {
+    public class TreeNode
+    {
+        public int NodeId { get; set; }
+
+        public IList<TreeNode> Leafs { get; set; }
+    }
+
     public class CalculatorService : JsonRpcService
     {
         [JsonRpcMethod]
@@ -354,5 +361,21 @@ namespace AustinHarris.JsonRpcTestN
             JsonRpcContext.SetException(new JsonRpcException(-27001, "This exception was thrown using: JsonRpcContext.SetException()", null));
             return null;
         }
+
+        [JsonRpcMethod]
+        public TreeNode TestNestedReturnType()
+        {
+            return new TreeNode
+            {
+                NodeId = 1,
+                Leafs =
+                    new[]
+                    {
+                        new TreeNode {NodeId = 2, Leafs = new List<TreeNode>()},
+                        new TreeNode {NodeId = 3, Leafs = new List<TreeNode>()}
+                    }
+            };
+        }
+
     }
 }

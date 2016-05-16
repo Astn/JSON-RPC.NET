@@ -42,18 +42,23 @@ namespace AustinHarris.JsonRpc
 
         public static int AddType(JObject jo)
         {
-            var hash = "t_" + jo.ToString().GetHashCode();
+            var hash = string.Format("t_{0}", jo.ToString().GetHashCode());
+            
             lock (TypeHashes)
-            {                
-                var idx = 0;
-                if (TypeHashes.Contains(hash) == false)
-                {
-                    TypeHashes.Add(hash);
-                    idx = TypeHashes.IndexOf(hash);                    
-                    Types.Add(idx, jo);
-                }
+            {
+                if (TypeHashes.Contains(hash)) return TypeHashes.IndexOf(hash);
+                
+                TypeHashes.Add(hash);
+                var idx = TypeHashes.IndexOf(hash);                    
+                Types.Add(idx, jo);
             }
+
             return TypeHashes.IndexOf(hash); 
+        }
+
+        public static bool ContainsType(JObject jo)
+        {
+            return TypeHashes.Contains(string.Format("t_{0}", jo.ToString().GetHashCode()));
         }
     }
 
@@ -163,10 +168,13 @@ namespace AustinHarris.JsonRpc
         {
             JObject jo = new JObject();
             jo.Add("__name", t.Name.ToLower());
-            if (isSimpleType(t))
+
+            if (isSimpleType(t) || SMD.ContainsType(jo))
             {                
                 return SMD.AddType(jo);
             }
+
+            var retVal = SMD.AddType(jo);
 
             var genArgs = t.GetGenericArguments();
             PropertyInfo[] properties = t.GetProperties();
@@ -225,7 +233,7 @@ namespace AustinHarris.JsonRpc
                 }
             }
 
-            return SMD.AddType(jo);
+            return retVal;
         }
 
         internal static bool isSimpleType(Type t)
