@@ -25,7 +25,7 @@ PM> Install-Package AustinHarris.JsonRpc
 To install JSON-RPC.NET AspNet, run the following command in the Package Manager Console
 
 ```
-PM> Install-Package AustinHarris.AspNet
+PM> Install-Package AustinHarris.JsonRpc.AspNet
 ```
 
 ##### Performance
