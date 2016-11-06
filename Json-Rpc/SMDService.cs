@@ -34,9 +34,9 @@ namespace AustinHarris.JsonRpc
             TypeHashes = new List<string>();
 	    }
 
-        public void AddService(string method, Dictionary<string,Type> parameters, Dictionary<string, object> defaultValues)
+        public void AddService(string method, Dictionary<string,Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
         {
-            var newService = new SMDService(transport,"JSON-RPC-2.0",parameters, defaultValues);
+            var newService = new SMDService(transport,"JSON-RPC-2.0",parameters, defaultValues, dele);
             Services.Add(method,newService);
         }
 
@@ -64,6 +64,7 @@ namespace AustinHarris.JsonRpc
 
     public class SMDService
     {
+        public Delegate dele;
         /// <summary>
         /// Defines a service method http://dojotoolkit.org/reference-guide/1.8/dojox/rpc/smd.html
         /// </summary>
@@ -71,9 +72,10 @@ namespace AustinHarris.JsonRpc
         /// <param name="envelope">URL, PATH, JSON, JSON-RPC-1.0, JSON-RPC-1.1, JSON-RPC-2.0</param>
         /// <param name="parameters"></param>
         /// <param name="defaultValues"></param>
-        public SMDService(string transport, string envelope, Dictionary<string, Type> parameters, Dictionary<string, object> defaultValues )
+        public SMDService(string transport, string envelope, Dictionary<string, Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
         {
             // TODO: Complete member initialization
+            this.dele = dele;
             this.transport = transport;
             this.envelope = envelope;
             this.parameters = new SMDAdditionalParameters[parameters.Count-1]; // last param is return type similar to Func<,>

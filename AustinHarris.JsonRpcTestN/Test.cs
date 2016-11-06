@@ -64,14 +64,11 @@ namespace AustinHarris.JsonRpcTestN
         public void TestCanCreateAndRemoveSession()
         {
             var h = JsonRpc.Handler.GetSessionHandler("this one");
-
-            h.Register("workie", new Func<string, string>(x => "workie ... " + x));
-
             var metadata = new System.Collections.Generic.List<Tuple<string, Type>> {
                 Tuple.Create ("sooper", typeof(string)),
                 Tuple.Create ("returns", typeof(string))
             }.ToDictionary(x => x.Item1, x => x.Item2);
-            h.MetaData.AddService("workie", metadata, new System.Collections.Generic.Dictionary<string, object>());
+            h.MetaData.AddService("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
 
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
@@ -1582,13 +1579,11 @@ namespace AustinHarris.JsonRpcTestN
             PreProcessHandlerLocal preHandler = new PreProcessHandlerLocal();
             h.SetPreProcessHandler(new PreProcessHandler(preHandler.PreProcess));
 
-            h.Register("workie", new Func<string, string>(x => "workie ... " + x));
-
             var metadata = new System.Collections.Generic.List<Tuple<string, Type>> {
                 Tuple.Create ("sooper", typeof(string)),
                 Tuple.Create ("returns", typeof(string))
             }.ToDictionary(x => x.Item1, x => x.Item2);
-            h.MetaData.AddService("workie", metadata, new System.Collections.Generic.Dictionary<string, object>());
+            h.MetaData.AddService("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
 
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
@@ -1824,13 +1819,11 @@ namespace AustinHarris.JsonRpcTestN
             PostProcessHandlerLocal postHandler = new PostProcessHandlerLocal(false);
             h.SetPostProcessHandler(new PostProcessHandler(postHandler.PostProcess));
 
-            h.Register("workie", new Func<string, string>(x => "workie ... " + x));
-
             var metadata = new System.Collections.Generic.List<Tuple<string, Type>> {
                 Tuple.Create ("sooper", typeof(string)),
                 Tuple.Create ("returns", typeof(string))
             }.ToDictionary(x => x.Item1, x => x.Item2);
-            h.MetaData.AddService("workie", metadata, new System.Collections.Generic.Dictionary<string, object>());
+            h.MetaData.AddService("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(), new Func<string, string>(x => "workie ... " + x));
 
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
