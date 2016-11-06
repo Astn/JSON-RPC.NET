@@ -140,7 +140,7 @@ namespace AustinHarris.JsonRpcTestN
         public void NullableFloatToNullableFloat2()
         {
             string request = @"{method:'NullableFloatToNullableFloat',params:[null],id:1}";
-            string expectedResult = "{\"jsonrpc\":\"2.0\",\"id\":1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":null,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.AreEqual(result.Result, expectedResult);
@@ -1435,6 +1435,17 @@ namespace AustinHarris.JsonRpcTestN
             result.Wait();
 
             Assert.IsTrue(string.IsNullOrEmpty(result.Result));
+        }
+
+
+        [Test()]
+        public void TestNotificationVoidResult()
+        {
+            var secondRequest = @"{""jsonrpc"":""2.0"",""method"":""Notify"",""params"":[""Hello World!""], ""id"":73}";
+            var result = JsonRpcProcessor.Process(secondRequest);
+            result.Wait();
+            Console.WriteLine(result.Result);
+            Assert.IsTrue(result.Result.Contains("result"), "Json Rpc 2.0 Spec - 'result' - This member is REQUIRED on success. A function that returns void should have the result property included even though the value may be null.");
         }
 
         [Test()]

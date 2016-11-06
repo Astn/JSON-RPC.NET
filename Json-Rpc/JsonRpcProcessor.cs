@@ -209,6 +209,14 @@ namespace AustinHarris.JsonRpc
                 var idx = 0;
                 foreach (var resp in batch.Where(x => x.Item2.Id != null || x.Item2.Error != null))
                 {
+                    if (resp.Item2.Result == null && resp.Item2.Error == null)
+                    {
+                        // Per json rpc 2.0 spec
+                        // result : This member is REQUIRED on success.
+                        // This member MUST NOT exist if there was an error invoking the method.    
+                        // Either the result member or error member MUST be included, but both members MUST NOT be included.
+                        resp.Item2.Result = new Newtonsoft.Json.Linq.JValue((Object)null);
+                    }
                     responses[idx++] = JsonConvert.SerializeObject(resp.Item2);
                 }
 
