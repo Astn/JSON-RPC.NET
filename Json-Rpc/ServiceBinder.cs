@@ -8,9 +8,17 @@
 
     public static class ServiceBinder
     {
-        public static void bindService<T>(string sessionID, Func<T> serviceFactory)
+        public static void BindService<T>() where T : new()
         {
-            var instance = serviceFactory();
+            BindService<T>(Handler.DefaultSessionId());
+        }
+        public static void BindService<T>(string sessionID) where T : new()
+        {
+            BindService(sessionID, new T());
+        }
+
+        public static void BindService(string sessionID, Object instance)
+        {
             var item = instance.GetType(); // var item = typeof(T);
 
             var methods = item.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Where(m => m.GetCustomAttributes(typeof(JsonRpcMethodAttribute), false).Length > 0);
@@ -58,15 +66,6 @@
                     handlerSession.MetaData.AddService(methodName, paras, defaultValues, newDel);
                 }
             }
-
-        }
-        public static void bindService<T>(string sessionID) where T : new()
-        {
-            bindService(sessionID, () => new T());
-        }
-        public static void bindService<T>() where T : new()
-        {
-            bindService<T>(Handler.DefaultSessionId());
         }
     }
 }

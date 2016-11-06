@@ -125,17 +125,6 @@
                 throw new InvalidOperationException("This method is only valid when used within the context of a method marked as a JsonRpcMethod, and that method must of been invoked by the JsonRpc Handler.");
         }
 
-        private void RemoveRpcException()
-        {
-            if (Task.CurrentId != null)
-            {
-                var id = Task.CurrentId.Value;
-                RpcExceptions[id] = null;
-                JsonRpcException va;
-                RpcExceptions.TryRemove(id, out va);
-            }
-        }
-
         private AustinHarris.JsonRpc.PreProcessHandler externalPreProcessingHandler;
         private AustinHarris.JsonRpc.PostProcessHandler externalPostProcessingHandler;
         private Func<JsonRequest, JsonRpcException, JsonRpcException> externalErrorHandler;
@@ -151,9 +140,42 @@
 
         #region Public Methods
 
-        public void UnRegister(string key)
+        /// <summary>
+        /// Allows you to register all the functions on a Pojo Type that have been attributed as [JsonRpcMethod] to the specified sessionId
+        /// </summary>
+        /// <param name="sessionID">The session to register against</param>
+        /// <param name="instance">The instance containing JsonRpcMethods to register</param>
+        public static void RegisterInstance(string sessionID, object instance)
         {
-            MetaData.Services.Remove(key);
+            ServiceBinder.BindService(sessionID, instance);
+        }
+
+        /// <summary>
+        /// Allows you to register any function, lambda, etc even when not attributed with JsonRpcMethod.
+        /// Requires you to specify all types and defaults
+        /// </summary>
+        /// <param name="methodName">The method name that will map to the registered function</param>
+        /// <param name="parameterNameTypeMapping">The parameter names and types that will be positionally bound to the function</param>
+        /// <param name="parameterNameDefaultValueMapping">Optional default values for parameters</param>
+        /// <param name="implementation">A reference to the Function</param>
+        public void RegisterFuction(string methodName, Dictionary<string, Type> parameterNameTypeMapping, Dictionary<string, object> parameterNameDefaultValueMapping, Delegate implementation)
+        {
+            MetaData.AddService(methodName, parameterNameTypeMapping, parameterNameDefaultValueMapping, implementation);
+        }
+
+        public void UnRegisterFunction(string methodName)
+        {
+            MetaData.Services.Remove(methodName);
+        }
+
+        public void SetPreProcessHandler(AustinHarris.JsonRpc.PreProcessHandler handler)
+        {
+            externalPreProcessingHandler = handler;
+        }
+
+        public void SetPostProcessHandler(AustinHarris.JsonRpc.PostProcessHandler handler)
+        {
+            externalPostProcessingHandler = handler;
         }
 
         /// <summary>
@@ -370,7 +392,7 @@
                 RemoveRpcContext();
             }
         }
-
+        #endregion
         /// <summary>
         /// Method returns the actual callback set to this thread in Handle() method.
         /// If callback is not set, then empty callback is returned.
@@ -428,7 +450,18 @@
             parseErrorHandler = handler;
         }
 
-        #endregion
+        private void RemoveRpcException()
+        {
+            if (Task.CurrentId != null)
+            {
+                var id = Task.CurrentId.Value;
+                RpcExceptions[id] = null;
+                JsonRpcException va;
+                RpcExceptions.TryRemove(id, out va);
+            }
+        }
+
+       
         private object CleanUpParameter(object p, SMDAdditionalParameters metaData)
         {
             var bob = p as JValue;
@@ -522,15 +555,6 @@
             return response;
         }
 
-        public void SetPreProcessHandler(AustinHarris.JsonRpc.PreProcessHandler handler)
-        {
-            externalPreProcessingHandler = handler;
-        }
-
-        public void SetPostProcessHandler(AustinHarris.JsonRpc.PostProcessHandler handler)
-        {
-            externalPostProcessingHandler = handler;
-        }
     }
 
 }

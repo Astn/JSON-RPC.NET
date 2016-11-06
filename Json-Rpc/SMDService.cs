@@ -34,7 +34,7 @@ namespace AustinHarris.JsonRpc
             TypeHashes = new List<string>();
 	    }
 
-        public void AddService(string method, Dictionary<string,Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
+        internal void AddService(string method, Dictionary<string,Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
         {
             var newService = new SMDService(transport,"JSON-RPC-2.0",parameters, defaultValues, dele);
             Services.Add(method,newService);
