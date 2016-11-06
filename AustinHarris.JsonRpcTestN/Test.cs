@@ -47,7 +47,7 @@ namespace AustinHarris.JsonRpcTestN
 
             for (int i = 0; i < 100; i++)
             {
-                ServiceBinder.bindService(i.ToString(), () => Poco.WithOffset(i));
+                ServiceBinder.BindService(i.ToString(), Poco.WithOffset(i));
             }
 
             for (int i = 0; i < 100; i++)
@@ -68,7 +68,7 @@ namespace AustinHarris.JsonRpcTestN
                 Tuple.Create ("sooper", typeof(string)),
                 Tuple.Create ("returns", typeof(string))
             }.ToDictionary(x => x.Item1, x => x.Item2);
-            h.MetaData.AddService("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
+            h.RegisterFuction("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
 
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
@@ -1583,7 +1583,7 @@ namespace AustinHarris.JsonRpcTestN
                 Tuple.Create ("sooper", typeof(string)),
                 Tuple.Create ("returns", typeof(string))
             }.ToDictionary(x => x.Item1, x => x.Item2);
-            h.MetaData.AddService("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
+            h.RegisterFuction("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
 
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
@@ -1823,7 +1823,7 @@ namespace AustinHarris.JsonRpcTestN
                 Tuple.Create ("sooper", typeof(string)),
                 Tuple.Create ("returns", typeof(string))
             }.ToDictionary(x => x.Item1, x => x.Item2);
-            h.MetaData.AddService("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(), new Func<string, string>(x => "workie ... " + x));
+            h.RegisterFuction("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(), new Func<string, string>(x => "workie ... " + x));
 
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";

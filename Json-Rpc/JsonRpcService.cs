@@ -10,12 +10,12 @@
     {
         protected JsonRpcService()
         {
-             ServiceBinder.bindService(Handler.DefaultSessionId(), () => this);
+             ServiceBinder.BindService(Handler.DefaultSessionId(), this);
         }
 
         protected JsonRpcService(string sessionID)
         {
-            ServiceBinder.bindService(sessionID, () => this);
+            ServiceBinder.BindService(sessionID, this);
         }
     }
 }
