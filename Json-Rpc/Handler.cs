@@ -34,7 +34,6 @@
         {
             SessionId = sessionId;
             this.MetaData = new SMD();
-            this.Handlers = new Dictionary<string, Delegate>();
         }
 
         #endregion
@@ -74,7 +73,6 @@
         {
             Handler h;
             _sessionHandlers.TryRemove(sessionId, out h);
-            h.Handlers.Clear();
             h.MetaData.Services.Clear();
         }
         /// <summary>
@@ -142,7 +140,6 @@
         private AustinHarris.JsonRpc.PostProcessHandler externalPostProcessingHandler;
         private Func<JsonRequest, JsonRpcException, JsonRpcException> externalErrorHandler;
         private Func<string, JsonRpcException, JsonRpcException> parseErrorHandler;
-        private Dictionary<string, Delegate> Handlers { get; set; }
         #endregion
 
         /// <summary>
@@ -154,27 +151,8 @@
 
         #region Public Methods
 
-        /// <summary>
-        /// Registers a jsonRpc method name (key) to be mapped to a specific function
-        /// </summary>
-        /// <param name="key">The Method as it will be called from JsonRpc</param>
-        /// <param name="handle">The method that will be invoked</param>
-        /// <returns></returns>
-        public bool Register(string key, Delegate handle)
-        {
-            var result = false;
-
-            if (!this.Handlers.ContainsKey(key))
-            {
-                this.Handlers.Add(key, handle);
-            }
-
-            return result;
-        }
-
         public void UnRegister(string key)
         {
-            this.Handlers.Remove(key);
             MetaData.Services.Remove(key);
         }
 
@@ -203,10 +181,13 @@
 
             SMDService metadata = null;
             Delegate handle = null;
-            var haveDelegate = this.Handlers.TryGetValue(Rpc.Method, out handle);
             var haveMetadata = this.MetaData.Services.TryGetValue(Rpc.Method, out metadata);
+            if (haveMetadata)
+            {
+                handle = metadata.dele; 
+            }
 
-            if (haveDelegate == false || haveMetadata == false || metadata == null || handle == null)
+            if (haveMetadata == false || metadata == null)
             {
                 JsonResponse response = new JsonResponse()
                 {

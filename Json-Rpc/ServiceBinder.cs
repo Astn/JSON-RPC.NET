@@ -12,7 +12,6 @@
         {
             var instance = serviceFactory();
             var item = instance.GetType(); // var item = typeof(T);
-            var regMethod = typeof(Handler).GetMethod("Register");
 
             var methods = item.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Where(m => m.GetCustomAttributes(typeof(JsonRpcMethodAttribute), false).Length > 0);
             foreach (var meth in methods)
@@ -42,8 +41,7 @@
                     var methodName = handlerAttribute.JsonMethodName == string.Empty ? meth.Name : handlerAttribute.JsonMethodName;
                     var newDel = Delegate.CreateDelegate(System.Linq.Expressions.Expression.GetDelegateType(paras.Values.ToArray()), instance /*Need to add support for other methods outside of this instance*/, meth);
                     var handlerSession = Handler.GetSessionHandler(sessionID);
-                    regMethod.Invoke(handlerSession, new object[] { methodName, newDel });
-                    handlerSession.MetaData.AddService(methodName, paras, defaultValues);
+                    handlerSession.MetaData.AddService(methodName, paras, defaultValues, newDel);
                 }
             }
         }

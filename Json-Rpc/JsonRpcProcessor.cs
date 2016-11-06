@@ -119,12 +119,7 @@ namespace AustinHarris.JsonRpc
 
         public static void Process(JsonRpcStateAsync async, object context = null)
         {
-            Task.Factory.StartNew((_async) =>
-            {
-                var tuple = (Tuple<JsonRpcStateAsync, object>)_async;
-                ProcessJsonRpcState(tuple.Item1, tuple.Item2);
-            }, new Tuple<JsonRpcStateAsync, object>(async, context));
-
+            Process(Handler.DefaultSessionId(), async, context);
         }
 
         public static void Process(string sessionId, JsonRpcStateAsync async, object context = null)
@@ -132,18 +127,10 @@ namespace AustinHarris.JsonRpc
             var t = Task.Factory.StartNew((_async) =>
             {
                 var i = (Tuple<string, JsonRpcStateAsync, object>)_async;
-                ProcessJsonRpcState(i.Item1, i.Item2, i.Item3);
+                async.Result = ProcessInternal(i.Item1, i.Item2.JsonRpc, i.Item3);
+                async.SetCompleted();
             }, new Tuple<string, JsonRpcStateAsync, object>(sessionId, async, context));
 
-        }
-        internal static void ProcessJsonRpcState(JsonRpcStateAsync async, object jsonRpcContext = null)
-        {
-            ProcessJsonRpcState(Handler.DefaultSessionId(), async, jsonRpcContext);
-        }
-        internal static void ProcessJsonRpcState(string sessionId, JsonRpcStateAsync async, object jsonRpcContext = null)
-        {
-            async.Result = ProcessInternal(sessionId, async.JsonRpc, jsonRpcContext);
-            async.SetCompleted();
         }
 
         public static Task<string> Process(string jsonRpc, object context = null)
