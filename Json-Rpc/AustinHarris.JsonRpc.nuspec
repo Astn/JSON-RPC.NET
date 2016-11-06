@@ -12,12 +12,12 @@
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>The fastest .Net JSON RPC Server</description>
         <summary>JSON-RPC.Net is a high performance Json-Rpc 2.0 server, leveraging the popular JSON.NET library. Easily create a JSON RPC server for your Angular javascript apps, also supports sockets and pipes, oh my!</summary>
-        <releaseNotes>Performance improvements -Astn, Bug Fixes: Optional Parameter Ordering -artnim, Batches with superflous commans -artnim, ParamCount Exception -artnim.</releaseNotes>
+        <releaseNotes>Named Parameters via attributes -rommar. Fix nuget dependency requirements -jbreens. Cleaner service registration -xmedeko</releaseNotes>
         <language>en-US</language>
         <tags>fast json rpc server socket javascript json-rpc.net json-rpc jsonrpc json.net web services webapi service angular server angularjs</tags>
         <dependencies>
             <group targetFramework=".NETFramework4.0">
-                <dependency id="Newtonsoft.Json" version="6.0.5" />
+                <dependency id="Newtonsoft.Json" version="9.0.0" />
             </group>
         </dependencies>
         <frameworkAssemblies>
