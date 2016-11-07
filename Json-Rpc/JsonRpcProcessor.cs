@@ -15,12 +15,19 @@ namespace AustinHarris.JsonRpc
     {
         public static void AsyncProcess(string jsonRpc, Action<string> callback, object context = null)
         {
-            Task.Factory.StartNew(() => AsyncProcessInternal(Handler.DefaultSessionId(), jsonRpc, context, callback));
+            AsyncProcess(Handler.DefaultSessionId(), jsonRpc, callback, context);
         }
 
         public static void AsyncProcess(string sessionId,string jsonRpc, Action<string> callback, object context = null)
         {
-            Task.Factory.StartNew(() => AsyncProcessInternal(sessionId, jsonRpc, context, callback));
+            Task.Factory.StartNew(() =>
+            {
+                //callback is stored to thread's local storage in order to get it directly from concrete JsonRpcService method implementation
+                //where callback is just returned from method
+                //Thread.SetData(Thread.GetNamedDataSlot(THREAD_CALLBACK_SLOT_NAME), callback);
+                var str = ProcessInternal(sessionId, jsonRpc, context);
+                callback.Invoke(str);
+            });
         }
 
         /// <summary>
@@ -42,79 +49,29 @@ namespace AustinHarris.JsonRpc
                 handler = Handler.GetSessionHandler(sessionId);
             } 
 
-            return handler.GetAsyncCallback();
+            return GetAsyncCallback();
         }
 
-        private static void AsyncProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext, Action<string> callback)
+        private const string THREAD_CALLBACK_SLOT_NAME = "Callback";
+
+        /// <summary>
+        /// Method returns the actual callback set to this thread in Handle() method.
+        /// If callback is not set, then empty callback is returned.
+        /// </summary>
+        /// <returns></returns>
+        internal static Action<JsonResponse> GetAsyncCallback()
         {
-            Handler handler = Handler.GetSessionHandler(sessionId);
-
-            try
+            object o = Thread.GetData(Thread.GetNamedDataSlot(THREAD_CALLBACK_SLOT_NAME));
+            Action<JsonResponse> callback;
+            if (o is Action<JsonResponse>)
             {
-                Tuple<JsonRequest>[] batch = null;
-                if (isSingleRpc(jsonRpc))
-                {
-                    batch = new[] { Tuple.Create(JsonConvert.DeserializeObject<JsonRequest>(jsonRpc)) };
-                }
-                else
-                {
-                    batch = JsonConvert.DeserializeObject<JsonRequest[]>(jsonRpc)
-                            .Select(request => new Tuple<JsonRequest>(request))
-                            .ToArray();
-                }
-
-                if (batch.Length == 0)
-                {
-                    callback.Invoke(Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
-                    {
-                        Error = handler.ProcessParseException(jsonRpc,
-                            new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty."))
-                    }));
-                }
-
-                foreach (var tuple in batch)
-                {
-                    JsonRequest jsonRequest = tuple.Item1;
-                    JsonResponse jsonResponse = new JsonResponse();
-
-                    if (jsonRequest == null)
-                    {
-                        jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                            new JsonRpcException(-32700, "Parse error",
-                                "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
-                    }
-                    else
-                    {
-                        jsonResponse.Id = jsonRequest.Id;
-
-                        if (jsonRequest.Method == null)
-                        {
-                            jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                                new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
-                        }
-                        else
-                        {
-                            handler.Handle(jsonRequest, jsonRpcContext, 
-                                delegate(JsonResponse a) 
-                                {
-                                    a.Id = jsonRequest.Id;
-                                    if (a.Id != null || a.Error != null)
-                                    {                                       
-                                        callback.Invoke(JsonConvert.SerializeObject(a));
-                                    }
-                                }
-                            );
-                        }
-                    }
-                }
+                callback = o as Action<JsonResponse>;
             }
-            catch (Exception ex)
+            else
             {
-                callback.Invoke(Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
-                {
-                    Error = handler.ProcessParseException(jsonRpc, new JsonRpcException(-32700, "Parse error", ex))
-                }));
+                callback = delegate(JsonResponse a) { };
             }
+            return callback;
         }
 
         public static void Process(JsonRpcStateAsync async, object context = null)
@@ -124,21 +81,19 @@ namespace AustinHarris.JsonRpc
 
         public static void Process(string sessionId, JsonRpcStateAsync async, object context = null)
         {
-            var t = Task.Factory.StartNew((_async) =>
+            Process(sessionId, async.JsonRpc, context)
+                .ContinueWith(t =>
             {
-                var i = (Tuple<string, JsonRpcStateAsync, object>)_async;
-                async.Result = ProcessInternal(i.Item1, i.Item2.JsonRpc, i.Item3);
+                async.Result = t.Result;
                 async.SetCompleted();
-            }, new Tuple<string, JsonRpcStateAsync, object>(sessionId, async, context));
-
+            });
         }
-
         public static Task<string> Process(string jsonRpc, object context = null)
         {
             return Process(Handler.DefaultSessionId(), jsonRpc, context);
         }
         public static Task<string> Process(string sessionId, string jsonRpc, object context = null)
-        {
+        { 
             return Task<string>.Factory.StartNew((_) =>
             {
                 var tuple = (Tuple<string, string, object>)_;

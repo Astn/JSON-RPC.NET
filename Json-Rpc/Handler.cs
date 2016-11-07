@@ -15,9 +15,13 @@
     {
         #region Members
 
-        //private static Handler current;
-        private static ConcurrentDictionary<string, Handler> _sessionHandlers;
-        private static string _defaultSessionId;
+        private static int _sessionHandlerMasterVersion = 1;
+        [ThreadStatic]
+        private static int _sessionHandlerLocalVersion = 0;
+        private static ConcurrentDictionary<string, Handler> _sessionHandlersMaster;
+        [ThreadStatic]
+        private static Dictionary<string, Handler> _sessionHandlersLocal;
+        private static volatile string _defaultSessionId;
         #endregion
 
         #region Constructors
@@ -26,8 +30,8 @@
         {
             //current = new Handler(Guid.NewGuid().ToString());
             _defaultSessionId = Guid.NewGuid().ToString();
-            _sessionHandlers = new ConcurrentDictionary<string, Handler>();
-            _sessionHandlers[_defaultSessionId] = new Handler(_defaultSessionId);
+            _sessionHandlersMaster = new ConcurrentDictionary<string, Handler>();
+            _sessionHandlersMaster[_defaultSessionId] = new Handler(_defaultSessionId);
         }
 
         private Handler(string sessionId)
@@ -53,7 +57,17 @@
         /// <returns></returns>
         public static Handler GetSessionHandler(string sessionId)
         {
-            return _sessionHandlers.GetOrAdd(sessionId, new Handler(sessionId));
+            if (_sessionHandlerMasterVersion != _sessionHandlerLocalVersion)
+            {
+                _sessionHandlersLocal = new Dictionary<string, Handler>(_sessionHandlersMaster);
+                _sessionHandlerLocalVersion = _sessionHandlerMasterVersion;
+            }
+            if (_sessionHandlersLocal.ContainsKey(sessionId))
+            {
+                return _sessionHandlersLocal[sessionId];
+            }
+            Interlocked.Increment(ref _sessionHandlerMasterVersion);
+            return _sessionHandlersMaster.GetOrAdd(sessionId, new Handler(sessionId));
         }
 
         /// <summary>
@@ -72,7 +86,8 @@
         public static void DestroySession(string sessionId)
         {
             Handler h;
-            _sessionHandlers.TryRemove(sessionId, out h);
+            _sessionHandlersMaster.TryRemove(sessionId, out h);
+            Interlocked.Increment(ref _sessionHandlerMasterVersion);
             h.MetaData.Services.Clear();
         }
         /// <summary>
@@ -93,9 +108,6 @@
         /// </summary>
         public string SessionId { get; private set; }
 
-        private static ConcurrentDictionary<int, object> RpcContexts = new ConcurrentDictionary<int, object>();
-        private static ConcurrentDictionary<int, JsonRpcException> RpcExceptions = new ConcurrentDictionary<int, JsonRpcException>();
-
         /// <summary>
         /// Provides access to a context specific to each JsonRpc method invocation.
         /// Warning: Must be called from within the execution context of the jsonRpc Method to return the context
@@ -103,26 +115,25 @@
         /// <returns></returns>
         public static object RpcContext()
         {
-            if (Task.CurrentId == null)
-                return null;
-
-            if (RpcContexts.ContainsKey(Task.CurrentId.Value) == false)
-                return null;
-
-            return RpcContexts[Task.CurrentId.Value];
+            return __currentRpcContext;
         }
 
+        [ThreadStatic]
+        static JsonRpcException __currentRpcException;
         /// <summary>
         /// Allows you to set the exception used in in the JsonRpc response.
-        /// Warning: Must be called from within the execution context of the jsonRpc method.
+        /// Warning: Must be called from the same thread as the jsonRpc method.
         /// </summary>
         /// <param name="exception"></param>
         public static void RpcSetException(JsonRpcException exception)
         {
-            if (Task.CurrentId != null)
-                RpcExceptions[Task.CurrentId.Value] = exception;
-            else
-                throw new InvalidOperationException("This method is only valid when used within the context of a method marked as a JsonRpcMethod, and that method must of been invoked by the JsonRpc Handler.");
+            __currentRpcException = exception;
+        }
+        public static JsonRpcException RpcGetAndRemoveRpcException()
+        {
+            var ex = __currentRpcException;
+            __currentRpcException = null ;
+            return ex;
         }
 
         private AustinHarris.JsonRpc.PreProcessHandler externalPreProcessingHandler;
@@ -135,8 +146,6 @@
         /// This metadata contains all the types and mappings of all the methods in this handler. Warning: Modifying this directly could cause your handler to no longer function. 
         /// </summary>
         public SMD MetaData { get; set; }
-
-        private const string THREAD_CALLBACK_SLOT_NAME ="Callback";
 
         #region Public Methods
 
@@ -184,7 +193,7 @@
         /// <param name="Rpc">JsonRpc Request to be processed</param>
         /// <param name="RpcContext">Optional context that will be available from within the jsonRpcMethod.</param>
         /// <returns></returns>
-        public JsonResponse Handle(JsonRequest Rpc, Object RpcContext = null, Action<JsonResponse> callback = null)
+        public JsonResponse Handle(JsonRequest Rpc, Object RpcContext = null)
         {
             AddRpcContext(RpcContext);
 
@@ -198,7 +207,7 @@
                 };
                 //callback is called - if it is empty then nothing will be done
                 //return response always- if callback is empty or not
-                return PostProcess(callback, Rpc, response, RpcContext);
+                return PostProcess(Rpc, response, RpcContext);
             }
 
             SMDService metadata = null;
@@ -217,7 +226,7 @@
                     Error = new JsonRpcException(-32601, "Method not found", "The method does not exist / is not available."),
                     Id = Rpc.Id
                 };
-                return PostProcess(callback, Rpc, response, RpcContext);
+                return PostProcess(Rpc, response, RpcContext);
             }
 
             bool isJObject = Rpc.Params is Newtonsoft.Json.Linq.JObject;
@@ -278,7 +287,7 @@
                                 )),
                             Id = Rpc.Id
                         };
-                        return PostProcess(callback, Rpc, response, RpcContext);
+                        return PostProcess(Rpc, response, RpcContext);
                     }
                     parameters[i] = CleanUpParameter(jo[metadata.parameters[i].Name], metadata.parameters[i]);
                 }
@@ -313,7 +322,7 @@
                                 )),
                         Id = Rpc.Id
                     };
-                    return PostProcess(callback, Rpc, response, RpcContext);
+                    return PostProcess(Rpc, response, RpcContext);
                 }
             }
 
@@ -330,33 +339,26 @@
                         )),
                     Id = Rpc.Id
                 };
-                return PostProcess(callback, Rpc, response, RpcContext);
+                return PostProcess(Rpc, response, RpcContext);
             }
 
             try
             {
-                //callback is stored to thread's local storage in order to get it directly from concrete JsonRpcService method implementation
-                //where callback is just returned from method
-               Thread.SetData(Thread.GetNamedDataSlot(THREAD_CALLBACK_SLOT_NAME), callback);
-               
-                
                 var results = handle.DynamicInvoke(parameters);
                 
                 var last = parameters.LastOrDefault();
-                JsonRpcException contextException;
-                if (Task.CurrentId.HasValue && RpcExceptions.TryRemove(Task.CurrentId.Value, out contextException))
+                var contextException = RpcGetAndRemoveRpcException();
+                if (contextException != null)
                 {
                     JsonResponse response = new JsonResponse() { Error = ProcessException(Rpc, contextException), Id = Rpc.Id };
-                    return PostProcess(callback, Rpc, response, RpcContext);
+                    return PostProcess(Rpc, response, RpcContext);
                 }
                 if (expectsRefException && last != null && last is JsonRpcException)
                 {
                     JsonResponse response = new JsonResponse() { Error = ProcessException(Rpc, last as JsonRpcException), Id = Rpc.Id };
-                    return PostProcess(callback, Rpc, response, RpcContext);
+                    return PostProcess(Rpc, response, RpcContext);
                 }
-                //return response, if callback is set (method is asynchronous) - result could be empty string and future result operations
-                //will be processed in the callback
-                return PostProcess(null, Rpc, new JsonResponse() { Result = results }, RpcContext);
+                return PostProcess(Rpc, new JsonResponse() { Result = results }, RpcContext);
             }
             catch (Exception ex)
             {
@@ -364,28 +366,28 @@
                 if (ex is TargetParameterCountException)
                 {
                     response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32602, "Invalid params", ex)) };
-                    return PostProcess(callback, Rpc, response, RpcContext);
+                    return PostProcess(Rpc, response, RpcContext);
                 }
 
                 // We really dont care about the TargetInvocationException, just pass on the inner exception
                 if (ex is JsonRpcException)
                 {
                     response = new JsonResponse() { Error = ProcessException(Rpc, ex as JsonRpcException) };
-                    return PostProcess(callback, Rpc, response, RpcContext);
+                    return PostProcess(Rpc, response, RpcContext);
                 }
                 if (ex.InnerException != null && ex.InnerException is JsonRpcException)
                 {
                     response = new JsonResponse() { Error = ProcessException(Rpc, ex.InnerException as JsonRpcException) };
-                    return PostProcess(callback, Rpc, response, RpcContext);
+                    return PostProcess(Rpc, response, RpcContext);
                 }
                 else if (ex.InnerException != null)
                 {
                     response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex.InnerException)) };
-                    return PostProcess(callback, Rpc, response, RpcContext);
+                    return PostProcess(Rpc, response, RpcContext);
                 }
 
                 response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex)) };
-                return PostProcess(callback, Rpc, response, RpcContext);
+                return PostProcess(Rpc, response, RpcContext);
             }
             finally
             {
@@ -393,40 +395,16 @@
             }
         }
         #endregion
-        /// <summary>
-        /// Method returns the actual callback set to this thread in Handle() method.
-        /// If callback is not set, then empty callback is returned.
-        /// </summary>
-        /// <returns></returns>
-        internal Action<JsonResponse> GetAsyncCallback()
-        {
-            object o = Thread.GetData(Thread.GetNamedDataSlot(THREAD_CALLBACK_SLOT_NAME));
-            Action<JsonResponse> callback;
-            if(o is Action<JsonResponse>)
-            {
-                callback = o as Action<JsonResponse>;
-            }
-            else
-            {
-                callback = delegate(JsonResponse a) { };
-            }
-            return callback;
-        }
 
+        [ThreadStatic]
+        static object __currentRpcContext;
         private void AddRpcContext(object RpcContext)
         {
-            if (Task.CurrentId != null)
-                RpcContexts[Task.CurrentId.Value] = RpcContext;
+            __currentRpcContext = RpcContext;
         }
         private void RemoveRpcContext()
         {
-            if (Task.CurrentId != null)
-            {
-                var id = Task.CurrentId.Value;
-                RpcContexts[id] = null;
-                object va;
-                RpcContexts.TryRemove(id, out va);
-            }
+            __currentRpcContext = null;
         }
 
         private JsonRpcException ProcessException(JsonRequest req, JsonRpcException ex)
@@ -449,18 +427,6 @@
         {
             parseErrorHandler = handler;
         }
-
-        private void RemoveRpcException()
-        {
-            if (Task.CurrentId != null)
-            {
-                var id = Task.CurrentId.Value;
-                RpcExceptions[id] = null;
-                JsonRpcException va;
-                RpcExceptions.TryRemove(id, out va);
-            }
-        }
-
        
         private object CleanUpParameter(object p, SMDAdditionalParameters metaData)
         {
@@ -531,7 +497,7 @@
             return externalPreProcessingHandler(request, context);
         }
 
-        private JsonResponse PostProcess(Action<JsonResponse> callback, JsonRequest request, JsonResponse response, object context)
+        private JsonResponse PostProcess(JsonRequest request, JsonResponse response, object context)
         {
             if (externalPostProcessingHandler != null)
             {
@@ -548,10 +514,6 @@
                     response = new JsonResponse() { Error = ProcessException(request, new JsonRpcException(-32603, "Internal Error", ex)) };
                 }
             }
-
-            if (callback != null)
-                callback.Invoke(response);
-
             return response;
         }
 
