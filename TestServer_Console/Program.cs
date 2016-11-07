@@ -16,36 +16,29 @@ namespace TestServer_Console
 
         static void Main(string[] args)
         {
-            string input = "";
-            do
+            PrintOptions();
+            for (string line = Console.ReadLine(); line != "q"; line = Console.ReadLine())
             {
-                input = PrintOptions();
-                if (string.IsNullOrWhiteSpace(input))
+                if (string.IsNullOrWhiteSpace(line))
                     Benchmark();
-                else if (input.StartsWith("C", StringComparison.CurrentCultureIgnoreCase))
+                else if (line.StartsWith("c", StringComparison.CurrentCultureIgnoreCase))
                     ConsoleInput();
-                else
-                    PrintOptions();
-            } while (input != "x");
+                PrintOptions();
+            }
         }
 
-        private static string PrintOptions()
+        private static void PrintOptions()
         {
             Console.WriteLine("Hit Enter to run benchmark");
             Console.WriteLine("'c' to start reading console input");
-            Console.WriteLine("'x' to exit");
-            return Console.ReadLine();
+            Console.WriteLine("'q' to quit");
         }
 
         private static void ConsoleInput()
         {
-            var rpcResultHandler = new AsyncCallback(_ => Console.WriteLine(((JsonRpcStateAsync)_).Result));
-
             for (string line = Console.ReadLine(); !string.IsNullOrEmpty(line); line = Console.ReadLine())
             {
-                var async = new JsonRpcStateAsync(rpcResultHandler, null);
-                async.JsonRpc = line;
-                JsonRpcProcessor.Process(async);
+                JsonRpcProcessor.Process(line).ContinueWith(response => Console.WriteLine( response.Result ));
             }
         }
 
@@ -54,8 +47,8 @@ namespace TestServer_Console
         {
             Console.WriteLine("Starting benchmark");
            
-            var cnt = 20;
-            var iterations = 8;
+            var cnt = 40;
+            var iterations = 7;
             for (int iteration = 1; iteration <= iterations; iteration++)
             {
                 cnt *= iteration;
