@@ -1929,6 +1929,8 @@ namespace AustinHarris.JsonRpcTestN
 
         private static void AssertJsonAreEqual(JObject expectedJson, JObject actualJson, string path)
         {
+            Console.WriteLine("expected: {0}", expectedJson);
+            Console.WriteLine("actual  : {0}", actualJson);
             Assert.AreEqual(expectedJson.Count, actualJson.Count, "Count of json object at " + path);
             for (var expectedElementsEnumerator = expectedJson.GetEnumerator(); expectedElementsEnumerator.MoveNext(); )
             {

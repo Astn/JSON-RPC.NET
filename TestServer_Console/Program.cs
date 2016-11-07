@@ -16,36 +16,29 @@ namespace TestServer_Console
 
         static void Main(string[] args)
         {
-            string input = "";
-            do
+            PrintOptions();
+            for (string line = Console.ReadLine(); line != "q"; line = Console.ReadLine())
             {
-                input = PrintOptions();
-                if (string.IsNullOrWhiteSpace(input))
+                if (string.IsNullOrWhiteSpace(line))
                     Benchmark();
-                else if (input.StartsWith("C", StringComparison.CurrentCultureIgnoreCase))
+                else if (line.StartsWith("c", StringComparison.CurrentCultureIgnoreCase))
                     ConsoleInput();
-                else
-                    PrintOptions();
-            } while (input != "x");
+                PrintOptions();
+            }
         }
 
-        private static string PrintOptions()
+        private static void PrintOptions()
         {
             Console.WriteLine("Hit Enter to run benchmark");
             Console.WriteLine("'c' to start reading console input");
-            Console.WriteLine("'x' to exit");
-            return Console.ReadLine();
+            Console.WriteLine("'q' to quit");
         }
 
         private static void ConsoleInput()
         {
-            var rpcResultHandler = new AsyncCallback(_ => Console.WriteLine(((JsonRpcStateAsync)_).Result));
-
             for (string line = Console.ReadLine(); !string.IsNullOrEmpty(line); line = Console.ReadLine())
             {
-                var async = new JsonRpcStateAsync(rpcResultHandler, null);
-                async.JsonRpc = line;
-                JsonRpcProcessor.Process(async);
+                JsonRpcProcessor.Process(line).ContinueWith(response => Console.WriteLine( response.Result ));
             }
         }
 
@@ -54,7 +47,7 @@ namespace TestServer_Console
         {
             Console.WriteLine("Starting benchmark");
            
-            var cnt = 50;
+            var cnt = 40;
             var iterations = 7;
             for (int iteration = 1; iteration <= iterations; iteration++)
             {
@@ -62,37 +55,28 @@ namespace TestServer_Console
                 ctr = 0;
                 var sw = Stopwatch.StartNew();
                 AutoResetEvent are = new AutoResetEvent(false);
-                var rpcResultHandler = new AsyncCallback(_ => 
-                    {
-                        if(Interlocked.Increment(ref ctr) == cnt)
+
+                var fn = new Action<System.Threading.Tasks.Task<String>>(_ => {
+                    if(Interlocked.Increment(ref ctr) == cnt)
                         {
                             sw.Stop();
                             Console.WriteLine("processed {0} rpc in {1}ms for {2} rpc/sec",cnt,sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
                             are.Set();
                         }
-                    });
+                });
 
+                var sessionid = Handler.DefaultSessionId();
                 for (int i = 0; i < cnt; i+=5)
                 {
-                    var async = new JsonRpcStateAsync(rpcResultHandler, null);
-                    async.JsonRpc = "{'method':'add','params':[1,2],'id':1}";
-                    JsonRpcProcessor.Process(async);
+                    JsonRpcProcessor.Process(sessionid, "{'method':'add','params':[1,2],'id':1}").ContinueWith(fn);
 
-                    async = new JsonRpcStateAsync(rpcResultHandler, null);
-                    async.JsonRpc = "{'method':'addInt','params':[1,7],'id':2}";
-                    JsonRpcProcessor.Process(async);
+                    JsonRpcProcessor.Process(sessionid, "{'method':'addInt','params':[1,7],'id':2}").ContinueWith(fn);
 
-                    async = new JsonRpcStateAsync(rpcResultHandler, null);
-                    async.JsonRpc = "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}";
-                    JsonRpcProcessor.Process(async);
+                    JsonRpcProcessor.Process(sessionid, "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}").ContinueWith(fn);
 
-                    async = new JsonRpcStateAsync(rpcResultHandler, null);
-                    async.JsonRpc = "{'method':'Test2','params':[3.456],'id':4}";
-                    JsonRpcProcessor.Process(async);
+                    JsonRpcProcessor.Process(sessionid, "{'method':'Test2','params':[3.456],'id':4}").ContinueWith(fn);
 
-                    async = new JsonRpcStateAsync(rpcResultHandler, null);
-                    async.JsonRpc = "{'method':'StringMe','params':['Foo'],'id':5}";
-                    JsonRpcProcessor.Process(async);
+                    JsonRpcProcessor.Process(sessionid, "{'method':'StringMe','params':['Foo'],'id':5}").ContinueWith(fn);
                 }
                 are.WaitOne();
             }
