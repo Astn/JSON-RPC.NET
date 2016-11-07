@@ -13,67 +13,6 @@ namespace AustinHarris.JsonRpc
 {
     public static class JsonRpcProcessor
     {
-        public static void AsyncProcess(string jsonRpc, Action<string> callback, object context = null)
-        {
-            AsyncProcess(Handler.DefaultSessionId(), jsonRpc, callback, context);
-        }
-
-        public static void AsyncProcess(string sessionId,string jsonRpc, Action<string> callback, object context = null)
-        {
-            Task.Factory.StartNew(() =>
-            {
-                //callback is stored to thread's local storage in order to get it directly from concrete JsonRpcService method implementation
-                //where callback is just returned from method
-                //Thread.SetData(Thread.GetNamedDataSlot(THREAD_CALLBACK_SLOT_NAME), callback);
-                var str = ProcessInternal(sessionId, jsonRpc, context);
-                callback.Invoke(str);
-            });
-        }
-
-        /// <summary>
-        /// The callback will be returned to the user, who needs to invoke it in concrete
-        /// service implementation. Call should be made directly from same thread as
-        /// service method is executed. 
-        /// </summary>
-        /// <param name="sessionId">Handler session id</param>
-        /// <returns></returns>
-        public static Action<JsonResponse> GetAsyncProcessCallback(string sessionId = "")
-        {
-            Handler handler;
-            if ("" == sessionId)
-            {
-                handler = Handler.GetSessionHandler(Handler.DefaultSessionId());
-            }
-            else 
-            {
-                handler = Handler.GetSessionHandler(sessionId);
-            } 
-
-            return GetAsyncCallback();
-        }
-
-        private const string THREAD_CALLBACK_SLOT_NAME = "Callback";
-
-        /// <summary>
-        /// Method returns the actual callback set to this thread in Handle() method.
-        /// If callback is not set, then empty callback is returned.
-        /// </summary>
-        /// <returns></returns>
-        internal static Action<JsonResponse> GetAsyncCallback()
-        {
-            object o = Thread.GetData(Thread.GetNamedDataSlot(THREAD_CALLBACK_SLOT_NAME));
-            Action<JsonResponse> callback;
-            if (o is Action<JsonResponse>)
-            {
-                callback = o as Action<JsonResponse>;
-            }
-            else
-            {
-                callback = delegate(JsonResponse a) { };
-            }
-            return callback;
-        }
-
         public static void Process(JsonRpcStateAsync async, object context = null)
         {
             Process(Handler.DefaultSessionId(), async, context);
