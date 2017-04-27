@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
 namespace AustinHarris.JsonRpc
 {
@@ -15,6 +11,16 @@ namespace AustinHarris.JsonRpc
         public JsonRequest()
         {
         }
+
+        public JsonRequest(string method, object pars, object id)
+        {
+            Method = method;
+            Params = pars;
+            Id = id;
+        }
+
+        [JsonProperty("jsonrpc")]
+        public string JsonRpc => "2.0";
 
         [JsonProperty("method")]
         public string Method { get; set; }
