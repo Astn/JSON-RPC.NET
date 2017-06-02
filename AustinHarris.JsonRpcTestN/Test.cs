@@ -113,40 +113,17 @@ namespace AustinHarris.JsonRpcTestN
             Assert.AreEqual(expectedDate, acutalDate);
         }
 
-        [Test()]
-        public void NullableFloatToNullableFloat()
+        [TestCase(@"{method:'NullableFloatToNullableFloat',params:[1.2345],id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.2345,\"id\":1}")]
+        [TestCase(@"{method:'NullableFloatToNullableFloat',params:[3.14159],id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":3.14159,\"id\":1}")]
+        [TestCase(@"{method:'NullableFloatToNullableFloat',params:[null],id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":null,\"id\":1}")]
+        public string NullableFloatToNullableFloat(string request)
         {
-            string request = @"{method:'NullableFloatToNullableFloat',params:[1.2345],id:1}";
-            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.2345,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
-            Assert.AreEqual(result.Result, expectedResult);
-            Assert.AreEqual(expectedResult, result.Result);
+            return result.Result;
         }
-
-        [Test()]
-        public void NullableFloatToNullableFloat3()
-        {
-            string request = @"{method:'NullableFloatToNullableFloat',params:[3.14159],id:1}";
-            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":3.14159,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
-            result.Wait();
-            Assert.AreEqual(result.Result, expectedResult);
-            Assert.AreEqual(expectedResult, result.Result);
-        }
-
-
-        [Test()]
-        public void NullableFloatToNullableFloat2()
-        {
-            string request = @"{method:'NullableFloatToNullableFloat',params:[null],id:1}";
-            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":null,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
-            result.Wait();
-            Assert.AreEqual(result.Result, expectedResult);
-            Assert.AreEqual(expectedResult, result.Result);
-        }
-
+        
+      
         [Test()]
         public void DecimalToNullableDecimal()
         {
