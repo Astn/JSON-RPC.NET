@@ -7,7 +7,7 @@ namespace TestServer_AspNet.JsonRpcServiceClasses
         [JsonRpcMethod]
         private string helloWorld(string message)
         {
-            return $"Hello World Service recieved a message: [{message}]";
+            return "Hello World " + message;
         }
     }
 }
