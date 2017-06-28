@@ -36,22 +36,22 @@ namespace AustinHarris.JsonRpc
 
         // alexbclarke: Original implementation will cause "An item with the same key has already been added."
         // when called multiple times from Global.asax.cs Init() method
-        //internal void AddService(string method, Dictionary<string,Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
-        //{
-        //    var newService = new SMDService(transport,"JSON-RPC-2.0",parameters, defaultValues, dele);
-        //    Services.Add(method,newService);
-        //}
-
-        // alexbclarke: Suggesed fix.
-        // Check is a method has already been added before adding it.
         internal void AddService(string method, Dictionary<string, Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
         {
-            if (!Services.ContainsKey(method))
-            {
-                var newService = new SMDService(transport, "JSON-RPC-2.0", parameters, defaultValues, dele);
-                Services.Add(method, newService);
-            }
+            var newService = new SMDService(transport, "JSON-RPC-2.0", parameters, defaultValues, dele);
+            Services.Add(method, newService);
         }
+
+        //// alexbclarke: Suggesed fix.
+        //// Check is a method has already been added before adding it.
+        //internal void AddService(string method, Dictionary<string, Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
+        //{
+        //    if (!Services.ContainsKey(method))
+        //    {
+        //        var newService = new SMDService(transport, "JSON-RPC-2.0", parameters, defaultValues, dele);
+        //        Services.Add(method, newService);
+        //    }
+        //}
 
         public static int AddType(JObject jo)
         {
