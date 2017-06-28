@@ -1880,9 +1880,10 @@ namespace AustinHarris.JsonRpcTestN
         }
 
         [Test]
-        public void AnItemWithTheSameKeyHasAlreadyBeenAdded_WhenInstantiatingAServiceMoreThanOnce()
+        public void InstantiatingAServiceMoreThanOnceDoesNotThrow()
         {
-            Assert.Throws<ArgumentException>(()=>new CalculatorService());
+            Assert.DoesNotThrow(()=>new CalculatorService());
+            Assert.DoesNotThrow(() => new CalculatorService());
         }
 
         private static void AssertJsonAreEqual(string expectedJson, string actualJson)
