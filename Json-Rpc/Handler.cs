@@ -14,13 +14,14 @@
     public class Handler
     {
         #region Members
-
+        private const string Name_of_JSONRPCEXCEPTION = "JsonRpcException&";
         private static int _sessionHandlerMasterVersion = 1;
+        [ThreadStatic]
+        private static Dictionary<string, Handler> _sessionHandlersLocal;
         [ThreadStatic]
         private static int _sessionHandlerLocalVersion = 0;
         private static ConcurrentDictionary<string, Handler> _sessionHandlersMaster;
-        [ThreadStatic]
-        private static Dictionary<string, Handler> _sessionHandlersLocal;
+        
         private static volatile string _defaultSessionId;
         #endregion
 
@@ -212,13 +213,10 @@
 
             SMDService metadata = null;
             Delegate handle = null;
-            var haveMetadata = this.MetaData.Services.TryGetValue(Rpc.Method, out metadata);
-            if (haveMetadata)
+            if (this.MetaData.Services.TryGetValue(Rpc.Method, out metadata))
             {
                 handle = metadata.dele; 
-            }
-
-            if (haveMetadata == false || metadata == null)
+            } else if (metadata == null)
             {
                 JsonResponse response = new JsonResponse()
                 {
@@ -229,53 +227,45 @@
                 return PostProcess(Rpc, response, RpcContext);
             }
 
-            bool isJObject = Rpc.Params is Newtonsoft.Json.Linq.JObject;
-            bool isJArray = Rpc.Params is Newtonsoft.Json.Linq.JArray;
             object[] parameters = null;
             bool expectsRefException = false;
             var metaDataParamCount = metadata.parameters.Count(x => x != null);
 
-            var getCount = Rpc.Params as ICollection;
+            
             var loopCt = 0;
-
+            var getCount = Rpc.Params as ICollection;
             if (getCount != null)
             {
                 loopCt = getCount.Count;
             }
 
             var paramCount = loopCt;
-            if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount - 1].ObjectType.Name.Contains(typeof(JsonRpcException).Name))
+            if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount - 1].ObjectType.Name.Equals(Name_of_JSONRPCEXCEPTION))
             {
                 paramCount++;
                 expectsRefException = true;
             }
             parameters = new object[paramCount];
 
-            if (isJArray)
+            if (Rpc.Params is Newtonsoft.Json.Linq.JArray)
             {
                 var jarr = ((Newtonsoft.Json.Linq.JArray)Rpc.Params);
-                //var loopCt = jarr.Count;
-                //var pCount = loopCt;
-                //if (pCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount].GetType() == typeof(JsonRpcException))
-                //    pCount++;
-                //parameters = new object[pCount];
                 for (int i = 0; i < loopCt; i++)
                 {
                     parameters[i] = CleanUpParameter(jarr[i], metadata.parameters[i]);
                 }
             }
-            else if (isJObject)
+            else if (Rpc.Params is Newtonsoft.Json.Linq.JObject)
             {
-                var jo = Rpc.Params as Newtonsoft.Json.Linq.JObject;
-                //var loopCt = jo.Count;
-                //var pCount = loopCt;
-                //if (pCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount].GetType() == typeof(JsonRpcException))
-                //    pCount++;
-                //parameters = new object[pCount];
-                var asDict = jo as IDictionary<string, Newtonsoft.Json.Linq.JToken>;
+                var asDict = Rpc.Params as IDictionary<string, Newtonsoft.Json.Linq.JToken>;
                 for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
                 {
-                    if (asDict.ContainsKey(metadata.parameters[i].Name) == false)
+                    if (asDict.ContainsKey(metadata.parameters[i].Name) == true)
+                    {
+                        parameters[i] = CleanUpParameter(asDict[metadata.parameters[i].Name], metadata.parameters[i]);
+                        continue;
+                    }
+                    else
                     {
                         JsonResponse response = new JsonResponse()
                         {
@@ -289,7 +279,6 @@
                         };
                         return PostProcess(Rpc, response, RpcContext);
                     }
-                    parameters[i] = CleanUpParameter(jo[metadata.parameters[i].Name], metadata.parameters[i]);
                 }
             }
 
@@ -348,17 +337,20 @@
                 
                 var last = parameters.LastOrDefault();
                 var contextException = RpcGetAndRemoveRpcException();
+                JsonResponse response = null;
                 if (contextException != null)
                 {
-                    JsonResponse response = new JsonResponse() { Error = ProcessException(Rpc, contextException), Id = Rpc.Id };
-                    return PostProcess(Rpc, response, RpcContext);
+                    response = new JsonResponse() { Error = ProcessException(Rpc, contextException), Id = Rpc.Id };
                 }
-                if (expectsRefException && last != null && last is JsonRpcException)
+                else if (expectsRefException && last != null && last is JsonRpcException)
                 {
-                    JsonResponse response = new JsonResponse() { Error = ProcessException(Rpc, last as JsonRpcException), Id = Rpc.Id };
-                    return PostProcess(Rpc, response, RpcContext);
+                    response = new JsonResponse() { Error = ProcessException(Rpc, last as JsonRpcException), Id = Rpc.Id };
                 }
-                return PostProcess(Rpc, new JsonResponse() { Result = results }, RpcContext);
+                else
+                {
+                    response = new JsonResponse() { Result = results };
+                }
+                return PostProcess(Rpc, response, RpcContext);
             }
             catch (Exception ex)
             {
@@ -492,9 +484,7 @@
 
         private JsonRpcException PreProcess(JsonRequest request, object context)
         {
-            if (externalPreProcessingHandler == null)
-                return null;
-            return externalPreProcessingHandler(request, context);
+            return externalPreProcessingHandler == null ? null : externalPreProcessingHandler(request, context);
         }
 
         private JsonResponse PostProcess(JsonRequest request, JsonResponse response, object context)
