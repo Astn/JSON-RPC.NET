@@ -431,13 +431,13 @@
         private object CleanUpParameter(object p, SMDAdditionalParameters metaData)
         {
             var bob = p as JValue;
-            //if (bob != null && (bob.Value == null || bob.Value.GetType() == metaData.ObjectType))
-            if (bob != null && (bob.Value == null))
-            {
-                return bob.Value;
-            }
+
             if (bob != null)
             {
+                if (bob.Value == null || metaData.ObjectType == bob.Value.GetType())
+                {
+                    return bob.Value;
+                }
 
                 // Avoid calling DeserializeObject on types that JValue has an explicit converter for
                 // try to optimize for the most common types
