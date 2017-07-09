@@ -72,11 +72,11 @@ namespace AustinHarris.JsonRpcTestN
 
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
-            string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
+            string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32601,\"message\":\"Method not found\",\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
+
             var result = JsonRpcProcessor.Process("this one", request);
             result.Wait();
-
-
+            
             var actual1 = JObject.Parse(result.Result);
             var expected1 = JObject.Parse(expectedResult);
             Assert.AreEqual(expected1, actual1);
@@ -170,7 +170,7 @@ namespace AustinHarris.JsonRpcTestN
         public void StringToRefException()
         {
             string request = @"{method:'StringToRefException',params:['some string'],id:1}";
-            string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"refException worked\",\"code\":-1,\"data\":null},\"id\":1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-1,\"message\":\"refException worked\",\"data\":null},\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.AreEqual(JObject.Parse(expectedResult), JObject.Parse(result.Result));
@@ -1575,7 +1575,7 @@ namespace AustinHarris.JsonRpcTestN
 
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
-            string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
+            string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32601,\"message\":\"Method not found\",\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
             var result = JsonRpcProcessor.Process(sessionId, request);
             result.Wait();
 
@@ -1781,7 +1781,7 @@ namespace AustinHarris.JsonRpcTestN
                 PostProcessHandlerLocal handler = new PostProcessHandlerLocal(true);
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
                 string request = @"{method:'TestPostProcessorThrowsException',params:{inputValue:'some string'},id:1}";
-                string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Test error\",\"code\":-123,\"data\":null},\"id\":1}";
+                string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-123,\"message\":\"Test error\",\"data\":null},\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
@@ -1815,7 +1815,7 @@ namespace AustinHarris.JsonRpcTestN
 
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
-            string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
+            string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32601,\"message\":\"Method not found\",\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
             var result = JsonRpcProcessor.Process(sessionId, request);
             result.Wait();
             
@@ -1877,13 +1877,6 @@ namespace AustinHarris.JsonRpcTestN
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.AreEqual(expected, result.Result);
-        }
-
-        [Test]
-        public void InstantiatingAServiceMoreThanOnceDoesNotThrow()
-        {
-            Assert.DoesNotThrow(()=>new CalculatorService());
-            Assert.DoesNotThrow(() => new CalculatorService());
         }
 
         private static void AssertJsonAreEqual(string expectedJson, string actualJson)
