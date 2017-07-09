@@ -43,13 +43,17 @@ namespace AustinHarris.JsonRpc
         //}
 
         // alexbclarke: Suggesed fix.
-        // Check is a method has already been added before adding it.
         internal void AddService(string method, Dictionary<string, Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
         {
             if (!Services.ContainsKey(method))
             {
                 var newService = new SMDService(transport, "JSON-RPC-2.0", parameters, defaultValues, dele);
                 Services.Add(method, newService);
+            }
+            else
+            {
+                throw new ArgumentException($"Failed to register method '{method}' in class '{dele.Target.ToString()}'. " + 
+                                            "A method with the same name has already been registered.");
             }
         }
 
