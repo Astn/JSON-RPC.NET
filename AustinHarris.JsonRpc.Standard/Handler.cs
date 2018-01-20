@@ -5,9 +5,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
-    using Newtonsoft.Json;
     using System.Collections.Concurrent;
-    using Newtonsoft.Json.Linq;
     using System.Threading;
 
     public class Handler
@@ -20,7 +18,7 @@
         [ThreadStatic]
         private static int _sessionHandlerLocalVersion = 0;
         private static ConcurrentDictionary<string, Handler> _sessionHandlersMaster;
-        
+        internal static IObjectFactory _objectFactory;
         private static volatile string _defaultSessionId;
         #endregion
 
@@ -31,13 +29,21 @@
             //current = new Handler(Guid.NewGuid().ToString());
             _defaultSessionId = Guid.NewGuid().ToString();
             _sessionHandlersMaster = new ConcurrentDictionary<string, Handler>();
-            _sessionHandlersMaster[_defaultSessionId] = new Handler(_defaultSessionId);
         }
 
         private Handler(string sessionId)
         {
             SessionId = sessionId;
             this.MetaData = new SMD();
+            if(_objectFactory == null)
+            {
+                throw new InvalidOperationException("Configure must be called before Handler is created.");
+            }
+        }
+
+        public static void Configure(IObjectFactory factory)
+        {
+            _objectFactory = factory ?? throw new ArgumentNullException("factory");
         }
 
         #endregion
@@ -108,6 +114,8 @@
         /// </summary>
         public string SessionId { get; private set; }
 
+
+
         /// <summary>
         /// Provides access to a context specific to each JsonRpc method invocation.
         /// Warning: Must be called from within the execution context of the jsonRpc Method to return the context
@@ -119,17 +127,17 @@
         }
 
         [ThreadStatic]
-        static JsonRpcException __currentRpcException;
+        static IJsonRpcException __currentRpcException;
         /// <summary>
         /// Allows you to set the exception used in in the JsonRpc response.
         /// Warning: Must be called from the same thread as the jsonRpc method.
         /// </summary>
         /// <param name="exception"></param>
-        public static void RpcSetException(JsonRpcException exception)
+        public static void RpcSetException(IJsonRpcException exception)
         {
             __currentRpcException = exception;
         }
-        public static JsonRpcException RpcGetAndRemoveRpcException()
+        public static IJsonRpcException RpcGetAndRemoveRpcException()
         {
             var ex = __currentRpcException;
             __currentRpcException = null ;
@@ -138,8 +146,8 @@
 
         private AustinHarris.JsonRpc.PreProcessHandler externalPreProcessingHandler;
         private AustinHarris.JsonRpc.PostProcessHandler externalPostProcessingHandler;
-        private Func<JsonRequest, JsonRpcException, JsonRpcException> externalErrorHandler;
-        private Func<string, JsonRpcException, JsonRpcException> parseErrorHandler;
+        private Func<IJsonRequest, IJsonRpcException, IJsonRpcException> externalErrorHandler;
+        private Func<string, IJsonRpcException, IJsonRpcException> parseErrorHandler;
         #endregion
 
         /// <summary>
@@ -193,18 +201,14 @@
         /// <param name="Rpc">JsonRpc Request to be processed</param>
         /// <param name="RpcContext">Optional context that will be available from within the jsonRpcMethod.</param>
         /// <returns></returns>
-        public JsonResponse Handle(JsonRequest Rpc, Object RpcContext = null)
+        public IJsonResponse Handle(IJsonRequest Rpc, Object RpcContext = null)
         {
             AddRpcContext(RpcContext);
 
             var preProcessingException = PreProcess(Rpc, RpcContext);
             if (preProcessingException != null)
             {
-                JsonResponse response = new JsonResponse()
-                {
-                    Error = preProcessingException,
-                    Id = Rpc.Id
-                };
+                IJsonResponse response = _objectFactory.CreateJsonErrorResponse(preProcessingException);
                 //callback is called - if it is empty then nothing will be done
                 //return response always- if callback is empty or not
                 return PostProcess(Rpc, response, RpcContext);
@@ -217,18 +221,13 @@
                 handle = metadata.dele; 
             } else if (metadata == null)
             {
-                JsonResponse response = new JsonResponse()
-                {
-                    Result = null,
-                    Error = new JsonRpcException(-32601, "Method not found", "The method does not exist / is not available."),
-                    Id = Rpc.Id
-                };
+                var response = _objectFactory.CreateJsonErrorResponse(_objectFactory.CreateException(-32601, "Method not found", "The method does not exist / is not available."));
                 return PostProcess(Rpc, response, RpcContext);
             }
 
             object[] parameters = null;
             bool expectsRefException = false;
-            var metaDataParamCount = metadata.parameters.Count(x => x != null);
+            var metaDataParamCount = metadata.parameters.Length;
 
             
             var loopCt = 0;
@@ -239,43 +238,39 @@
             }
 
             var paramCount = loopCt;
-            if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount - 1].ObjectType.Name.Equals(Name_of_JSONRPCEXCEPTION))
+            if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount - 1].Value.Name.Equals(Name_of_JSONRPCEXCEPTION))
             {
                 paramCount++;
                 expectsRefException = true;
             }
             parameters = new object[paramCount];
 
-            if (Rpc.Params is Newtonsoft.Json.Linq.JArray)
+            if (Rpc.Params is IList<Object>)
             {
-                var jarr = ((Newtonsoft.Json.Linq.JArray)Rpc.Params);
+                var jarr = ((IList)Rpc.Params);
                 for (int i = 0; i < loopCt; i++)
                 {
                     parameters[i] = CleanUpParameter(jarr[i], metadata.parameters[i]);
                 }
             }
-            else if (Rpc.Params is Newtonsoft.Json.Linq.JObject)
+            else if (Rpc.Params is IDictionary<string, Object>)
             {
-                var asDict = Rpc.Params as IDictionary<string, Newtonsoft.Json.Linq.JToken>;
+                var asDict = Rpc.Params as IDictionary<string, Object>;
                 for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
                 {
-                    if (asDict.ContainsKey(metadata.parameters[i].Name) == true)
+                    if (asDict.ContainsKey(metadata.parameters[i].Key) == true)
                     {
-                        parameters[i] = CleanUpParameter(asDict[metadata.parameters[i].Name], metadata.parameters[i]);
+                        parameters[i] = CleanUpParameter(asDict[metadata.parameters[i].Key], metadata.parameters[i]);
                         continue;
                     }
                     else
                     {
-                        JsonResponse response = new JsonResponse()
-                        {
-                            Error = ProcessException(Rpc,
-                            new JsonRpcException(-32602,
+                        var response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc,
+                            _objectFactory.CreateException(-32602,
                                 "Invalid params",
                                 string.Format("Named parameter '{0}' was not present.",
-                                                metadata.parameters[i].Name)
-                                )),
-                            Id = Rpc.Id
-                        };
+                                                metadata.parameters[i].Key)
+                                )));
                         return PostProcess(Rpc, response, RpcContext);
                     }
                 }
@@ -299,34 +294,26 @@
 
                 if (missingParamsCount > metadata.defaultValues.Length)
                 {
-                    JsonResponse response = new JsonResponse
-                    {
-                        Error = ProcessException(Rpc,
-                            new JsonRpcException(-32602,
+                    var response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc,
+                            _objectFactory.CreateException(-32602,
                                 "Invalid params",
                                 string.Format(
                                     "Number of default parameters {0} not sufficient to fill all missing parameters {1}",
                                     metadata.defaultValues.Length, missingParamsCount)
-                                )),
-                        Id = Rpc.Id
-                    };
+                                )));
                     return PostProcess(Rpc, response, RpcContext);
                 }
             }
 
             if (parameters.Length != metaDataParamCount)
             {
-                JsonResponse response = new JsonResponse()
-                {
-                    Error = ProcessException(Rpc,
-                    new JsonRpcException(-32602,
+                var response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc,
+                    _objectFactory.CreateException(-32602,
                         "Invalid params",
                         string.Format("Expecting {0} parameters, and received {1}",
                                         metadata.parameters.Length,
                                         parameters.Length)
-                        )),
-                    Id = Rpc.Id
-                };
+                        )));
                 return PostProcess(Rpc, response, RpcContext);
             }
 
@@ -336,48 +323,48 @@
                 
                 var last = parameters.LastOrDefault();
                 var contextException = RpcGetAndRemoveRpcException();
-                JsonResponse response = null;
+                IJsonResponse response = null;
                 if (contextException != null)
                 {
-                    response = new JsonResponse() { Error = ProcessException(Rpc, contextException), Id = Rpc.Id };
+                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, contextException));
                 }
-                else if (expectsRefException && last != null && last is JsonRpcException)
+                else if (expectsRefException && last != null && last is IJsonRpcException)
                 {
-                    response = new JsonResponse() { Error = ProcessException(Rpc, last as JsonRpcException), Id = Rpc.Id };
+                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, last as IJsonRpcException));
                 }
                 else
                 {
-                    response = new JsonResponse() { Result = results };
+                    response = _objectFactory.CreateJsonSuccessResponse(results);
                 }
                 return PostProcess(Rpc, response, RpcContext);
             }
             catch (Exception ex)
             {
-                JsonResponse response;
+                IJsonResponse response;
                 if (ex is TargetParameterCountException)
                 {
-                    response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32602, "Invalid params", ex)) };
+                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, _objectFactory.CreateException(-32602, "Invalid params", ex)));
                     return PostProcess(Rpc, response, RpcContext);
                 }
 
                 // We really dont care about the TargetInvocationException, just pass on the inner exception
-                if (ex is JsonRpcException)
+                if (ex is IJsonRpcException)
                 {
-                    response = new JsonResponse() { Error = ProcessException(Rpc, ex as JsonRpcException) };
+                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, ex as IJsonRpcException));
                     return PostProcess(Rpc, response, RpcContext);
                 }
-                if (ex.InnerException != null && ex.InnerException is JsonRpcException)
+                if (ex.InnerException != null && ex.InnerException is IJsonRpcException)
                 {
-                    response = new JsonResponse() { Error = ProcessException(Rpc, ex.InnerException as JsonRpcException) };
+                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, ex.InnerException as IJsonRpcException));
                     return PostProcess(Rpc, response, RpcContext);
                 }
                 else if (ex.InnerException != null)
                 {
-                    response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex.InnerException)) };
+                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, _objectFactory.CreateException(-32603, "Internal Error", ex.InnerException)));
                     return PostProcess(Rpc, response, RpcContext);
                 }
 
-                response = new JsonResponse() { Error = ProcessException(Rpc, new JsonRpcException(-32603, "Internal Error", ex)) };
+                response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, _objectFactory.CreateException(-32603, "Internal Error", ex)));
                 return PostProcess(Rpc, response, RpcContext);
             }
             finally
@@ -398,109 +385,72 @@
             __currentRpcContext = null;
         }
 
-        private JsonRpcException ProcessException(JsonRequest req, JsonRpcException ex)
+        private IJsonRpcException ProcessException(IJsonRequest req, IJsonRpcException ex)
         {
             if (externalErrorHandler != null)
                 return externalErrorHandler(req, ex);
             return ex;
         }
-        internal JsonRpcException ProcessParseException(string req, JsonRpcException ex)
+        internal IJsonRpcException ProcessParseException(string req, IJsonRpcException ex)
         {
             if (parseErrorHandler != null)
                 return parseErrorHandler(req, ex);
             return ex;
         }
-        internal void SetErrorHandler(Func<JsonRequest, JsonRpcException, JsonRpcException> handler)
+        internal void SetErrorHandler(Func<IJsonRequest, IJsonRpcException, IJsonRpcException> handler)
         {
             externalErrorHandler = handler;
         }
-        internal void SetParseErrorHandler(Func<string, JsonRpcException, JsonRpcException> handler)
+        internal void SetParseErrorHandler(Func<string, IJsonRpcException, IJsonRpcException> handler)
         {
             parseErrorHandler = handler;
         }
        
-        private object CleanUpParameter(object p, SMDAdditionalParameters metaData)
+        private object CleanUpParameter(object input, KeyValuePair<string,Type> metaData)
         {
-            var bob = p as JValue;
-
-            if (bob != null)
+            try
             {
-                if (bob.Value == null || metaData.ObjectType == bob.Value.GetType())
+                if (metaData.Value.IsAssignableFrom(input.GetType()))
                 {
-                    return bob.Value;
+                    return input;
                 }
-
-                // Avoid calling DeserializeObject on types that JValue has an explicit converter for
-                // try to optimize for the most common types
-                if (metaData.ObjectType == typeof(string)) return (string)bob;
-                if (metaData.ObjectType == typeof(int)) return (int)bob;
-                if (metaData.ObjectType == typeof(double)) return (double)bob;
-                if (metaData.ObjectType == typeof(float)) return (float)bob;
-                //if (metaData.ObjectType == typeof(long)) return (long)bob;
-                //if (metaData.ObjectType == typeof(uint)) return (uint)bob;
-                //if (metaData.ObjectType == typeof(ulong)) return (ulong)bob;
-                //if (metaData.ObjectType == typeof(byte[])) return (byte[])bob;
-                //if (metaData.ObjectType == typeof(Guid)) return (Guid)bob;
-                if (metaData.ObjectType == typeof(decimal)) return (decimal)bob;
-                //if (metaData.ObjectType == typeof(TimeSpan)) return (TimeSpan)bob;
-                //if (metaData.ObjectType == typeof(short)) return (short)bob;
-                //if (metaData.ObjectType == typeof(ushort)) return (ushort)bob;
-                //if (metaData.ObjectType == typeof(char)) return (char)bob;
-                //if (metaData.ObjectType == typeof(DateTime)) return (DateTime)bob;
-                //if (metaData.ObjectType == typeof(bool)) return (bool)bob;
-                //if (metaData.ObjectType == typeof(DateTimeOffset)) return (DateTimeOffset)bob;
-
-                if (metaData.ObjectType.IsAssignableFrom(typeof(JValue)))
-                    return bob;
-
-                try
+                else if (input is string)
                 {
-                    return bob.ToObject(metaData.ObjectType);
+                    return _objectFactory.DeserializeJson((string)input, metaData.Value);
                 }
-                catch (Exception ex)
+                else
                 {
-                    // no need to throw here, they will
-                    // get an invalid cast exception right after this.
+                    return _objectFactory.DeserializeJson(input.ToString(), metaData.Value);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                try
-                {
-                    if (p is string)
-                        return JsonConvert.DeserializeObject((string)p, metaData.ObjectType);
-                    return JsonConvert.DeserializeObject(p.ToString(), metaData.ObjectType);
-                }
-                catch (Exception ex)
-                {
-                    // no need to throw here, they will
-                    // get an invalid cast exception right after this.
-                }
+                // no need to throw here, they will
+                // get an invalid cast exception right after this.
             }
-
-            return p;
+            return input;
         }
 
-        private JsonRpcException PreProcess(JsonRequest request, object context)
+        private IJsonRpcException PreProcess(IJsonRequest request, object context)
         {
             return externalPreProcessingHandler == null ? null : externalPreProcessingHandler(request, context);
         }
 
-        private JsonResponse PostProcess(JsonRequest request, JsonResponse response, object context)
+        private IJsonResponse PostProcess(IJsonRequest request, IJsonResponse response, object context)
         {
             if (externalPostProcessingHandler != null)
             {
                 try
                 {
-                    JsonRpcException exception = externalPostProcessingHandler(request, response, context);
+                    IJsonRpcException exception = externalPostProcessingHandler(request, response, context);
                     if (exception != null)
                     {
-                        response = new JsonResponse() { Error = exception };
+                        response = _objectFactory.CreateJsonErrorResponse( exception );
                     }
                 }
                 catch (Exception ex)
                 {
-                    response = new JsonResponse() { Error = ProcessException(request, new JsonRpcException(-32603, "Internal Error", ex)) };
+                    response = _objectFactory.CreateJsonErrorResponse( ProcessException(request, _objectFactory.CreateException(-32603, "Internal Error", ex)) );
                 }
             }
             return response;

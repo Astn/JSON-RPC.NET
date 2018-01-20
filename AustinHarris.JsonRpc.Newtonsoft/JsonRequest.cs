@@ -1,12 +1,12 @@
 ﻿using Newtonsoft.Json;
 
-namespace AustinHarris.JsonRpc
+namespace AustinHarris.JsonRpc.Newtonsoft
 {
     /// <summary>
     /// Represents a JsonRpc request
     /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
-    public class JsonRequest
+    public class JsonRequest : IJsonRequest
     {
         public JsonRequest()
         {

@@ -9,7 +9,7 @@ namespace AustinHarris.JsonRpc
     /// <param name="request">The jsonRpc Request that is pending processing.</param>
     /// <param name="context">The context associated with this request</param>
     /// <returns>Any non-null result causes the operation to be aborted, and the JsonRpcException is returned to the caller.</returns>
-    public delegate JsonRpcException PreProcessHandler(JsonRequest request, object context);
+    public delegate IJsonRpcException PreProcessHandler(IJsonRequest request, object context);
     /// <summary>
     /// The PostProcessHandler is called after the response has been created and prior to returning the data to the caller.
     /// If any non-null result is returned from the PostProcessHandler, the current return value is discared and the new return value used
@@ -19,13 +19,22 @@ namespace AustinHarris.JsonRpc
     /// <param name="response">The jsonRpc Response that has been created.</param>
     /// <param name="context">The context associated with this request/response pair</param>
     /// <returns>Any non-null result causes the result to be discarded and the JsonRpcException is returned to the caller.</returns>
-    public delegate JsonRpcException PostProcessHandler(JsonRequest request, JsonResponse response, object context);
+    public delegate IJsonRpcException PostProcessHandler(IJsonRequest request, IJsonResponse response, object context);
 
     /// <summary>
     /// Global configurations for JsonRpc
     /// </summary>
     public static class Config
     {
+        /// <summary>
+        /// Sets the object factory to be used.
+        /// </summary>
+        /// <param name="handler"></param>
+        public static void ConfigureFactory(IObjectFactory factory)
+        {
+            Handler.Configure(factory);
+        }
+
         /// <summary>
         /// Sets the the PreProcessing Handler on the default session.
         /// </summary>
@@ -60,7 +69,7 @@ namespace AustinHarris.JsonRpc
         /// You are able to modify the error that is returned inside the provided handler.
         /// </summary>
         /// <param name="handler"></param>
-        public static void SetErrorHandler(Func<JsonRequest, JsonRpcException, JsonRpcException> handler)
+        public static void SetErrorHandler(Func<IJsonRequest, IJsonRpcException, IJsonRpcException> handler)
         {
             Handler.DefaultHandler.SetErrorHandler(handler);
         }
@@ -72,7 +81,7 @@ namespace AustinHarris.JsonRpc
         /// </summary>
         /// <param name="sessionId"></param>
         /// <param name="handler"></param>
-        public static void SetErrorHandler(string sessionId, Func<JsonRequest, JsonRpcException, JsonRpcException> handler)
+        public static void SetErrorHandler(string sessionId, Func<IJsonRequest, IJsonRpcException, IJsonRpcException> handler)
         {
             Handler.GetSessionHandler(sessionId).SetErrorHandler(handler);
         }
@@ -83,7 +92,7 @@ namespace AustinHarris.JsonRpc
         /// You are able to modify the error that is returned inside the provided handler.
         /// </summary>
         /// <param name="handler"></param>
-        public static void SetParseErrorHandler(Func<string,JsonRpcException,JsonRpcException> handler)
+        public static void SetParseErrorHandler(Func<string,IJsonRpcException,IJsonRpcException> handler)
         {
             Handler.DefaultHandler.SetParseErrorHandler(handler);
         }
@@ -95,7 +104,7 @@ namespace AustinHarris.JsonRpc
         /// </summary>
         /// <param name="sessionId"></param>
         /// <param name="handler"></param>
-        public static void SetParseErrorHandler(string sessionId, Func<string, JsonRpcException, JsonRpcException> handler)
+        public static void SetParseErrorHandler(string sessionId, Func<string, IJsonRpcException, IJsonRpcException> handler)
         {
             Handler.GetSessionHandler(sessionId).SetParseErrorHandler(handler);
         }

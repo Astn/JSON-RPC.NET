@@ -21,7 +21,7 @@
         /// Warning: Must be called from within the execution context of the jsonRpc method to function.
         /// </summary>
         /// <param name="exception"></param>
-        public static void SetException(JsonRpcException exception)
+        public static void SetException(IJsonRpcException exception)
         {
             Handler.RpcSetException(exception);
         }

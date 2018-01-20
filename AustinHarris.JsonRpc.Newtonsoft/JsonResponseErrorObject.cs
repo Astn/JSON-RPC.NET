@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 
-namespace AustinHarris.JsonRpc
+namespace AustinHarris.JsonRpc.Newtonsoft
 {
     /// <summary>
     ///  5.1 Error object
@@ -27,7 +27,7 @@ namespace AustinHarris.JsonRpc
     /// </summary>
     [Serializable]
     [JsonObject(MemberSerialization.OptIn)]    
-    public class JsonRpcException : System.ApplicationException
+    public class JsonRpcException : System.ApplicationException, IJsonRpcException
     {
         [JsonProperty]
         public int code { get; set; }

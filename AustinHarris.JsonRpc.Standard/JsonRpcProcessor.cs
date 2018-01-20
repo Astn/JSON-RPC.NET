@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using System.IO;
 using System.Text;
-using Newtonsoft.Json;
 
 namespace AustinHarris.JsonRpc
 {
@@ -40,34 +39,27 @@ namespace AustinHarris.JsonRpc
             var handler = Handler.GetSessionHandler(sessionId);
 
 
-            JsonRequest[] batch = null;
+            IJsonRequest[] batch = null;
             try
             {
                 if (isSingleRpc(jsonRpc))
                 {
-                    var foo = JsonConvert.DeserializeObject<JsonRequest>(jsonRpc);
+                    var foo = Handler._objectFactory.DeserializeRequest(jsonRpc);
                     batch = new[] { foo };
                 }
                 else
                 {
-                    batch = JsonConvert.DeserializeObject<JsonRequest[]>(jsonRpc);
+                    batch = Handler._objectFactory.DeserializeRequests(jsonRpc);
                 }
             }
             catch (Exception ex)
             {
-                return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
-                {
-                    Error = handler.ProcessParseException(jsonRpc, new JsonRpcException(-32700, "Parse error", ex))
-                });
+                return Handler._objectFactory.SerializeResponse(Handler._objectFactory.CreateJsonErrorResponse(handler.ProcessParseException(jsonRpc, Handler._objectFactory.CreateException(-32700, "Parse error", ex))));
             }
 
             if (batch.Length == 0)
             {
-                return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
-                {
-                    Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty."))
-                });
+                return Handler._objectFactory.SerializeResponse(Handler._objectFactory.CreateJsonErrorResponse(handler.ProcessParseException(jsonRpc, Handler._objectFactory.CreateException(3200, "Invalid Request", "Batch of calls was empty."))));
             }
 
             var singleBatch = batch.Length == 1;
@@ -75,18 +67,18 @@ namespace AustinHarris.JsonRpc
             for (var i = 0; i < batch.Length; i++)
             {
                 var jsonRequest = batch[i];
-                var jsonResponse = new JsonResponse();
+                var jsonResponse = Handler._objectFactory.CreateJsonResponse();
 
                 if (jsonRequest == null)
                 {
                     jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(-32700, "Parse error",
+                        Handler._objectFactory.CreateException(-32700, "Parse error",
                             "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
                 }
                 else if (jsonRequest.Method == null)
                 {
                     jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
+                        Handler._objectFactory.CreateException(-32600, "Invalid Request", "Missing property 'method'"));
                 }
                 else
                 {
@@ -106,29 +98,12 @@ namespace AustinHarris.JsonRpc
                     // result : This member is REQUIRED on success.
                     // This member MUST NOT exist if there was an error invoking the method.    
                     // Either the result member or error member MUST be included, but both members MUST NOT be included.
-                    jsonResponse.Result = new Newtonsoft.Json.Linq.JValue((Object)null);
+                    jsonResponse.Result = null;
                 }
                 // special case optimization for single Item batch
                 if (singleBatch && (jsonResponse.Id != null || jsonResponse.Error != null))
                 {
-                    StringWriter sw = new StringWriter();
-                    JsonTextWriter writer = new JsonTextWriter(sw);
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("jsonrpc"); writer.WriteValue("2.0");
-
-                    if (jsonResponse.Error != null)
-                    {
-                        writer.WritePropertyName("error"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Error));
-                    }
-                    else
-                    {
-                        writer.WritePropertyName("result"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Result));
-                    }
-                    writer.WritePropertyName("id"); writer.WriteValue(jsonResponse.Id);
-                    writer.WriteEndObject();
-                    return sw.ToString();
-
-                    //return JsonConvert.SerializeObject(jsonResponse);
+                    return Handler._objectFactory.SerializeResponse(jsonResponse);
                 }
                 else if (jsonResponse.Id == null && jsonResponse.Error == null)
                 {
@@ -143,7 +118,7 @@ namespace AustinHarris.JsonRpc
                         sbResult = new StringBuilder("[");
                     }
 
-                    sbResult.Append(JsonConvert.SerializeObject(jsonResponse));
+                    sbResult.Append(Handler._objectFactory.SerializeResponse(jsonResponse));
                     if (i < batch.Length - 1)
                     {
                         sbResult.Append(',');
