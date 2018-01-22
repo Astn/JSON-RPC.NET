@@ -47,7 +47,7 @@ namespace TestServer_Console
         private static void Benchmark()
         {
             Console.WriteLine("Starting benchmark");
-           
+            AustinHarris.JsonRpc.Config.ConfigureFactory(new AustinHarris.JsonRpc.Newtonsoft.ObjectFactory());
             var cnt = 50;
             var iterations = 7;
             for (int iteration = 1; iteration <= iterations; iteration++)
@@ -55,9 +55,12 @@ namespace TestServer_Console
                 cnt *= iteration;
                 ctr = 0;
                 Task<string>[] tasks = new Task<string>[cnt];
+                var sessionid = Handler.DefaultSessionId();
+                GC.Collect();
+                
                 var sw = Stopwatch.StartNew();
 
-                var sessionid = Handler.DefaultSessionId();
+                
                 for (int i = 0; i < cnt; i+=5)
                 {
                     tasks[i] = JsonRpcProcessor.Process(sessionid, "{'method':'add','params':[1,2],'id':1}");

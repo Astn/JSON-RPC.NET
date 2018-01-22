@@ -14,6 +14,5 @@
         IJsonResponse CreateJsonSuccessResponse(object result);
         IJsonResponse CreateJsonResponse();
         string SerializeResponse(IJsonResponse response);
-        string SerializeResponses(IJsonResponse[] response);
     }
 }
