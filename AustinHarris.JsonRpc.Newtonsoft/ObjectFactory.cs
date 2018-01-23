@@ -41,12 +41,12 @@ namespace AustinHarris.JsonRpc.Newtonsoft
             return JsonConvert.DeserializeObject(json, type);
         }
 
-        
+
 
         public IJsonRequest DeserializeRequest(string request)
-        {            
+        {
             var req = new JsonRequest();
-            var prop = String.Empty;
+            var prop = new Stack<String>();
             var ptype = String.Empty;
             JsonTextReader reader = new JsonTextReader(new StringReader(request));
             while (reader.Read())
@@ -55,33 +55,42 @@ namespace AustinHarris.JsonRpc.Newtonsoft
                 {
                     if (reader.TokenType == JsonToken.PropertyName)
                     {
-                        prop = (string)reader.Value;
+                        prop.Push( (string)reader.Value );
+                        continue;
                     }
-                    else if (reader.TokenType == JsonToken.String && prop == "method")
+                    else if (prop.Peek() == "jsonrpc" && prop.Count == 1)
+                    {
+                        //req.JsonRpc = (string)reader.Value;
+                        prop.Pop();
+                        continue;
+                    }
+                    else if (prop.Peek() == "method" && prop.Count == 1)
                     {
                         req.Method = (string)reader.Value;
-                        prop = null;
+                        prop.Pop();
+                        continue;
                     }
-                    else if (prop == "id")
+                    else if (prop.Peek() == "id" && prop.Count == 1)
                     {
                         req.Id = reader.Value;
-                        prop = null;
+                        prop.Pop();
+                        continue;
                     }
-                    else if (prop == "params")
+                    else
                     {
-                        if (ptype == "JArray")
+                        if (ptype == "Array")
                         {
-                            ((JArray)req.Params).Add(reader.Value);
+                            ((List<Object>)req.Params).Add(new JValue(reader.Value));
                         }
-                        else if (ptype == "JObject")
+                        else if (ptype == "Object")
                         {
-                            ((JObject)req.Params).Add(reader.Value);
+                            ((Dictionary<string, Object>)req.Params).Add(prop.Pop(), new JValue(reader.Value));
                         }
                     }
                 }
                 else
                 {
-                    if (prop == "params")
+                    if (prop.Count >0 && prop.Peek() == "params")
                     {
                         // this function isn't smart enough to handle deep objects.
                         // make sure we arn't trying to deal with a complex object.
@@ -92,13 +101,19 @@ namespace AustinHarris.JsonRpc.Newtonsoft
                         }
                         if (reader.TokenType == JsonToken.StartArray)
                         {
-                            ptype = "JArray";
-                            req.Params = new JArray();
+                            ptype = "Array";
+                            req.Params = new List<Object>();
                         }
                         else if (reader.TokenType == JsonToken.StartObject)
                         {
-                            ptype = "JObject";
-                            req.Params = new JObject();
+                            ptype = "Object";
+                            req.Params = new Dictionary<string, Object>();
+                        }
+                        else if (reader.TokenType == JsonToken.EndArray
+                            || reader.TokenType == JsonToken.EndObject)
+                        {
+                            prop.Pop();
+                            continue;
                         }
                     }
                     //  Console.WriteLine("Token: {0}", reader.TokenType);
@@ -123,11 +138,27 @@ namespace AustinHarris.JsonRpc.Newtonsoft
         {
             try
             {
+
                 var jv = parameter as JValue;
                 if (jv != null)
                 {
+                    if(jv.Type == JTokenType.Null)
+                    {
+                        return null;
+                    }
+
                     return jv.ToObject(type);
-                } 
+                } else if(parameter is JObject)
+                {
+                    return ((JObject)parameter).ToObject(type);
+                }
+                //else if (type.Name == "Single") return Convert.ToSingle(parameter);
+                //else if (type.Name == "Float") return Convert.ToSingle(parameter);
+                //else if (type.Name == "Int32") return Convert.ToInt32(parameter);
+                //else if (type.Name == "Int16") return Convert.ToInt16(parameter);
+                //else if (type.Name == "Decimal") return Convert.ToDecimal(parameter);
+                //else if (type.Name == "Byte") return Convert.ToByte(parameter);
+                //else if (type.Name == "Boolean") return Convert.ToBoolean(parameter);
             }
             catch (Exception ex)
             {
