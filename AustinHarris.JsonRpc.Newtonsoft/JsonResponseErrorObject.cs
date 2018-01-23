@@ -27,7 +27,7 @@ namespace AustinHarris.JsonRpc.Newtonsoft
     /// </summary>
     [Serializable]
     [JsonObject(MemberSerialization.OptIn)]    
-    public class JsonRpcException : System.ApplicationException, IJsonRpcException
+    public class JsonRpcException : System.Exception, IJsonRpcException
     {
         [JsonProperty]
         public int code { get; set; }

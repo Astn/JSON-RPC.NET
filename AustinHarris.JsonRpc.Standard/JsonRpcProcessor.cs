@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace AustinHarris.JsonRpc
@@ -32,24 +33,43 @@ namespace AustinHarris.JsonRpc
             public string jsonRpc;
             public object context;
         }
+        struct ParamBox2
+        {
+            public Handler handler;
+            public string jsonRpc;
+            public object context;
+        }
 
+        private static TaskFactory<string> _tf =  new TaskFactory<string>(TaskScheduler.Default);
+        
         public static Task<string> Process(string sessionId, string jsonRpc, object context = null)
         {
             ParamBox __pq;
             __pq.sessionId = sessionId;
             __pq.jsonRpc = jsonRpc;
             __pq.context = context;
-               
-            return Task<string>.Factory.StartNew((_) =>
+            
+            return _tf.StartNew((_) =>
             {
-                return ProcessInternal(((ParamBox)_).sessionId, ((ParamBox)_).jsonRpc, ((ParamBox)_).context);
+                return ProcessInternal(Handler.GetSessionHandler(((ParamBox)_).sessionId), ((ParamBox)_).jsonRpc, ((ParamBox)_).context);
+            }, __pq);
+        }
+        public static Task<string> Process(Handler handler, string jsonRpc, object context = null)
+        {
+            ParamBox2 __pq;
+            __pq.handler = handler;
+            __pq.jsonRpc = jsonRpc;
+            __pq.context = context;
+            
+            return _tf.StartNew((_) =>
+            {
+                return ProcessInternal(((ParamBox2)_).handler, ((ParamBox2)_).jsonRpc, ((ParamBox2)_).context);
             }, __pq);
         }
 
-        private static string ProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext)
+        private static string ProcessInternal(Handler handler, string jsonRpc, object jsonRpcContext)
         {
-            var handler = Handler.GetSessionHandler(sessionId);
-
+            var singleBatch = true;
 
             IJsonRequest[] batch = null;
             try
@@ -62,19 +82,18 @@ namespace AustinHarris.JsonRpc
                 else
                 {
                     batch = Handler._objectFactory.DeserializeRequests(jsonRpc);
+                    singleBatch = batch.Length == 1;
+                    if (batch.Length == 0)
+                    {
+                        return Handler._objectFactory.SerializeResponse(Handler._objectFactory.CreateJsonErrorResponse(handler.ProcessParseException(jsonRpc, Handler._objectFactory.CreateException(3200, "Invalid Request", "Batch of calls was empty."))));
+                    }
                 }
             }
             catch (Exception ex)
             {
                 return Handler._objectFactory.SerializeResponse(Handler._objectFactory.CreateJsonErrorResponse(handler.ProcessParseException(jsonRpc, Handler._objectFactory.CreateException(-32700, "Parse error", ex))));
             }
-
-            if (batch.Length == 0)
-            {
-                return Handler._objectFactory.SerializeResponse(Handler._objectFactory.CreateJsonErrorResponse(handler.ProcessParseException(jsonRpc, Handler._objectFactory.CreateException(3200, "Invalid Request", "Batch of calls was empty."))));
-            }
-
-            var singleBatch = batch.Length == 1;
+            
             StringBuilder sbResult = null;
             for (var i = 0; i < batch.Length; i++)
             {
@@ -104,6 +123,8 @@ namespace AustinHarris.JsonRpc
                     jsonResponse.Result = data.Result;
 
                 }
+                
+                // Now return the result of the call.
                 if (jsonResponse.Result == null && jsonResponse.Error == null)
                 {
                     // Per json rpc 2.0 spec
@@ -117,7 +138,7 @@ namespace AustinHarris.JsonRpc
                 {
                     return Handler._objectFactory.SerializeResponse(jsonResponse);
                 }
-                else if (jsonResponse.Id == null && jsonResponse.Error == null)
+                if (jsonResponse.Id == null && jsonResponse.Error == null)
                 {
                     // do nothing
                     sbResult = new StringBuilder(0);
