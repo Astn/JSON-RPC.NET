@@ -245,12 +245,12 @@
             }
             parameters = new object[paramCount];
 
-            if (Rpc.Params is IList<Object>)
+            if (Rpc.Params is IList)
             {
-                var jarr = ((IList)Rpc.Params);
+                var jarr = (IList)Rpc.Params;
                 for (int i = 0; i < loopCt; i++)
                 {
-                    parameters[i] = CleanUpParameter(jarr[i], metadata.parameters[i]);
+                    parameters[i] = _objectFactory.DeserializeOrCoerceParameter(jarr[i], metadata.parameters[i].Key, metadata.parameters[i].Value);
                 }
             }
             else if (Rpc.Params is IDictionary<string, Object>)
@@ -260,7 +260,8 @@
                 {
                     if (asDict.ContainsKey(metadata.parameters[i].Key) == true)
                     {
-                        parameters[i] = CleanUpParameter(asDict[metadata.parameters[i].Key], metadata.parameters[i]);
+                        parameters[i] = _objectFactory.DeserializeOrCoerceParameter(asDict[metadata.parameters[i].Key], metadata.parameters[i].Key, metadata.parameters[i].Value);
+                        //parameters[i] = CleanUpParameter(, );
                         continue;
                     }
                     else
@@ -319,18 +320,18 @@
 
             try
             {
-                var results = handle.DynamicInvoke(parameters);
-                
-                var last = parameters.LastOrDefault();
+                var results = handle.Method.Invoke(handle.Target, parameters);
+                //var results = handle.DynamicInvoke(parameters);
+
                 var contextException = RpcGetAndRemoveRpcException();
                 IJsonResponse response = null;
                 if (contextException != null)
                 {
                     response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, contextException));
                 }
-                else if (expectsRefException && last != null && last is IJsonRpcException)
+                else if (expectsRefException && parameters.LastOrDefault() != null)
                 {
-                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, last as IJsonRpcException));
+                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, parameters.LastOrDefault() as IJsonRpcException));
                 }
                 else
                 {
@@ -353,7 +354,7 @@
                     response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, ex as IJsonRpcException));
                     return PostProcess(Rpc, response, RpcContext);
                 }
-                if (ex.InnerException != null && ex.InnerException is IJsonRpcException)
+                else if (ex.InnerException != null && ex.InnerException is IJsonRpcException)
                 {
                     response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, ex.InnerException as IJsonRpcException));
                     return PostProcess(Rpc, response, RpcContext);

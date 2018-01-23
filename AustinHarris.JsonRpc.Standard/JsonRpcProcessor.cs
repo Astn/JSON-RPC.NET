@@ -25,13 +25,25 @@ namespace AustinHarris.JsonRpc
         {
             return Process(Handler.DefaultSessionId(), jsonRpc, context);
         }
+
+        struct ParamBox
+        {
+            public string sessionId;
+            public string jsonRpc;
+            public object context;
+        }
+
         public static Task<string> Process(string sessionId, string jsonRpc, object context = null)
-        { 
+        {
+            ParamBox __pq;
+            __pq.sessionId = sessionId;
+            __pq.jsonRpc = jsonRpc;
+            __pq.context = context;
+               
             return Task<string>.Factory.StartNew((_) =>
             {
-                var tuple = (Tuple<string, string, object>)_;
-                return ProcessInternal(tuple.Item1, tuple.Item2, tuple.Item3);
-            }, new Tuple<string, string, object>(sessionId, jsonRpc, context));
+                return ProcessInternal(((ParamBox)_).sessionId, ((ParamBox)_).jsonRpc, ((ParamBox)_).context);
+            }, __pq);
         }
 
         private static string ProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext)
