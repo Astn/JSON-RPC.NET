@@ -215,112 +215,17 @@
             }
 
             SMDService metadata = null;
-            Delegate handle = null;
             if (this.MetaData.Services.TryGetValue(Rpc.Method, out metadata))
             {
-                handle = metadata.dele; 
             } else if (metadata == null)
             {
                 var response = _objectFactory.CreateJsonErrorResponse(_objectFactory.CreateException(-32601, "Method not found", "The method does not exist / is not available."));
                 return PostProcess(Rpc, response, RpcContext);
             }
 
-            object[] parameters = null;
-            bool expectsRefException = false;
-            var metaDataParamCount = metadata.parameters.Length;
-
-            
-            var loopCt = 0;
-            var getCount = Rpc.Params as ICollection;
-            if (getCount != null)
-            {
-                loopCt = getCount.Count;
-            }
-
-            var paramCount = loopCt;
-            if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount - 1].Value.Name.Equals(Name_of_JSONRPCEXCEPTION))
-            {
-                paramCount++;
-                expectsRefException = true;
-            }
-            parameters = new object[paramCount];
-
-            if (Rpc.Params is IList)
-            {
-                var jarr = (IList)Rpc.Params;
-                for (int i = 0; i < loopCt; i++)
-                {
-                    parameters[i] = _objectFactory.DeserializeOrCoerceParameter(jarr[i], metadata.parameters[i].Key, metadata.parameters[i].Value);
-                }
-            }
-            else if (Rpc.Params is IDictionary<string, Object>)
-            {
-                var asDict = Rpc.Params as IDictionary<string, Object>;
-                for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
-                {
-                    if (asDict.ContainsKey(metadata.parameters[i].Key) == true)
-                    {
-                        parameters[i] = _objectFactory.DeserializeOrCoerceParameter(asDict[metadata.parameters[i].Key], metadata.parameters[i].Key, metadata.parameters[i].Value);
-                        //parameters[i] = CleanUpParameter(, );
-                        continue;
-                    }
-                    else
-                    {
-                        var response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc,
-                            _objectFactory.CreateException(-32602,
-                                "Invalid params",
-                                string.Format("Named parameter '{0}' was not present.",
-                                                metadata.parameters[i].Key)
-                                )));
-                        return PostProcess(Rpc, response, RpcContext);
-                    }
-                }
-            }
-
-            // Optional Parameter support
-            // check if we still miss parameters compared to metadata which may include optional parameters.
-            // if the rpc-call didn't supply a value for an optional parameter, we should be assinging the default value of it.
-            if (parameters.Length < metaDataParamCount && metadata.defaultValues.Length > 0) // rpc call didn't set values for all optional parameters, so we need to assign the default values for them.
-            {
-                var suppliedParamsCount = parameters.Length; // the index we should start storing default values of optional parameters.
-                var missingParamsCount = metaDataParamCount - parameters.Length; // the amount of optional parameters without a value set by rpc-call.
-                Array.Resize(ref parameters, parameters.Length + missingParamsCount); // resize the array to include all optional parameters.
-
-                for (int paramIndex = parameters.Length - 1, defaultIndex = metadata.defaultValues.Length - 1;     // fill missing parameters from the back 
-                    paramIndex >= suppliedParamsCount && defaultIndex >= 0;                                        // to don't overwrite supplied ones.
-                    paramIndex--, defaultIndex--)
-                {
-                    parameters[paramIndex] = metadata.defaultValues[defaultIndex].Value;
-                }
-
-                if (missingParamsCount > metadata.defaultValues.Length)
-                {
-                    var response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc,
-                            _objectFactory.CreateException(-32602,
-                                "Invalid params",
-                                string.Format(
-                                    "Number of default parameters {0} not sufficient to fill all missing parameters {1}",
-                                    metadata.defaultValues.Length, missingParamsCount)
-                                )));
-                    return PostProcess(Rpc, response, RpcContext);
-                }
-            }
-
-            if (parameters.Length != metaDataParamCount)
-            {
-                var response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc,
-                    _objectFactory.CreateException(-32602,
-                        "Invalid params",
-                        string.Format("Expecting {0} parameters, and received {1}",
-                                        metadata.parameters.Length,
-                                        parameters.Length)
-                        )));
-                return PostProcess(Rpc, response, RpcContext);
-            }
-
             try
             {
-                var results = handle.Method.Invoke(handle.Target, parameters);
+                var results = metadata.Invoke(_objectFactory, Rpc.Raw);
                 //var results = handle.DynamicInvoke(parameters);
 
                 var contextException = RpcGetAndRemoveRpcException();
@@ -328,10 +233,6 @@
                 if (contextException != null)
                 {
                     response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, contextException));
-                }
-                else if (expectsRefException && parameters.LastOrDefault() != null)
-                {
-                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, parameters.LastOrDefault() as IJsonRpcException));
                 }
                 else
                 {
@@ -407,31 +308,6 @@
             parseErrorHandler = handler;
         }
        
-        private object CleanUpParameter(object input, KeyValuePair<string,Type> metaData)
-        {
-            try
-            {
-                if (metaData.Value.IsAssignableFrom(input.GetType()))
-                {
-                    return input;
-                }
-                else if (input is string)
-                {
-                    return _objectFactory.DeserializeJson((string)input, metaData.Value);
-                }
-                else
-                {
-                    return _objectFactory.DeserializeJson(input.ToString(), metaData.Value);
-                }
-            }
-            catch (Exception ex)
-            {
-                // no need to throw here, they will
-                // get an invalid cast exception right after this.
-            }
-            return input;
-        }
-
         private IJsonRpcException PreProcess(IJsonRequest request, object context)
         {
             return externalPreProcessingHandler == null ? null : externalPreProcessingHandler(request, context);

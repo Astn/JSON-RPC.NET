@@ -92,12 +92,12 @@ namespace AustinHarris.JsonRpcTestN
             return true; 
         } 
 
-        [JsonRpcMethod]
-        private string StringToRefException(string s, ref JsonRpc.Newtonsoft.JsonRpcException refException)
-        {
-            refException = new JsonRpc.Newtonsoft.JsonRpcException(-1, "refException worked", null);
-            return s;
-        }
+        //[JsonRpcMethod]
+        //private string StringToRefException(string s, ref JsonRpc.Newtonsoft.JsonRpcException refException)
+        //{
+        //    refException = new JsonRpc.Newtonsoft.JsonRpcException(-1, "refException worked", null);
+        //    return s;
+        //}
         [JsonRpcMethod]
         private string StringToThrowJsonRpcException(string s)
         {
@@ -105,19 +105,19 @@ namespace AustinHarris.JsonRpcTestN
             return s;
         }
 
-        [JsonRpcMethod]
-        private DateTime ReturnsDateTime()
-        {
-            return DateTime.Now;
-        }
+        //[JsonRpcMethod]
+        //private DateTime ReturnsDateTime()
+        //{
+        //    return DateTime.Now;
+        //}
 
-        [JsonRpcMethod]
-        private recursiveClass ReturnsCustomRecursiveClass()
-        {
-            var obj = new recursiveClass() { Value1 = 10, Nested1 = new recursiveClass() { Value1 = 5 } };
-            //obj.Nested1.Nested1 = obj;
-            return obj;
-        }
+        //[JsonRpcMethod]
+        //private recursiveClass ReturnsCustomRecursiveClass()
+        //{
+        //    var obj = new recursiveClass() { Value1 = 10, Nested1 = new recursiveClass() { Value1 = 5 } };
+        //    //obj.Nested1.Nested1 = obj;
+        //    return obj;
+        //}
 
         [JsonRpcMethod]
         private float FloatToFloat(float input)
@@ -319,11 +319,11 @@ namespace AustinHarris.JsonRpcTestN
             return input2;
         }
 
-        [JsonRpcMethod]
-        public void Notify(string message)
-        {
-            Trace.WriteLine(string.Format("Notified about: {0}", message));
-        }
+        //[JsonRpcMethod]
+        //public void Notify(string message)
+        //{
+        //    Trace.WriteLine(string.Format("Notified about: {0}", message));
+        //}
 
         [JsonRpcMethod]
         public string TestPreProcessor(string inputValue)
@@ -375,20 +375,20 @@ namespace AustinHarris.JsonRpcTestN
             return null;
         }
 
-        [JsonRpcMethod]
-        public TreeNode TestNestedReturnType()
-        {
-            return new TreeNode
-            {
-                NodeId = 1,
-                Leafs =
-                    new[]
-                    {
-                        new TreeNode {NodeId = 2, Leafs = new List<TreeNode>()},
-                        new TreeNode {NodeId = 3, Leafs = new List<TreeNode>()}
-                    }
-            };
-        }
+        //[JsonRpcMethod]
+        //public TreeNode TestNestedReturnType()
+        //{
+        //    return new TreeNode
+        //    {
+        //        NodeId = 1,
+        //        Leafs =
+        //            new[]
+        //            {
+        //                new TreeNode {NodeId = 2, Leafs = new List<TreeNode>()},
+        //                new TreeNode {NodeId = 3, Leafs = new List<TreeNode>()}
+        //            }
+        //    };
+        //}
 
     }
 }

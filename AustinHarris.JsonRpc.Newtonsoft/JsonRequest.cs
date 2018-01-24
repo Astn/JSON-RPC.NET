@@ -30,5 +30,6 @@ namespace AustinHarris.JsonRpc.Newtonsoft
 
         [JsonProperty("id")]
         public object Id { get; set; }
+        public string Raw { get; set; }
     }
 }

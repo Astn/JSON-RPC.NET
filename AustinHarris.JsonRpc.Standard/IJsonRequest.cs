@@ -2,6 +2,7 @@
 {
     public interface IJsonRequest
     {
+        string Raw { get; set; }
         object Id { get; set; }
         string JsonRpc { get; }
         string Method { get; set; }
@@ -10,6 +11,7 @@
 
     public interface IJsonRequestFactory
     {
+        IJsonRequest CreateRequest();
         IJsonRequest DeserializeRequest(string request);
         IJsonRequest[] DeserializeRequests(string requests);
     }

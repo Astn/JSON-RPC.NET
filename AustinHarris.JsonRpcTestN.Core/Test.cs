@@ -101,6 +101,18 @@ namespace AustinHarris.JsonRpcTestN.Core
         }
 
         [Fact]
+        public void TestStringToString()
+        {
+            string request = @"{method:'internal.echo',params:['hi'],id:1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":'hi',\"id\":1}";
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+
+            Assert.Equal(result.Result, expectedResult);
+            Assert.Equal(expectedResult, result.Result);
+        }
+
+        [Fact]
         public void NullableDateTimeToNullableDateTime()
         {
             string request = @"{method:'NullableDateTimeToNullableDateTime',params:['2014-06-30T14:50:38.5208399+09:00'],id:1}";

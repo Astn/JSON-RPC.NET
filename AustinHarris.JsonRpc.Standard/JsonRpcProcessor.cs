@@ -76,7 +76,10 @@ namespace AustinHarris.JsonRpc
             {
                 if (isSingleRpc(jsonRpc))
                 {
-                    var foo = Handler._objectFactory.DeserializeRequest(jsonRpc);
+                    var name = Handler._objectFactory.MethodName(jsonRpc);
+                    var foo = Handler._objectFactory.CreateRequest();
+                    foo.Method = name;
+                    foo.Raw = jsonRpc;
                     batch = new[] { foo };
                 }
                 else
@@ -113,10 +116,8 @@ namespace AustinHarris.JsonRpc
                 }
                 else
                 {
-                    jsonResponse.Id = jsonRequest.Id;
-
                     var data = handler.Handle(jsonRequest, jsonRpcContext);
-
+                    jsonResponse.Id = jsonRequest.Id;
                     if (data == null) continue;
 
                     jsonResponse.Error = data.Error;
