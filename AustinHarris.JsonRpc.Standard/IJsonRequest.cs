@@ -9,7 +9,6 @@
     public interface IJsonRequestFactory
     {
         IJsonRequest CreateRequest();
-        IJsonRequest DeserializeRequest(string request);
         IJsonRequest[] DeserializeRequests(string requests);
     }
 }

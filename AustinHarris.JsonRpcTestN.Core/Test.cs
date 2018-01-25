@@ -52,7 +52,7 @@ namespace AustinHarris.JsonRpcTestN.Core
 
             for (int i = 0; i < 100; i++)
             {
-                var result = JsonRpcProcessor.Process(i.ToString(), request(10));
+                var result = JsonRpcProcessor.ProcessAsync(i.ToString(), request(10));
                 result.Wait();
                 var actual1 = JObject.Parse(result.Result);
                 var expected1 = JObject.Parse(expectedResult(10 + i));
@@ -73,7 +73,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
             string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
-            var result = JsonRpcProcessor.Process("this one", request);
+            var result = JsonRpcProcessor.ProcessAsync("this one", request);
             result.Wait();
 
 
@@ -82,7 +82,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             Assert.True(JToken.DeepEquals(expected1, actual1));
             h.Destroy();
 
-            var result2 = JsonRpcProcessor.Process("this one", request);
+            var result2 = JsonRpcProcessor.ProcessAsync("this one", request);
             result2.Wait();
 
             Assert.True(JToken.DeepEquals(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result)));
@@ -93,7 +93,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'NullableFloatToNullableFloat',params:[0.0],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
 
             Assert.Equal(result.Result, expectedResult);
@@ -105,7 +105,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'internal.echo',params:['hi'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"hi\",\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
 
             Assert.Equal(result.Result, expectedResult);
@@ -118,7 +118,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request = @"{method:'NullableDateTimeToNullableDateTime',params:['2014-06-30T14:50:38.5208399+09:00'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"2014-06-30T14:50:38.5208399+09:00\",\"id\":1}";
             var expectedDate = DateTime.Parse("2014-06-30T14:50:38.5208399+09:00");
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             var acutalDate = DateTime.Parse(result.Result.Substring(27, 33));
             Assert.Equal(expectedDate, acutalDate);
@@ -130,7 +130,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         [InlineData(@"{method:'NullableFloatToNullableFloat',params:[null],id:1}", "{\"jsonrpc\":\"2.0\",\"result\":null,\"id\":1}")]
         public void NullableFloatToNullableFloat(string request, string response)
         {
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.Equal(response, result.Result);
         }
@@ -141,7 +141,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'DecimalToNullableDecimal',params:[0.0],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.Equal(result.Result, expectedResult);
             Assert.Equal(expectedResult, result.Result);
@@ -152,7 +152,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'StringToListOfString',params:['some string'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"one\",\"two\",\"three\",\"some string\"],\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.Equal(result.Result, expectedResult);
             Assert.Equal(expectedResult, result.Result);
@@ -163,7 +163,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'CustomStringToListOfString',params:[{str:'some string'}],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"one\",\"two\",\"three\",\"some string\"],\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.Equal(result.Result, expectedResult);
             Assert.Equal(expectedResult, result.Result);
@@ -173,7 +173,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         public void StringToThrowingException()
         {
             string request = @"{method:'StringToThrowingException',params:['some string'],id:1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.Contains("-32603", result.Result);
         }
@@ -183,7 +183,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'StringToRefException',params:['some string'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"refException worked\",\"code\":-1,\"data\":null},\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.True(JToken.DeepEquals(JObject.Parse(expectedResult), JObject.Parse(result.Result)));
         }
@@ -192,7 +192,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         public void StringToThrowJsonRpcException()
         {
             string request = @"{method:'StringToThrowJsonRpcException',params:['some string'],id:1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.Contains("-2700", result.Result);
         }
@@ -201,7 +201,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         public void ReturnsDateTime()
         {
             string request = @"{method:'ReturnsDateTime',params:[],id:1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
         }
@@ -211,7 +211,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'ReturnsCustomRecursiveClass',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":{\"Nested1\":{\"Nested1\":null,\"Value1\":5},\"Value1\":10},\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -223,7 +223,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'FloatToFloat',params:[0.123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.123,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -235,7 +235,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'IntToInt',params:[789],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -246,7 +246,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamInt16',params:[789],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -257,7 +257,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamInt16',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -268,7 +268,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'Int16ToInt16',params:[789],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -279,7 +279,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'Int32ToInt32',params:[789],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -290,7 +290,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'Int64ToInt64',params:[78915984515564],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":78915984515564,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -302,7 +302,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambyte',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -312,7 +312,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamsbyte',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -322,7 +322,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamshort',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -332,7 +332,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamint',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -342,7 +342,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamlong',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -352,7 +352,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamushort',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -362,7 +362,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamuint',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -372,7 +372,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamulong',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -382,7 +382,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamfloat',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -392,7 +392,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdouble',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -402,7 +402,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambool',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -412,7 +412,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamchar',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"a\",\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -422,7 +422,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdecimal',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -433,7 +433,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambyte',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -443,7 +443,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamsbyte',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -453,7 +453,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamshort',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -463,7 +463,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamint',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -473,7 +473,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamlong',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -483,7 +483,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamushort',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -493,7 +493,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamuint',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -503,7 +503,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamulong',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -513,7 +513,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamfloat',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -523,7 +523,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdouble',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -533,7 +533,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambool',params:[false],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -543,7 +543,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamchar',params:[" + (int)'b' + "],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"b\",\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -553,7 +553,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdecimal',params:[71],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -564,7 +564,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambyte',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -574,7 +574,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamsbyte',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -584,7 +584,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamshort',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -594,7 +594,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamint',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -604,7 +604,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamlong',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -614,7 +614,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamushort',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -624,7 +624,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamuint',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -634,7 +634,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamulong',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -644,7 +644,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamfloat',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -654,7 +654,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdouble',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -664,7 +664,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambool',params:{'input':false},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -674,7 +674,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamchar',params:{'input':" + (int)'c' + "},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"c\",\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -684,7 +684,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdecimal',params:{'input':71},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -695,7 +695,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambyte',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -705,7 +705,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamsbyte',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -715,7 +715,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamshort',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -725,7 +725,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamint',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -735,7 +735,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamlong',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -745,7 +745,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamushort',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -755,7 +755,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamuint',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -765,7 +765,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamulong',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -775,7 +775,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamfloat',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -785,7 +785,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdouble',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -795,7 +795,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambool',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -805,7 +805,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamchar',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"a\",\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -815,7 +815,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdecimal',params:{},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -826,7 +826,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -836,7 +836,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":126,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -846,7 +846,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -856,7 +856,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamint_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -866,7 +866,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -876,7 +876,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -886,7 +886,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -896,7 +896,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -906,7 +906,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -916,7 +916,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -926,7 +926,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambool_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -936,7 +936,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -946,7 +946,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:{input1:123},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -957,7 +957,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:{input1:123, input2: 67},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":67,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -967,7 +967,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:[123, 67],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":67,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -977,7 +977,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambyte_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -987,7 +987,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:{input1:123, input2: 97},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":97,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -997,7 +997,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:[123, 98],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1007,7 +1007,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamsbyte_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":126,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1017,7 +1017,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1027,7 +1027,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1037,7 +1037,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamshort_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1047,7 +1047,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamint_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1057,7 +1057,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamint_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1067,7 +1067,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamint_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1077,7 +1077,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1087,7 +1087,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:[123,  671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1097,7 +1097,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamlong_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1107,7 +1107,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1117,7 +1117,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:[123,  671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1127,7 +1127,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamushort_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1137,7 +1137,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1147,7 +1147,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1157,7 +1157,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamuint_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1167,7 +1167,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1177,7 +1177,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1187,7 +1187,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamulong_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1197,7 +1197,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1207,7 +1207,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1217,7 +1217,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamfloat_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1227,7 +1227,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1237,7 +1237,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:[123,  671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1247,7 +1247,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdouble_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1257,7 +1257,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambool_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1267,7 +1267,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambool_2x',params:[true, false],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1277,7 +1277,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParambool_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1287,7 +1287,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:{'input1':" + (int)'c' + ", 'input2':" + (int)'d' + "},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1297,7 +1297,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:[" + (int)'c' + ", " + (int)'d' + "],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1307,7 +1307,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamchar_2x',params:[" + (int)'c' + "],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1317,7 +1317,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:{input1:123, input2: 671},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1327,7 +1327,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:[123, 671],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1337,7 +1337,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"{method:'TestOptionalParamdecimal_2x',params:[123],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1349,7 +1349,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request = @"{method:'TestOptionalParameters_Strings',params:[],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[null,null],\"id\":1}";
 
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1361,7 +1361,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request = @"{method:'TestOptionalParameters_Strings',params:['first'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"first\",null],\"id\":1}";
 
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1373,7 +1373,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request = @"{method:'TestOptionalParameters_Strings',params:['first','second'],id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"first\",\"second\"],\"id\":1}";
 
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1386,7 +1386,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 "{\"jsonrpc\":\"2.0\",\"method\":\"TestOptionalParametersBoolsAndStrings\",\"params\":{\"input1\":\"murkel\"},\"id\":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
 
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.DoesNotContain("error", result.Result);
             Assert.Equal(expectedResult, result.Result);
@@ -1397,7 +1397,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             string request = @"[{},{""jsonrpc"":""2.0"",""id"":4}]";
 
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
 
             Assert.True(Regex.IsMatch(result.Result, @"\[(\{.*""error"":.*?,""id"":.*?\}),(\{.*""error"":.*?,""id"":.*?\})\]"), "Should have two errors.");
@@ -1409,7 +1409,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request =
                 @"[{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1},{""jsonrpc"":""2.0"",""method"":""Notify"",""params"":[""Hello World!""]}]";
 
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
 
             Assert.False(result.Result.EndsWith(@",]"), "result.Result.EndsWith(@',]')");
@@ -1420,7 +1420,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         public void TestEmptyBatchResult()
         {
             var secondRequest = @"{""jsonrpc"":""2.0"",""method"":""Notify"",""params"":[""Hello World!""]}";
-            var result = JsonRpcProcessor.Process(secondRequest);
+            var result = JsonRpcProcessor.ProcessAsync(secondRequest);
             result.Wait();
 
             Assert.True(string.IsNullOrEmpty(result.Result));
@@ -1431,7 +1431,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         public void TestNotificationVoidResult()
         {
             var secondRequest = @"{""jsonrpc"":""2.0"",""method"":""Notify"",""params"":[""Hello World!""], ""id"":73}";
-            var result = JsonRpcProcessor.Process(secondRequest);
+            var result = JsonRpcProcessor.ProcessAsync(secondRequest);
             result.Wait();
             Console.WriteLine(result.Result);
             Assert.True(result.Result.Contains("result"), "Json Rpc 2.0 Spec - 'result' - This member is REQUIRED on success. A function that returns void should have the result property included even though the value may be null.");
@@ -1443,7 +1443,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             var request =
                 @"{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""id"":1}";
 
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
 
             Assert.False(result.Result.Contains(@"error"":{""code"":-32602"), @"According to JSON-RPC 2.0 the ""params"" member MAY be omitted.");
@@ -1453,7 +1453,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         public void TestMultipleResults()
         {
             var result =
-                JsonRpcProcessor.Process(
+                JsonRpcProcessor.ProcessAsync(
                     @"[{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1},{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
             result.Wait();
 
@@ -1464,7 +1464,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         public void TestSingleResultBatch()
         {
             var result =
-                JsonRpcProcessor.Process(@"[{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
+                JsonRpcProcessor.ProcessAsync(@"[{""jsonrpc"":""2.0"",""method"":""ReturnsDateTime"",""params"":{},""id"":1}]");
             result.Wait();
             Assert.False(result.Result.EndsWith("]"));
         }
@@ -1494,7 +1494,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Config.SetPreProcessHandler(new PreProcessHandler(handler.PreProcess));
                 string request = @"{method:'TestPreProcessor',params:{inputValue:'some string'},id:1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"Success!\",\"id\":1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
@@ -1515,7 +1515,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Config.SetPreProcessHandler(new PreProcessHandler(handler.PreProcess));
                 string request = @"{method:'TestPreProcessorThrowsJsonRPCException',params:{inputValue:'some string'},id:1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-27000,\"message\":\"Just some testing\",\"data\":null},\"id\":1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
@@ -1536,7 +1536,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 PreProcessHandlerLocal handler = new PreProcessHandlerLocal();
                 Config.SetPreProcessHandler(new PreProcessHandler(handler.PreProcess));
                 string request = @"{method:'TestPreProcessorThrowsException',params:{inputValue:'some string'},id:1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 Assert.Contains("-32603", result.Result);
                 Assert.Equal(1, handler.run);
@@ -1558,7 +1558,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Config.SetPreProcessHandler(new PreProcessHandler(handler.PreProcess));
                 string request = @"{method:'TestPreProcessorSetsException',params:{inputValue:'some string'},id:1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-27000,\"message\":\"This exception was thrown using: JsonRpcContext.SetException()\",\"data\":null},\"id\":1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
@@ -1588,7 +1588,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
             string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
-            var result = JsonRpcProcessor.Process(sessionId, request);
+            var result = JsonRpcProcessor.ProcessAsync(sessionId, request);
             result.Wait();
 
             var actual1 = JObject.Parse(result.Result);
@@ -1598,7 +1598,7 @@ namespace AustinHarris.JsonRpcTestN.Core
 
             h.Destroy();
 
-            var result2 = JsonRpcProcessor.Process(sessionId, request);
+            var result2 = JsonRpcProcessor.ProcessAsync(sessionId, request);
             result2.Wait();
 
             Assert.Equal(1, preHandler.run);
@@ -1643,7 +1643,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
                 string request = @"{method:'TestPostProcessor',params:{inputValue:'some string'},id:1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"Success!\",\"id\":1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
@@ -1667,7 +1667,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
                 string request = @"{method:'TestPostProcessorThrowsJsonRPCException',params:{inputValue:'some string'},id:1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-27000,\"message\":\"Just some testing\",\"data\":null},\"id\":1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
@@ -1692,7 +1692,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 PostProcessHandlerLocal handler = new PostProcessHandlerLocal(false);
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
                 string request = @"{method:'TestPostProcessorThrowsException',params:{inputValue:'some string'},id:1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 Assert.Contains("-32603", result.Result);
                 Assert.Equal(1, handler.run);
@@ -1717,7 +1717,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
                 string request = @"{method:'TestPostProcessorSetsException',params:{inputValue:'some string'},id:1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-27001,\"message\":\"This exception was thrown using: JsonRpcContext.SetException()\",\"data\":null},\"id\":1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
@@ -1740,7 +1740,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
                 string request = @"{method:'TestPostProcessor',params:{inputValue:'some string'},id:1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-123,\"message\":\"Test error\",\"data\":null},\"id\":1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
@@ -1765,7 +1765,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
                 string request = @"{method:'TestPostProcessorThrowsJsonRPCException',params:{inputValue:'some string'},id:1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-123,\"message\":\"Test error\",\"data\":null},\"id\":1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
@@ -1792,7 +1792,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
                 string request = @"{method:'TestPostProcessorThrowsException',params:{inputValue:'some string'},id:1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Test error\",\"code\":-123,\"data\":null},\"id\":1}";
-                var result = JsonRpcProcessor.Process(request);
+                var result = JsonRpcProcessor.ProcessAsync(request);
                 result.Wait();
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
@@ -1825,7 +1825,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
             string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
-            var result = JsonRpcProcessor.Process(sessionId, request);
+            var result = JsonRpcProcessor.ProcessAsync(sessionId, request);
             result.Wait();
 
             var actual1 = JObject.Parse(result.Result);
@@ -1835,7 +1835,7 @@ namespace AustinHarris.JsonRpcTestN.Core
 
             h.Destroy();
 
-            var result2 = JsonRpcProcessor.Process(sessionId, request);
+            var result2 = JsonRpcProcessor.ProcessAsync(sessionId, request);
             result2.Wait();
 
             Assert.Equal(1, postHandler.run);
@@ -1846,7 +1846,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         public void TestExtraParameters()
         {
             string request = @"{method:'ReturnsDateTime',params:{extra:'mytext'},id:1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.Contains("error", result.Result);
             Assert.Contains("\"code\":-32602", result.Result);
@@ -1858,11 +1858,11 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request(string paramName) => String.Format("{{method:'TestCustomParameterName',params:{{ {0}:'some string'}},id:1}}", paramName);
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             // Check custom param name specified in attribute works 
-            var result = JsonRpcProcessor.Process(request("myCustomParameter"));
+            var result = JsonRpcProcessor.ProcessAsync(request("myCustomParameter"));
             result.Wait();
             Assert.Equal(JObject.Parse(expectedResult), JObject.Parse(result.Result));
             // Check method can't be used with its actual parameter name 
-            result = JsonRpcProcessor.Process(request("arg"));
+            result = JsonRpcProcessor.ProcessAsync(request("arg"));
             result.Wait();
             Assert.Contains("-32602", result.Result); // check for 'invalid params' error code 
         }
@@ -1873,7 +1873,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string request(string paramName) => String.Format("{{method:'TestCustomParameterWithNoSpecificName',params:{{ {0}:'some string'}},id:1}}", paramName);
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             // Check method can be used with its parameter name 
-            var result = JsonRpcProcessor.Process(request("arg"));
+            var result = JsonRpcProcessor.ProcessAsync(request("arg"));
             result.Wait();
             Assert.Equal(JObject.Parse(expectedResult), JObject.Parse(result.Result));
         } 
@@ -1883,7 +1883,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         {
             var request = @"{""jsonrpc"":""2.0"",""method"":""TestNestedReturnType"",""id"":1}";
             var expected = @"{""jsonrpc"":""2.0"",""result"":{""NodeId"":1,""Leafs"":[{""NodeId"":2,""Leafs"":[]},{""NodeId"":3,""Leafs"":[]}]},""id"":1}";
-            var result = JsonRpcProcessor.Process(request);
+            var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();
             Assert.Equal(expected, result.Result);
         }

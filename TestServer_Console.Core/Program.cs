@@ -39,7 +39,7 @@ namespace TestServer_Console
         {
             for (string line = Console.ReadLine(); !string.IsNullOrEmpty(line); line = Console.ReadLine())
             {
-                JsonRpcProcessor.Process(line).ContinueWith(response => Console.WriteLine( response.Result ));
+                JsonRpcProcessor.ProcessAsync(line).ContinueWith(response => Console.WriteLine( response.Result ));
             }
         }
 
@@ -56,23 +56,54 @@ namespace TestServer_Console
                 ctr = 0;
                 var handler = Handler.GetSessionHandler();
                 Task<string>[] tasks = new Task<string>[cnt];
+                string[] results = new string[cnt];
                 var sessionid = Handler.DefaultSessionId();
-                GC.Collect();
-                
-                var sw = Stopwatch.StartNew();
 
-                
-                for (int i = 0; i < cnt; i+=5)
+                GC.Collect();
+                var sw = Stopwatch.StartNew();
+                for (int i = 0; i < cnt; i += 5)
                 {
-                    tasks[i] = JsonRpcProcessor.Process(handler, "{'method':'Add','params':[1,2],'id':1}");
-                    tasks[i+1] = JsonRpcProcessor.Process(handler, "{'method':'AddInt','params':[1,7],'id':2}");
-                    tasks[i+2] = JsonRpcProcessor.Process(handler, "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}");
-                    tasks[i+3] = JsonRpcProcessor.Process(handler, "{'method':'Test2','params':[3.456],'id':4}");
-                    tasks[i+4] = JsonRpcProcessor.Process(handler, "{'method':'StringMe','params':['Foo'],'id':5}");
+                    tasks[i] = JsonRpcProcessor.ProcessAsync(handler, "{'method':'Add','params':[1,2],'id':1}");
+                    tasks[i + 1] = JsonRpcProcessor.ProcessAsync(handler, "{'method':'AddInt','params':[1,7],'id':2}");
+                    tasks[i + 2] = JsonRpcProcessor.ProcessAsync(handler, "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}");
+                    tasks[i + 3] = JsonRpcProcessor.ProcessAsync(handler, "{'method':'Test2','params':[3.456],'id':4}");
+                    tasks[i + 4] = JsonRpcProcessor.ProcessAsync(handler, "{'method':'StringMe','params':['Foo'],'id':5}");
                 }
                 Task.WaitAll(tasks);
                 sw.Stop();
-                Console.WriteLine("processed {0} rpc in {1}ms for {2} rpc/sec", cnt, sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
+                Console.WriteLine("Async  processed {0} rpc in {1}ms for {2} rpc/sec", cnt, sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
+
+                for (int i = 0; i < tasks.Length; i++)
+                {
+                    tasks[i] = null;
+                }
+                GC.Collect();
+
+                sw = Stopwatch.StartNew();
+                for (int i = 0; i < cnt; i+=5)
+                {
+                    tasks[i] = JsonRpcProcessor.ProcessAsync2(handler, "{'method':'Add','params':[1,2],'id':1}");
+                    tasks[i + 1] = JsonRpcProcessor.ProcessAsync2(handler, "{'method':'AddInt','params':[1,7],'id':2}");
+                    tasks[i + 2] = JsonRpcProcessor.ProcessAsync2(handler, "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}");
+                    tasks[i + 3] = JsonRpcProcessor.ProcessAsync2(handler, "{'method':'Test2','params':[3.456],'id':4}");
+                    tasks[i + 4] = JsonRpcProcessor.ProcessAsync2(handler, "{'method':'StringMe','params':['Foo'],'id':5}");
+                }
+                Task.WaitAll(tasks);
+                sw.Stop();
+                Console.WriteLine("Async2 processed {0} rpc in {1}ms for {2} rpc/sec", cnt, sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
+
+                GC.Collect();
+                sw = Stopwatch.StartNew();
+                for (int i = 0; i < cnt; i += 5)
+                {
+                    results[i] = JsonRpcProcessor.Process(handler, "{'method':'Add','params':[1,2],'id':1}", null);
+                    results[i + 1] = JsonRpcProcessor.Process(handler, "{'method':'AddInt','params':[1,7],'id':2}", null);
+                    results[i + 2] = JsonRpcProcessor.Process(handler, "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}", null);
+                    results[i + 3] = JsonRpcProcessor.Process(handler, "{'method':'Test2','params':[3.456],'id':4}", null);
+                    results[i + 4] = JsonRpcProcessor.Process(handler, "{'method':'StringMe','params':['Foo'],'id':5}", null);
+                }
+                sw.Stop();
+                Console.WriteLine("Direct processed {0} rpc in {1}ms for {2} rpc/sec", cnt, sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
             }
 
 

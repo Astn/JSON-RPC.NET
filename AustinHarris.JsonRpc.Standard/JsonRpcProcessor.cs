@@ -3,28 +3,40 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace AustinHarris.JsonRpc
 {
     public static class JsonRpcProcessor
     {
-        public static void Process(JsonRpcStateAsync async, object context = null)
+        static JsonRpcProcessor()
         {
-            Process(Handler.DefaultSessionId(), async, context);
+            for (int i = 0; i < _privatepool.Length; i++)
+            {
+                _privatepool[i] = new Thread(new ThreadStart(_workPool));
+                _privatepool[i].IsBackground = true;
+                _privatepool[i].Start();
+            }
         }
 
-        public static void Process(string sessionId, JsonRpcStateAsync async, object context = null)
+        public static void ProcessAsync(JsonRpcStateAsync async, object context = null)
         {
-            Process(sessionId, async.JsonRpc, context)
+            ProcessAsync(Handler.DefaultSessionId(), async, context);
+        }
+
+        public static void ProcessAsync(string sessionId, JsonRpcStateAsync async, object context = null)
+        {
+            ProcessAsync(sessionId, async.JsonRpc, context)
                 .ContinueWith(t =>
             {
                 async.Result = t.Result;
                 async.SetCompleted();
             });
         }
-        public static Task<string> Process(string jsonRpc, object context = null)
+        public static Task<string> ProcessAsync(string jsonRpc, object context = null)
         {
-            return Process(Handler.DefaultSessionId(), jsonRpc, context);
+            return ProcessAsync(Handler.DefaultSessionId(), jsonRpc, context);
         }
 
         struct ParamBox
@@ -39,10 +51,17 @@ namespace AustinHarris.JsonRpc
             public string jsonRpc;
             public object context;
         }
+        struct ParamBox3
+        {
+            public TaskCompletionSource<string> tcs;
+            public Handler handler;
+            public string jsonRpc;
+            public object context;
+        }
 
         private static TaskFactory<string> _tf =  new TaskFactory<string>(TaskScheduler.Default);
         
-        public static Task<string> Process(string sessionId, string jsonRpc, object context = null)
+        public static Task<string> ProcessAsync(string sessionId, string jsonRpc, object context = null)
         {
             ParamBox __pq;
             __pq.sessionId = sessionId;
@@ -51,10 +70,10 @@ namespace AustinHarris.JsonRpc
             
             return _tf.StartNew((_) =>
             {
-                return ProcessInternal(Handler.GetSessionHandler(((ParamBox)_).sessionId), ((ParamBox)_).jsonRpc, ((ParamBox)_).context);
+                return Process(Handler.GetSessionHandler(((ParamBox)_).sessionId), ((ParamBox)_).jsonRpc, ((ParamBox)_).context);
             }, __pq);
         }
-        public static Task<string> Process(Handler handler, string jsonRpc, object context = null)
+        public static Task<string> ProcessAsync(Handler handler, string jsonRpc, object context = null)
         {
             ParamBox2 __pq;
             __pq.handler = handler;
@@ -63,11 +82,38 @@ namespace AustinHarris.JsonRpc
             
             return _tf.StartNew((_) =>
             {
-                return ProcessInternal(((ParamBox2)_).handler, ((ParamBox2)_).jsonRpc, ((ParamBox2)_).context);
+                return Process(((ParamBox2)_).handler, ((ParamBox2)_).jsonRpc, ((ParamBox2)_).context);
             }, __pq);
         }
 
-        private static string ProcessInternal(Handler handler, string jsonRpc, object jsonRpcContext)
+        private static BlockingCollection<ParamBox3> _pendingWork = new BlockingCollection<ParamBox3>();
+        private static Thread[] _privatepool = new Thread[6];
+        private static void _workPool()
+        {
+            ParamBox3 item;
+            while (true)
+            {
+                item = _pendingWork.Take();
+                item.tcs.SetResult(Process(item.handler, item.jsonRpc, item.context));
+            }
+        }
+
+        public static Task<string> ProcessAsync2(Handler handler, string jsonRpc, object context = null)
+        {
+            var tcs = new TaskCompletionSource<string>();
+            var task = tcs.Task;
+            
+            ParamBox3 __pq;
+            __pq.tcs = tcs;
+            __pq.handler = handler;
+            __pq.jsonRpc = jsonRpc;
+            __pq.context = context;
+
+            _pendingWork.Add(__pq);
+            return tcs.Task;
+        }
+
+        public static string Process(Handler handler, string jsonRpc, object jsonRpcContext)
         {
             var singleBatch = true;
 
