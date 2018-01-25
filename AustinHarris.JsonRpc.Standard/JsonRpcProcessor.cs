@@ -87,7 +87,7 @@ namespace AustinHarris.JsonRpc
         }
 
         private static BlockingCollection<ParamBox3> _pendingWork = new BlockingCollection<ParamBox3>();
-        private static Thread[] _privatepool = new Thread[6];
+        private static Thread[] _privatepool = new Thread[8];
         private static void _workPool()
         {
             ParamBox3 item;

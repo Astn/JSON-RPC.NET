@@ -21,7 +21,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".Net Standard", ".Net Stand
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AustinHarris.JsonRpc.Newtonsoft", "AustinHarris.JsonRpc.Newtonsoft\AustinHarris.JsonRpc.Newtonsoft.csproj", "{216F103E-B492-465E-ABBE-142A1491771C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AustinHarris.JsonRpcTestN.Core", "AustinHarris.JsonRpcTestN.Core\AustinHarris.JsonRpcTestN.Core.csproj", "{84DBDA32-A467-4902-9577-F7A90986272D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AustinHarris.JsonRpcTestN.Core", "AustinHarris.JsonRpcTestN.Core\AustinHarris.JsonRpcTestN.Core.csproj", "{84DBDA32-A467-4902-9577-F7A90986272D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AustinHarris.JsonRpc.Jsmn", "AustinHarris.JsonRpc.Jsmn\AustinHarris.JsonRpc.Jsmn.csproj", "{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}"
 EndProject
 Global
 	GlobalSection(Performance) = preSolution
@@ -102,6 +104,22 @@ Global
 		{84DBDA32-A467-4902-9577-F7A90986272D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{84DBDA32-A467-4902-9577-F7A90986272D}.Release|x86.ActiveCfg = Release|Any CPU
 		{84DBDA32-A467-4902-9577-F7A90986272D}.Release|x86.Build.0 = Release|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Debug|ARM.Build.0 = Debug|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Debug|x86.Build.0 = Debug|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Release|ARM.ActiveCfg = Release|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Release|ARM.Build.0 = Release|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Release|x86.ActiveCfg = Release|Any CPU
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -111,9 +129,13 @@ Global
 		{FDFB1B74-FBCA-4317-AFC8-7B8FC5489088} = {9FC11C57-5936-4804-A323-87D5572150EE}
 		{216F103E-B492-465E-ABBE-142A1491771C} = {CB659139-9876-4850-BBB7-BC48F0B5BA22}
 		{84DBDA32-A467-4902-9577-F7A90986272D} = {9FC11C57-5936-4804-A323-87D5572150EE}
+		{4D4C9D5F-A675-4CAE-8145-C432D19C15F2} = {CB659139-9876-4850-BBB7-BC48F0B5BA22}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {895CB7D3-766C-490E-9686-57339AE17D6B}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = AustinHarris.JsonRpc.vsmdi
