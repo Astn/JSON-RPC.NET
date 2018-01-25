@@ -17,7 +17,7 @@ namespace AustinHarris.JsonRpcTestN
     public class CalculatorService : JsonRpcService
     {
         [JsonRpcMethod]
-        private double add(double l, double r)
+        private double Add(double l, double r)
         {
             return l + r;
         }
@@ -72,7 +72,7 @@ namespace AustinHarris.JsonRpcTestN
         }
 
         [JsonRpcMethod("error1")]
-        private string devideByZero(string s)
+        private string DevideByZero(string s)
         {
             var i = 0;
             var j = 15;
@@ -163,9 +163,9 @@ namespace AustinHarris.JsonRpcTestN
             return input;
         }
 
-        private class recursiveClass
+        private class RecursiveClass
         {
-            public recursiveClass Nested1 { get; set; }
+            public RecursiveClass Nested1 { get; set; }
             public int Value1 { get; set; }
         }
 

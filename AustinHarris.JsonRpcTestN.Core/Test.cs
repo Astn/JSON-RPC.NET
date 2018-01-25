@@ -42,8 +42,8 @@ namespace AustinHarris.JsonRpcTestN.Core
         [Fact]
         public void TestCanCreateMultipleServicesOfSameTypeInTheirOwnSessions()
         {
-            Func<int, string> request = (int param) => String.Format("{{method:'add',params:[{0}],id:1}}", param);
-            Func<int, string> expectedResult = (int param) => String.Format("{{\"jsonrpc\":\"2.0\",\"result\":{0},\"id\":1}}", param);
+            string request(int param) => String.Format("{{method:'add',params:[{0}],id:1}}", param);
+            string expectedResult(int param) => String.Format("{{\"jsonrpc\":\"2.0\",\"result\":{0},\"id\":1}}", param);
 
             for (int i = 0; i < 100; i++)
             {
@@ -104,7 +104,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         public void TestStringToString()
         {
             string request = @"{method:'internal.echo',params:['hi'],id:1}";
-            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":'hi',\"id\":1}";
+            string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"hi\",\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
 
@@ -1608,7 +1608,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         class PostProcessHandlerLocal
         {
             public IJsonRequest rpc = null;
-            public IJsonResponse response = null;
+            public InvokeResult response;
             public object context = null;
             public int run = 0;
             private bool changeResponse_;
@@ -1618,7 +1618,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 changeResponse_ = changeResponse;
             }
 
-            public IJsonRpcException PostProcess(IJsonRequest rpc, IJsonResponse response, object context)
+            public IJsonRpcException PostProcess(IJsonRequest rpc,ref InvokeResult response, object context)
             {
                 run++;
 
@@ -1649,7 +1649,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Assert.Equal(1, handler.run);
                 Assert.NotNull(handler.rpc);
                 Assert.NotNull(handler.response);
-                Assert.Equal("Success!", (string)handler.response.Result);
+                Assert.Equal("Success!", (string)handler.response.SerializedResult);
                 Assert.Null(handler.context);
             }
             finally
@@ -1672,11 +1672,10 @@ namespace AustinHarris.JsonRpcTestN.Core
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
                 Assert.NotNull(handler.rpc);
-                Assert.NotNull(handler.response);
-                Assert.Null(handler.response.Result);
-                Assert.NotNull(handler.response.Error);
-                Assert.Equal(-27000, handler.response.Error.code);
-                Assert.Equal("Just some testing", handler.response.Error.message);
+                Assert.Null(handler.response.SerializedResult);
+                Assert.NotNull(handler.response.SerializedError);
+                Assert.Contains("-27000", handler.response.SerializedError);
+                Assert.Contains("Just some testing", handler.response.SerializedError);
                 Assert.Null(handler.context);
             }
             finally
@@ -1698,10 +1697,9 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Assert.Contains("-32603", result.Result);
                 Assert.Equal(1, handler.run);
                 Assert.NotNull(handler.rpc);
-                Assert.NotNull(handler.response);
-                Assert.Null(handler.response.Result);
-                Assert.NotNull(handler.response.Error);
-                Assert.Equal(-32603, handler.response.Error.code);
+                Assert.Null(handler.response.SerializedResult);
+                Assert.NotNull(handler.response.SerializedError);
+                Assert.Contains("-32603", handler.response.SerializedError);
                 Assert.Null(handler.context);
             }
             finally
@@ -1749,7 +1747,7 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Assert.Equal(1, handler.run);
                 Assert.NotNull(handler.rpc);
                 Assert.NotNull(handler.response);
-                Assert.Equal("Success!", (string)handler.response.Result);
+                Assert.Equal("Success!", (string)handler.response.SerializedResult);
                 Assert.Null(handler.context);
             }
             finally
@@ -1773,10 +1771,10 @@ namespace AustinHarris.JsonRpcTestN.Core
                 Assert.Equal(1, handler.run);
                 Assert.NotNull(handler.rpc);
                 Assert.NotNull(handler.response);
-                Assert.Null(handler.response.Result);
-                Assert.NotNull(handler.response.Error);
-                Assert.Equal(-27000, handler.response.Error.code);
-                Assert.Equal("Just some testing", handler.response.Error.message);
+                Assert.Null(handler.response.SerializedResult);
+                Assert.NotNull(handler.response.SerializedError);
+                Assert.Contains("-27000", handler.response.SerializedError);
+                Assert.Contains("Just some testing", handler.response.SerializedError);
                 Assert.Null(handler.context);
             }
             finally
@@ -1799,10 +1797,9 @@ namespace AustinHarris.JsonRpcTestN.Core
                 AssertJsonAreEqual(expectedResult, result.Result);
                 Assert.Equal(1, handler.run);
                 Assert.NotNull(handler.rpc);
-                Assert.NotNull(handler.response);
-                Assert.Null(handler.response.Result);
-                Assert.NotNull(handler.response.Error);
-                Assert.Equal(-32603, handler.response.Error.code);
+                Assert.Null(handler.response.SerializedResult);
+                Assert.NotNull(handler.response.SerializedError);
+                Assert.Contains("-32603", handler.response.SerializedError);
                 Assert.Null(handler.context);
             }
             finally
@@ -1830,7 +1827,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
             var result = JsonRpcProcessor.Process(sessionId, request);
             result.Wait();
-            
+
             var actual1 = JObject.Parse(result.Result);
             var expected1 = JObject.Parse(expectedResult);
             Assert.True(JToken.DeepEquals(expected1, actual1));
@@ -1858,7 +1855,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         [Fact]
         public void TestCustomParameterName()
         {
-            Func<string, string> request = (string paramName) => String.Format("{{method:'TestCustomParameterName',params:{{ {0}:'some string'}},id:1}}", paramName);
+            string request(string paramName) => String.Format("{{method:'TestCustomParameterName',params:{{ {0}:'some string'}},id:1}}", paramName);
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             // Check custom param name specified in attribute works 
             var result = JsonRpcProcessor.Process(request("myCustomParameter"));
@@ -1873,7 +1870,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         [Fact]
         public void TestCustomParameterWithNoSpecificName()
         {
-            Func<string, string> request = (string paramName) => String.Format("{{method:'TestCustomParameterWithNoSpecificName',params:{{ {0}:'some string'}},id:1}}", paramName);
+            string request(string paramName) => String.Format("{{method:'TestCustomParameterWithNoSpecificName',params:{{ {0}:'some string'}},id:1}}", paramName);
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             // Check method can be used with its parameter name 
             var result = JsonRpcProcessor.Process(request("arg"));
@@ -1923,8 +1920,7 @@ namespace AustinHarris.JsonRpcTestN.Core
             Assert.Equal(expectedJson.Count, actualJson.Count);
             for (var expectedElementsEnumerator = expectedJson.GetEnumerator(); expectedElementsEnumerator.MoveNext(); )
             {
-                JToken actualElement = null;
-                Assert.True(actualJson.TryGetValue(expectedElementsEnumerator.Current.Key, out actualElement), "Couldn't find " + path + "[" + expectedElementsEnumerator.Current.Key + "]");
+                Assert.True(actualJson.TryGetValue(expectedElementsEnumerator.Current.Key, out JToken actualElement), "Couldn't find " + path + "[" + expectedElementsEnumerator.Current.Key + "]");
                 AssertJsonAreEqual(expectedElementsEnumerator.Current.Value, actualElement, path + "[" + expectedElementsEnumerator.Current.Key + "]");
             }
         }

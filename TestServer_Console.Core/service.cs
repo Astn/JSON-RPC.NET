@@ -9,13 +9,13 @@ namespace TestServer_Console
     public class CalculatorService : JsonRpcService
     {
         [JsonRpcMethod]
-        private double add(double l, double r)
+        private double Add(double l, double r)
         {
             return l + r;
         }
 
         [JsonRpcMethod]
-        private int addInt(int l, int r)
+        private int AddInt(int l, int r)
         {
             return l + r;
         }
@@ -39,13 +39,13 @@ namespace TestServer_Console
         }
 
         [JsonRpcMethod]
-        private double add_1(double l, double r)
+        private double Add_1(double l, double r)
         {
             return l + r;
         }
 
         [JsonRpcMethod]
-        private int addInt_1(int l, int r)
+        private int AddInt_1(int l, int r)
         {
             return l + r;
         }
@@ -69,13 +69,13 @@ namespace TestServer_Console
         }
 
         [JsonRpcMethod]
-        private double add_2(double l, double r)
+        private double Add_2(double l, double r)
         {
             return l + r;
         }
 
         [JsonRpcMethod]
-        private int addInt_2(int l, int r)
+        private int AddInt_2(int l, int r)
         {
             return l + r;
         }
@@ -99,13 +99,13 @@ namespace TestServer_Console
         }
 
         [JsonRpcMethod]
-        private double add_3(double l, double r)
+        private double Add_3(double l, double r)
         {
             return l + r;
         }
 
         [JsonRpcMethod]
-        private int addInt_3(int l, int r)
+        private int AddInt_3(int l, int r)
         {
             return l + r;
         }

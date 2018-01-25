@@ -91,8 +91,7 @@
         /// <param name="sessionId"></param>
         public static void DestroySession(string sessionId)
         {
-            Handler h;
-            _sessionHandlersMaster.TryRemove(sessionId, out h);
+            _sessionHandlersMaster.TryRemove(sessionId, out Handler h);
             Interlocked.Increment(ref _sessionHandlerMasterVersion);
             h.MetaData.Services.Clear();
         }
@@ -201,73 +200,65 @@
         /// <param name="Rpc">JsonRpc Request to be processed</param>
         /// <param name="RpcContext">Optional context that will be available from within the jsonRpcMethod.</param>
         /// <returns></returns>
-        public IJsonResponse Handle(IJsonRequest Rpc, Object RpcContext = null)
+        public void Handle(IJsonRequest Rpc, ref InvokeResult response, Object RpcContext = null)
         {
             AddRpcContext(RpcContext);
 
             var preProcessingException = PreProcess(Rpc, RpcContext);
             if (preProcessingException != null)
             {
-                IJsonResponse response = _objectFactory.CreateJsonErrorResponse(preProcessingException);
+                response.SerializedError = _objectFactory.Serialize(preProcessingException);
                 //callback is called - if it is empty then nothing will be done
                 //return response always- if callback is empty or not
-                return PostProcess(Rpc, response, RpcContext);
+                
+                return ;
             }
 
-            SMDService metadata = null;
-            if (this.MetaData.Services.TryGetValue(Rpc.Method, out metadata))
+            if (this.MetaData.Services.TryGetValue(Rpc.Method, out SMDService metadata))
             {
-            } else if (metadata == null)
+            }
+            else if (metadata == null)
             {
-                var response = _objectFactory.CreateJsonErrorResponse(_objectFactory.CreateException(-32601, "Method not found", "The method does not exist / is not available."));
-                return PostProcess(Rpc, response, RpcContext);
+                response.SerializedError = _objectFactory.Serialize(_objectFactory.CreateException(-32601, "Method not found", "The method does not exist / is not available."));
+                return;
             }
 
             try
             {
                 var results = metadata.Invoke(_objectFactory, Rpc.Raw);
-                //var results = handle.DynamicInvoke(parameters);
-
+                response.SerializedResult = results.Item1;
+                response.SerializedId = results.Item2;
                 var contextException = RpcGetAndRemoveRpcException();
-                IJsonResponse response = null;
+                
                 if (contextException != null)
                 {
-                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, contextException));
+                    response.SerializedError = _objectFactory.Serialize(ProcessException(Rpc, contextException));
                 }
-                else
-                {
-                    response = _objectFactory.CreateJsonSuccessResponse(results);
-                }
-                return PostProcess(Rpc, response, RpcContext);
+                return ;
             }
             catch (Exception ex)
             {
-                IJsonResponse response;
                 if (ex is TargetParameterCountException)
                 {
-                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, _objectFactory.CreateException(-32602, "Invalid params", ex)));
-                    return PostProcess(Rpc, response, RpcContext);
+                    response.SerializedError = _objectFactory.Serialize(ProcessException(Rpc, _objectFactory.CreateException(-32602, "Invalid params", ex)));
                 }
-
-                // We really dont care about the TargetInvocationException, just pass on the inner exception
-                if (ex is IJsonRpcException)
+                else if (ex is IJsonRpcException)
                 {
-                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, ex as IJsonRpcException));
-                    return PostProcess(Rpc, response, RpcContext);
+                    response.SerializedError = _objectFactory.Serialize(ProcessException(Rpc, ex as IJsonRpcException));
                 }
                 else if (ex.InnerException != null && ex.InnerException is IJsonRpcException)
                 {
-                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, ex.InnerException as IJsonRpcException));
-                    return PostProcess(Rpc, response, RpcContext);
+                    response.SerializedError = _objectFactory.Serialize(ProcessException(Rpc, ex.InnerException as IJsonRpcException));
                 }
                 else if (ex.InnerException != null)
                 {
-                    response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, _objectFactory.CreateException(-32603, "Internal Error", ex.InnerException)));
-                    return PostProcess(Rpc, response, RpcContext);
+                    response.SerializedError = _objectFactory.Serialize(ProcessException(Rpc, _objectFactory.CreateException(-32603, "Internal Error", ex.InnerException)));
                 }
-
-                response = _objectFactory.CreateJsonErrorResponse(ProcessException(Rpc, _objectFactory.CreateException(-32603, "Internal Error", ex)));
-                return PostProcess(Rpc, response, RpcContext);
+                else
+                {
+                    response.SerializedError = _objectFactory.Serialize(ProcessException(Rpc, _objectFactory.CreateException(-32603, "Internal Error", ex)));
+                }
+                return;
             }
             finally
             {
@@ -313,24 +304,19 @@
             return externalPreProcessingHandler == null ? null : externalPreProcessingHandler(request, context);
         }
 
-        private IJsonResponse PostProcess(IJsonRequest request, IJsonResponse response, object context)
+        internal void PostProcess(IJsonRequest request, ref InvokeResult response, object context)
         {
             if (externalPostProcessingHandler != null)
             {
                 try
                 {
-                    IJsonRpcException exception = externalPostProcessingHandler(request, response, context);
-                    if (exception != null)
-                    {
-                        response = _objectFactory.CreateJsonErrorResponse( exception );
-                    }
+                    externalPostProcessingHandler(request,ref response, context);
                 }
                 catch (Exception ex)
                 {
-                    response = _objectFactory.CreateJsonErrorResponse( ProcessException(request, _objectFactory.CreateException(-32603, "Internal Error", ex)) );
+                    response.SerializedError = _objectFactory.Serialize( ProcessException(request, _objectFactory.CreateException(-32603, "Internal Error", ex)) );
                 }
             }
-            return response;
         }
 
     }

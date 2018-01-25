@@ -20,7 +20,7 @@ namespace AustinHarris.JsonRpc
     /// <param name="response">The jsonRpc Response that has been created.</param>
     /// <param name="context">The context associated with this request/response pair</param>
     /// <returns>Any non-null result causes the result to be discarded and the JsonRpcException is returned to the caller.</returns>
-    public delegate IJsonRpcException PostProcessHandler(IJsonRequest request, IJsonResponse response, object context);
+    public delegate IJsonRpcException PostProcessHandler(IJsonRequest request, ref InvokeResult response, object context);
 
     /// <summary>
     /// Global configurations for JsonRpc

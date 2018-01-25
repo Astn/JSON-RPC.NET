@@ -64,8 +64,8 @@ namespace TestServer_Console
                 
                 for (int i = 0; i < cnt; i+=5)
                 {
-                    tasks[i] = JsonRpcProcessor.Process(handler, "{'method':'add','params':[1,2],'id':1}");
-                    tasks[i+1] = JsonRpcProcessor.Process(handler, "{'method':'addInt','params':[1,7],'id':2}");
+                    tasks[i] = JsonRpcProcessor.Process(handler, "{'method':'Add','params':[1,2],'id':1}");
+                    tasks[i+1] = JsonRpcProcessor.Process(handler, "{'method':'AddInt','params':[1,7],'id':2}");
                     tasks[i+2] = JsonRpcProcessor.Process(handler, "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}");
                     tasks[i+3] = JsonRpcProcessor.Process(handler, "{'method':'Test2','params':[3.456],'id':4}");
                     tasks[i+4] = JsonRpcProcessor.Process(handler, "{'method':'StringMe','params':['Foo'],'id':5}");

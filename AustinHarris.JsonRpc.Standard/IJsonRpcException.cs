@@ -2,9 +2,9 @@
 {
     public interface IJsonRpcException
     {
-        int code { get; set; }
-        object data { get; set; }
-        string message { get; set; }
+        int Code { get; set; }
+        object Data { get; set; }
+        string Message { get; set; }
     }
     public interface IJsonRpcExceptionFactory
     {

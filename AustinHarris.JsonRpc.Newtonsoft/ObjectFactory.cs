@@ -15,27 +15,6 @@ namespace AustinHarris.JsonRpc.Newtonsoft
             return new JsonRpcException(code, message, data);
         }
 
-        public IJsonResponse CreateJsonErrorResponse(IJsonRpcException Error)
-        {
-            return new JsonResponse()
-            {
-                Error = Error
-            };
-        }
-
-        public IJsonResponse CreateJsonResponse()
-        {
-            return new JsonResponse();
-        }
-
-        public IJsonResponse CreateJsonSuccessResponse(object result)
-        {
-            return new JsonResponse()
-            {
-                Result = result
-            };
-        }
-
         public object DeserializeJson(string json, Type type)
         {
             return JsonConvert.DeserializeObject(json, type);
@@ -149,10 +128,44 @@ namespace AustinHarris.JsonRpc.Newtonsoft
             return req;
 
         }
-
-        public string SerializeResponse(IJsonResponse response)
+        const string envelopeResult1 = "{\"jsonrpc\":\"2.0\",\"result\":";
+        const string envelopeError1 = "{\"jsonrpc\":\"2.0\",\"error\":";
+        const string envelope2 = ",\"id\":";
+        const string envelope3 = "}";
+        static int LenEnvelopeResult = envelopeResult1.Length + envelope2.Length + envelope3.Length;
+        static int LenEnvelopeError = envelopeError1.Length + envelope2.Length + envelope3.Length;
+        public string ToJsonRpcResponse(ref InvokeResult response)
         {
-            return JsonConvert.SerializeObject(response);
+
+            if (String.IsNullOrEmpty(response.SerializedError))
+            {                
+                var sb = new StringBuilder(response.SerializedResult.Length + 
+                                            response.SerializedId.Length 
+                                            + LenEnvelopeResult);
+                sb.Append(envelopeResult1);
+                sb.Append(response.SerializedResult);
+                sb.Append(envelope2);
+                sb.Append(response.SerializedId);
+                sb.Append(envelope3);
+                return sb.ToString();
+            }
+            else
+            {
+                var sb = new StringBuilder(response.SerializedResult.Length +
+                                            response.SerializedId.Length
+                                            + LenEnvelopeError);
+                sb.Append(envelopeError1);
+                sb.Append(response.SerializedError);
+                sb.Append(envelope2);
+                sb.Append(response.SerializedId);
+                sb.Append(envelope3);
+                return sb.ToString();
+            }
+        }
+
+        public string Serialize<T>(T data)
+        {
+            return JsonConvert.SerializeObject(data);
         }
 
         public IJsonRequest[] DeserializeRequests(string requests)
@@ -165,16 +178,16 @@ namespace AustinHarris.JsonRpc.Newtonsoft
             try
             {
 
-                var jv = parameter as JValue;
-                if (jv != null)
+                if (parameter is JValue jv)
                 {
-                    if(jv.Type == JTokenType.Null)
+                    if (jv.Type == JTokenType.Null)
                     {
                         return null;
                     }
 
                     return jv.ToObject(type);
-                } else if(parameter is JObject)
+                }
+                else if (parameter is JObject)
                 {
                     return ((JObject)parameter).ToObject(type);
                 }
@@ -194,7 +207,7 @@ namespace AustinHarris.JsonRpc.Newtonsoft
             return parameter;
         }
 
-        public void DeserializeJsonRef<T>(string json, ref ValueTuple<T> functionParameters, ref Object id, KeyValuePair<string, Type>[] info)
+        public void DeserializeJsonRef<T>(string json, ref ValueTuple<T> functionParameters, ref string rawId, KeyValuePair<string, Type>[] info)
         {
             var prop = new Stack<String>();
             var ptype = String.Empty;
@@ -221,7 +234,7 @@ namespace AustinHarris.JsonRpc.Newtonsoft
                     }
                     else if (prop.Peek() == "id" && prop.Count == 1)
                     {
-                        id = reader.Value;
+                        rawId = reader.Value.ToString();
                         prop.Pop();
                         continue;
                     }
@@ -274,7 +287,7 @@ namespace AustinHarris.JsonRpc.Newtonsoft
             }
         }
 
-        public void DeserializeJsonRef<T1, T2>(string json, ref (T1, T2) functionParameters, ref object id, KeyValuePair<string, Type>[] info)
+        public void DeserializeJsonRef<T1, T2>(string json, ref (T1, T2) functionParameters, ref string rawId, KeyValuePair<string, Type>[] info)
         {
             var prop = new Stack<String>();
             var ptype = String.Empty;
@@ -301,7 +314,7 @@ namespace AustinHarris.JsonRpc.Newtonsoft
                     }
                     else if (prop.Peek() == "id" && prop.Count == 1)
                     {
-                        id = reader.Value;
+                        rawId = reader.Value.ToString();
                         prop.Pop();
                         continue;
                     }
@@ -374,7 +387,7 @@ namespace AustinHarris.JsonRpc.Newtonsoft
             }
         }
 
-        public void DeserializeJsonRef<T1, T2, T3>(string json, ref (T1, T2, T3) functionParameters, ref object id, KeyValuePair<string, Type>[] info)
+        public void DeserializeJsonRef<T1, T2, T3>(string json, ref (T1, T2, T3) functionParameters, ref string rawId, KeyValuePair<string, Type>[] info)
         {
             var prop = new Stack<String>();
             var ptype = String.Empty;
@@ -401,7 +414,7 @@ namespace AustinHarris.JsonRpc.Newtonsoft
                     }
                     else if (prop.Peek() == "id" && prop.Count == 1)
                     {
-                        id = reader.Value;
+                        rawId = reader.Value.ToString();
                         prop.Pop();
                         continue;
                     }
@@ -488,24 +501,25 @@ namespace AustinHarris.JsonRpc.Newtonsoft
             }
         }
 
-        public void DeserializeJsonRef<T1, T2, T3, T4>(string json, ref (T1, T2, T3, T4) functionParameters, ref object id, KeyValuePair<string, Type>[] functionParameterInfo)
+        public void DeserializeJsonRef<T1, T2, T3, T4>(string json, ref (T1, T2, T3, T4) functionParameters, ref string rawId, KeyValuePair<string, Type>[] functionParameterInfo)
         {
             throw new NotImplementedException();
         }
 
-        public void DeserializeJsonRef<T1, T2, T3, T4, T5>(string json, ref (T1, T2, T3, T4, T5) functionParameters, ref object id, KeyValuePair<string, Type>[] functionParameterInfo)
+        public void DeserializeJsonRef<T1, T2, T3, T4, T5>(string json, ref (T1, T2, T3, T4, T5) functionParameters, ref string rawId, KeyValuePair<string, Type>[] functionParameterInfo)
         {
             throw new NotImplementedException();
         }
 
-        public void DeserializeJsonRef<T1, T2, T3, T4, T5, T6>(string json, ref (T1, T2, T3, T4, T5, T6) functionParameters, ref object id, KeyValuePair<string, Type>[] functionParameterInfo)
+        public void DeserializeJsonRef<T1, T2, T3, T4, T5, T6>(string json, ref (T1, T2, T3, T4, T5, T6) functionParameters, ref string rawId, KeyValuePair<string, Type>[] functionParameterInfo)
         {
             throw new NotImplementedException();
         }
 
-        public void DeserializeJsonRef<T1, T2, T3, T4, T5, T6, T7>(string json, ref (T1, T2, T3, T4, T5, T6, T7) functionParameters, ref object id, KeyValuePair<string, Type>[] functionParameterInfo)
+        public void DeserializeJsonRef<T1, T2, T3, T4, T5, T6, T7>(string json, ref (T1, T2, T3, T4, T5, T6, T7) functionParameters, ref string rawId, KeyValuePair<string, Type>[] functionParameterInfo)
         {
             throw new NotImplementedException();
         }
+
     }
 }

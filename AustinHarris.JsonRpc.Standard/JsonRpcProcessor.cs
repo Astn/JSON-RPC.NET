@@ -74,7 +74,7 @@ namespace AustinHarris.JsonRpc
             IJsonRequest[] batch = null;
             try
             {
-                if (isSingleRpc(jsonRpc))
+                if (IsSingleRpc(jsonRpc))
                 {
                     var name = Handler._objectFactory.MethodName(jsonRpc);
                     var foo = Handler._objectFactory.CreateRequest();
@@ -88,58 +88,54 @@ namespace AustinHarris.JsonRpc
                     singleBatch = batch.Length == 1;
                     if (batch.Length == 0)
                     {
-                        return Handler._objectFactory.SerializeResponse(Handler._objectFactory.CreateJsonErrorResponse(handler.ProcessParseException(jsonRpc, Handler._objectFactory.CreateException(3200, "Invalid Request", "Batch of calls was empty."))));
+                        InvokeResult ir = new InvokeResult
+                        {
+                            SerializedResult = Handler._objectFactory.Serialize(handler.ProcessParseException(jsonRpc, Handler._objectFactory.CreateException(3200, "Invalid Request", "Batch of calls was empty.")))
+                        };
+                        return Handler._objectFactory.ToJsonRpcResponse( ref ir );
                     }
                 }
             }
             catch (Exception ex)
             {
-                return Handler._objectFactory.SerializeResponse(Handler._objectFactory.CreateJsonErrorResponse(handler.ProcessParseException(jsonRpc, Handler._objectFactory.CreateException(-32700, "Parse error", ex))));
+                InvokeResult ir = new InvokeResult
+                {
+                    SerializedResult = Handler._objectFactory.Serialize(handler.ProcessParseException(jsonRpc, Handler._objectFactory.CreateException(-32700, "Parse error", ex)))
+                };
+                return Handler._objectFactory.ToJsonRpcResponse(ref ir);
             }
             
             StringBuilder sbResult = null;
             for (var i = 0; i < batch.Length; i++)
             {
                 var jsonRequest = batch[i];
-                var jsonResponse = Handler._objectFactory.CreateJsonResponse();
+                InvokeResult jsonResponse = new InvokeResult();
 
                 if (jsonRequest == null)
                 {
-                    jsonResponse.Error = handler.ProcessParseException(jsonRpc,
+                    jsonResponse.SerializedError = Handler._objectFactory.Serialize(handler.ProcessParseException(jsonRpc,
                         Handler._objectFactory.CreateException(-32700, "Parse error",
-                            "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
+                            "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text.")));
                 }
                 else if (jsonRequest.Method == null)
                 {
-                    jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        Handler._objectFactory.CreateException(-32600, "Invalid Request", "Missing property 'method'"));
+                    jsonResponse.SerializedError = Handler._objectFactory.Serialize(handler.ProcessParseException(jsonRpc,
+                        Handler._objectFactory.CreateException(-32600, "Invalid Request", "Missing property 'method'")));
                 }
                 else
                 {
-                    var data = handler.Handle(jsonRequest, jsonRpcContext);
-                    jsonResponse.Id = jsonRequest.Id;
-                    if (data == null) continue;
+                    handler.Handle(jsonRequest, ref jsonResponse, jsonRpcContext);
+                    handler.PostProcess(jsonRequest, ref jsonResponse, jsonRpcContext);
 
-                    jsonResponse.Error = data.Error;
-                    jsonResponse.Result = data.Result;
+                    if (jsonResponse.SerializedResult == null) continue;
+                }
 
-                }
-                
-                // Now return the result of the call.
-                if (jsonResponse.Result == null && jsonResponse.Error == null)
-                {
-                    // Per json rpc 2.0 spec
-                    // result : This member is REQUIRED on success.
-                    // This member MUST NOT exist if there was an error invoking the method.    
-                    // Either the result member or error member MUST be included, but both members MUST NOT be included.
-                    jsonResponse.Result = null;
-                }
                 // special case optimization for single Item batch
-                if (singleBatch && (jsonResponse.Id != null || jsonResponse.Error != null))
+                if (singleBatch && (jsonResponse.SerializedId != null || jsonResponse.SerializedError != null))
                 {
-                    return Handler._objectFactory.SerializeResponse(jsonResponse);
+                    return Handler._objectFactory.ToJsonRpcResponse(ref jsonResponse);
                 }
-                if (jsonResponse.Id == null && jsonResponse.Error == null)
+                if (jsonResponse.SerializedId == null && jsonResponse.SerializedError == null)
                 {
                     // do nothing
                     sbResult = new StringBuilder(0);
@@ -152,7 +148,7 @@ namespace AustinHarris.JsonRpc
                         sbResult = new StringBuilder("[");
                     }
 
-                    sbResult.Append(Handler._objectFactory.SerializeResponse(jsonResponse));
+                    sbResult.Append(Handler._objectFactory.ToJsonRpcResponse(ref jsonResponse));
                     if (i < batch.Length - 1)
                     {
                         sbResult.Append(',');
@@ -166,7 +162,7 @@ namespace AustinHarris.JsonRpc
             return sbResult.ToString();
         }
 
-        private static bool isSingleRpc(string json)
+        private static bool IsSingleRpc(string json)
         {
             for (int i = 0; i < json.Length; i++)
             {

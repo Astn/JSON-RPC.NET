@@ -30,19 +30,19 @@ namespace AustinHarris.JsonRpc.Newtonsoft
     public class JsonRpcException : System.Exception, IJsonRpcException
     {
         [JsonProperty]
-        public int code { get; set; }
+        public int Code { get; set; }
 
         [JsonProperty]
-        public string message { get; set; }
+        public string Message { get; set; }
 
         [JsonProperty]
-        public object data { get; set; }
+        public object Data { get; set; }
 
         public JsonRpcException(int code, string message, object data)
         {
-            this.code = code;
-            this.message = message;
-            this.data = data;
+            this.Code = code;
+            this.Message = message;
+            this.Data = data;
         }
     }
 }
