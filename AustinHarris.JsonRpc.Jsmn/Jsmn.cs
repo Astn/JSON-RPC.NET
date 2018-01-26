@@ -59,15 +59,228 @@ namespace AustinHarris.JsonRpc.Jsmn
         public int toksuper; /* superior token node, e.g parent object or array */
     };
 
-    public unsafe static class jsmn_c
+   
+    public static class jsmn
     {
+        public static unsafe int parse(string json, jsmntok_t[] tokens)
+        {
+            fixed(jsmntok_t* thead = &tokens[0])
+            fixed (char* pjson = json)
+            {
+                jsmn_parser parser;
+                jsmn_c.init(&parser);
+                return jsmn_c.jsmn_parse(&parser, pjson, json.Length, thead, 100);
+                
+            }
+        }
+        
+        public static unsafe bool parseFirstField(string json, string fieldName, out string value)
+        {
+            const int count = 20;
+            jsmntok_t* tokens = stackalloc jsmntok_t[count];
+            var found = 0;
+            fixed (char* pjson = json)
+            {
+                jsmn_parser parser;
+                jsmn_c.init(&parser);
+                found = jsmn_c.jsmn_parse(&parser, pjson, json.Length, tokens, count);
+            }
+            
+            for (int i = 0; i < found; i++)
+            {
+                var tokSz = tokens[i].end - tokens[i].start;
+                if (tokSz == fieldName.Length && String.Compare(fieldName, 0, json, tokens[i].start, tokSz) == 0)
+                {
+                    i++;
+                    value = json.Substring(tokens[i].start, tokens[i].end - tokens[i].start);
+                    return true;
+                }
+            }
 
+            value = string.Empty;
+            return false;
+            
+        }
 
+        public static unsafe void DeserializeJsonRef<T>(string json, ref ValueTuple<T> functionParameters, ref string rawId, KeyValuePair<string, Type>[] info)
+        {
+            const int count = 20;
+            jsmntok_t* tokens = stackalloc jsmntok_t[count];
+            var found = 0;
+            fixed (char* pjson = json)
+            {
+                jsmn_parser parser;
+                jsmn_c.init(&parser);
+                found = jsmn_c.jsmn_parse(&parser, pjson, json.Length, tokens, count);
+            }
+
+            const string idField = "id"; 
+            const string paramsField = "params"; 
+            
+            for (int i = 0; i < found; i++)
+            {
+                var tokSz = tokens[i].end - tokens[i].start;
+                var current = tokens[i];
+                var currentval = json.Substring(tokens[i].start, tokens[i].end - tokens[i].start);
+                if (tokSz == idField.Length && String.Compare(idField, 0, json, tokens[i].start, tokSz) == 0)
+                {
+                    i++;
+                    rawId = json.Substring(tokens[i].start, tokens[i].end - tokens[i].start);
+                }
+                
+                else if (tokSz == paramsField.Length && String.Compare(paramsField, 0, json, tokens[i].start, tokSz) == 0)
+                {
+                    i++;
+                    switch (tokens[i].type)
+                    {
+                        case jsmntype_t.JSMN_ARRAY:
+                            var level = i;
+                            i++;
+                            while (tokens[i].parent == level)
+                            {
+                                switch (tokens[i].type)
+                                {
+                                    case jsmntype_t.JSMN_UNDEFINED:
+                                        break;
+                                    case jsmntype_t.JSMN_OBJECT:
+                                        break;
+                                    case jsmntype_t.JSMN_ARRAY:
+                                        break;
+                                    case jsmntype_t.JSMN_STRING:
+                                        if (i - level == 1)
+                                            functionParameters.Item1 =
+                                                (T) Convert.ChangeType(
+                                                    json.Substring(tokens[i].start, tokens[i].end - tokens[i].start),
+                                                    typeof(T));
+                                        break;
+                                    case jsmntype_t.JSMN_PRIMITIVE:
+                                        if (i - level == 1)
+                                            functionParameters.Item1 =
+                                                (T) Convert.ChangeType(
+                                                    json.Substring(tokens[i].start, tokens[i].end - tokens[i].start),
+                                                    typeof(T));
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
+                                i++;
+                            }
+
+                            i--;
+                            break;
+                        case jsmntype_t.JSMN_OBJECT:
+                            break;
+                        case jsmntype_t.JSMN_UNDEFINED:
+                            break;
+                        case jsmntype_t.JSMN_STRING:
+                            break;
+                        case jsmntype_t.JSMN_PRIMITIVE:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+        }
+        
+        public static unsafe void DeserializeJsonRef<T1,T2>(string json, ref ValueTuple<T1,T2> functionParameters, ref string rawId, KeyValuePair<string, Type>[] info)
+        {
+            const int count = 20;
+            jsmntok_t* tokens = stackalloc jsmntok_t[count];
+            var found = 0;
+            fixed (char* pjson = json)
+            {
+                jsmn_parser parser;
+                jsmn_c.init(&parser);
+                found = jsmn_c.jsmn_parse(&parser, pjson, json.Length, tokens, count);
+            }
+
+            const string idField = "id"; 
+            const string paramsField = "params"; 
+            
+            for (int i = 0; i < found; i++)
+            {
+                var tokSz = tokens[i].end - tokens[i].start;
+                var current = tokens[i];
+                var currentval = json.Substring(tokens[i].start, tokens[i].end - tokens[i].start);
+                if (tokSz == idField.Length && String.Compare(idField, 0, json, tokens[i].start, tokSz) == 0)
+                {
+                    i++;
+                    rawId = json.Substring(tokens[i].start, tokens[i].end - tokens[i].start);
+                }
+                
+                else if (tokSz == paramsField.Length && String.Compare(paramsField, 0, json, tokens[i].start, tokSz) == 0)
+                {
+                    i++;
+                    switch (tokens[i].type)
+                    {
+                        case jsmntype_t.JSMN_ARRAY:
+                            var level = i;
+                            i++;
+                            while (tokens[i].parent == level)
+                            {
+                                switch (tokens[i].type)
+                                {
+                                    case jsmntype_t.JSMN_UNDEFINED:
+                                        break;
+                                    case jsmntype_t.JSMN_OBJECT:
+                                        break;
+                                    case jsmntype_t.JSMN_ARRAY:
+                                        break;
+                                    case jsmntype_t.JSMN_STRING:
+                                        if (i - level == 1)
+                                            functionParameters.Item1 =
+                                                (T1) Convert.ChangeType(
+                                                    json.Substring(tokens[i].start, tokens[i].end - tokens[i].start),
+                                                    typeof(T1));
+                                        if (i - level == 2)
+                                            functionParameters.Item2 =
+                                                (T2) Convert.ChangeType(
+                                                    json.Substring(tokens[i].start, tokens[i].end - tokens[i].start),
+                                                    typeof(T2));
+                                        break;
+                                    case jsmntype_t.JSMN_PRIMITIVE:
+                                        if (i - level == 1)
+                                            functionParameters.Item1 =
+                                                (T1) Convert.ChangeType(
+                                                    json.Substring(tokens[i].start, tokens[i].end - tokens[i].start),
+                                                    typeof(T1));
+                                        if (i - level == 2)
+                                            functionParameters.Item2 =
+                                                (T2) Convert.ChangeType(
+                                                    json.Substring(tokens[i].start, tokens[i].end - tokens[i].start),
+                                                    typeof(T2));
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
+                                i++;
+                            }
+
+                            i--;
+                            break;
+                        case jsmntype_t.JSMN_OBJECT:
+                            break;
+                        case jsmntype_t.JSMN_UNDEFINED:
+                            break;
+                        case jsmntype_t.JSMN_STRING:
+                            break;
+                        case jsmntype_t.JSMN_PRIMITIVE:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+        }
+    }
+    
+    internal static unsafe class jsmn_c
+    {
         /**
      * Allocates a fresh unused token from the token pull.
      */
-        unsafe static jsmntok_t* jsmn_alloc_token(jsmn_parser* parser,
-            jsmntok_t* tokens, int num_tokens)
+        static jsmntok_t* jsmn_alloc_token(jsmn_parser* parser, jsmntok_t* tokens, int num_tokens)
         {
             jsmntok_t* tok;
             if (parser->toknext >= num_tokens)
@@ -86,8 +299,7 @@ namespace AustinHarris.JsonRpc.Jsmn
         /**
          * Fills token type and boundaries.
          */
-        unsafe static void jsmn_fill_token(jsmntok_t* token, jsmntype_t type,
-                                    int start, int end)
+        static void jsmn_fill_token(jsmntok_t* token, jsmntype_t type, int start, int end)
         {
             token->type = type;
             token->start = start;
@@ -98,8 +310,7 @@ namespace AustinHarris.JsonRpc.Jsmn
         /**
          * Fills next available token with JSON primitive.
          */
-        unsafe static int jsmn_parse_primitive(jsmn_parser* parser, char* js,
-                int len, jsmntok_t* tokens, int num_tokens)
+        static int jsmn_parse_primitive(jsmn_parser* parser, char* js, int len, jsmntok_t* tokens, int num_tokens)
         {
             jsmntok_t* token;
             int start;
@@ -158,8 +369,7 @@ namespace AustinHarris.JsonRpc.Jsmn
         /**
          * Fills next token with JSON string.
          */
-        unsafe static int jsmn_parse_string(jsmn_parser* parser, char* js,
-                int len, jsmntok_t* tokens, int num_tokens)
+        static int jsmn_parse_string(jsmn_parser* parser, char* js, int len, jsmntok_t* tokens, int num_tokens)
         {
             jsmntok_t* token;
 
@@ -240,8 +450,7 @@ namespace AustinHarris.JsonRpc.Jsmn
         /**
          * Parse JSON string and fill tokens.
          */
-        unsafe static int jsmn_parse(jsmn_parser* parser, char* js, int len,
-                jsmntok_t* tokens, int num_tokens)
+        internal static int jsmn_parse(jsmn_parser* parser, char* js, int len, jsmntok_t* tokens, int num_tokens)
         {
             int r;
             int i;
@@ -439,11 +648,12 @@ namespace AustinHarris.JsonRpc.Jsmn
          * Creates a new parser based over a given  buffer with an array of tokens
          * available.
          */
-        unsafe static void jsmn_init(jsmn_parser* parser)
+        internal static void init(jsmn_parser* parser)
         {
             parser->pos = 0;
             parser->toknext = 0;
             parser->toksuper = -1;
         }
+        
     }
 }
