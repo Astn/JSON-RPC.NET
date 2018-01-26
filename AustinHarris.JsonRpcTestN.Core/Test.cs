@@ -103,7 +103,7 @@ namespace AustinHarris.JsonRpcTestN.Core
         [Fact]
         public void TestStringToString()
         {
-            string request = @"{method:'internal.echo',params:['hi'],id:1}";
+            string request = "{\"method\":\"internal.echo\",\"params\":[\"hi\"],\"id\":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"hi\",\"id\":1}";
             var result = JsonRpcProcessor.ProcessAsync(request);
             result.Wait();

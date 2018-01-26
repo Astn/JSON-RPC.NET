@@ -113,6 +113,9 @@ namespace AustinHarris.JsonRpc
             return tcs.Task;
         }
 
+        [ThreadStatic]
+        static IJsonRequest[] array1 = null;
+
         public static string Process(Handler handler, string jsonRpc, object jsonRpcContext)
         {
             var singleBatch = true;
@@ -123,10 +126,11 @@ namespace AustinHarris.JsonRpc
                 if (IsSingleRpc(jsonRpc))
                 {
                     var name = Handler._objectFactory.MethodName(jsonRpc);
-                    var foo = Handler._objectFactory.CreateRequest();
-                    foo.Method = name;
-                    foo.Raw = jsonRpc;
-                    batch = new[] { foo };
+                    if (array1 == null)
+                        array1 = new[] { Handler._objectFactory.CreateRequest() };
+                    array1[0].Method = name;
+                    array1[0].Raw = jsonRpc;
+                    batch = array1; 
                 }
                 else
                 {

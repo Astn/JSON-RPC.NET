@@ -49,5 +49,17 @@ namespace AustinHarris.JsonRpcTestN.Jsmn
             Assert.Equal(functionParameters.Item2, 2);
             Assert.Equal(rawId, "3");
         }
+
+        [Fact]
+        public void CanGetParamsArrayPrimitives1Nullable()
+        {
+            var json = "{\"method\":\"NullableFloatToNullableFloat\",\"params\":[1.23],\"id\":3}";
+            var functionParameters = new ValueTuple<float?>();
+            string rawId = string.Empty;
+            var info = new KeyValuePair<string, Type>[] { new KeyValuePair<string, Type>("p1", typeof(float?)) };
+            jsmn.DeserializeJsonRef(json, ref functionParameters, ref rawId, info);
+            Assert.Equal(functionParameters.Item1, (float?)(1.23));
+            Assert.Equal(rawId, "3");
+        }
     }
 }

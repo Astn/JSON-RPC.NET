@@ -66,38 +66,58 @@ namespace AustinHarris.JsonRpc.Newtonsoft
         const string envelope3 = "}";
         static int LenEnvelopeResult = envelopeResult1.Length + envelope2.Length + envelope3.Length;
         static int LenEnvelopeError = envelopeError1.Length + envelope2.Length + envelope3.Length;
+        [ThreadStatic]
+        static char[] respBuffer = null;
+
         public string ToJsonRpcResponse(ref InvokeResult response)
         {
+            if (respBuffer == null)
+            {
+                respBuffer = new char[200];
+            }
 
             if (String.IsNullOrEmpty(response.SerializedError))
-            {                
-                var sb = new StringBuilder(response.SerializedResult.Length + 
-                                            response.SerializedId.Length 
-                                            + LenEnvelopeResult);
-                sb.Append(envelopeResult1);
-                sb.Append(response.SerializedResult);
-                sb.Append(envelope2);
-                sb.Append(response.SerializedId);
-                sb.Append(envelope3);
-                return sb.ToString();
+            {
+                var respLen = response.SerializedResult.Length +
+                                            response.SerializedId.Length
+                                            + LenEnvelopeResult;
+                if(respBuffer.Length < respLen)
+                {
+                    Array.Resize(ref respBuffer, respLen);
+                }
+                var preC = 0;
+                var newC = 0;
+                envelopeResult1             .CopyTo(0, respBuffer, 0, newC = envelopeResult1.Length);
+                response.SerializedResult   .CopyTo(0, respBuffer, preC += newC, newC = response.SerializedResult.Length);
+                envelope2                   .CopyTo(0, respBuffer, preC += newC, newC = envelope2.Length);
+                response.SerializedId       .CopyTo(0, respBuffer, preC += newC, newC = response.SerializedId.Length);
+                envelope3                   .CopyTo(0, respBuffer, preC += newC, newC = envelope3.Length);
+                return new string(respBuffer, 0, preC += newC);
             }
             else
             {
-                var sb = new StringBuilder(response.SerializedResult.Length +
+                var respLen = response.SerializedError.Length +
                                             response.SerializedId.Length
-                                            + LenEnvelopeError);
-                sb.Append(envelopeError1);
-                sb.Append(response.SerializedError);
-                sb.Append(envelope2);
-                sb.Append(response.SerializedId);
-                sb.Append(envelope3);
-                return sb.ToString();
+                                            + LenEnvelopeError;
+                if (respBuffer.Length < respLen)
+                {
+                    Array.Resize(ref respBuffer, respLen);
+                }
+
+                var preC = 0;
+                var newC = 0;
+                envelopeError1              .CopyTo(0, respBuffer, 0, newC = envelopeError1.Length);
+                response.SerializedError    .CopyTo(0, respBuffer, preC += newC, newC = response.SerializedError.Length);
+                envelope2                   .CopyTo(0, respBuffer, preC += newC, newC = envelope2.Length);
+                response.SerializedId       .CopyTo(0, respBuffer, preC += newC, newC = response.SerializedId.Length);
+                envelope3                   .CopyTo(0, respBuffer, preC += newC, newC = envelope3.Length);
+                return new string(respBuffer, 0, preC += newC);
             }
         }
-
+        static JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings();
         public string Serialize<T>(T data)
         {
-            return JsonConvert.SerializeObject(data);
+            return JsonConvert.SerializeObject(data, jsonSerializerSettings);
         }
 
         public IJsonRequest[] DeserializeRequests(string requests)

@@ -155,10 +155,18 @@ namespace AustinHarris.JsonRpc.Jsmn
                                         break;
                                     case jsmntype_t.JSMN_PRIMITIVE:
                                         if (i - level == 1)
-                                            functionParameters.Item1 =
+                                            if (info[0].Value.IsGenericType && info[0].Value.GenericTypeArguments.Length==1)
+                                            {
+                                                functionParameters.Item1 = (T)Convert.ChangeType(
+                                                    json.Substring(tokens[i].start, tokens[i].end - tokens[i].start),
+                                                    info[0].Value.GenericTypeArguments[0]);
+                                            }
+                                            else { 
+                                                functionParameters.Item1 =
                                                 (T) Convert.ChangeType(
                                                     json.Substring(tokens[i].start, tokens[i].end - tokens[i].start),
                                                     typeof(T));
+                                            }
                                         break;
                                     default:
                                         throw new ArgumentOutOfRangeException();
