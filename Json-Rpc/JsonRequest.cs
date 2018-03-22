@@ -20,7 +20,7 @@ namespace AustinHarris.JsonRpc
         }
 
         [JsonProperty("jsonrpc")]
-        public string JsonRpc => "2.0";
+        public string JsonRpc { get => "2.0";}
 
         [JsonProperty("method")]
         public string Method { get; set; }
