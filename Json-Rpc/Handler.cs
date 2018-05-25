@@ -339,8 +339,14 @@
                     var task = (Task)results;
                     await task;
                     PropertyInfo pInfo = task.GetType().GetRuntimeProperty("Result");
-                    if (pInfo != null)
+                    if (pInfo != null && !pInfo.PropertyType.Name.Equals("VoidTaskResult"))
+                    {
                         results = pInfo.GetValue(task);
+                    }
+                    else
+                    {
+                        results = null;
+                    }
                 }
 
                 var last = parameters.LastOrDefault();
