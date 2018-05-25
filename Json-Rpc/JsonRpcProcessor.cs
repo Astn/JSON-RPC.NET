@@ -27,20 +27,16 @@ namespace AustinHarris.JsonRpc
                 async.SetCompleted();
             });
         }
-        public static Task<string> Process(string jsonRpc, object context = null)
+        public static async Task<string> Process(string jsonRpc, object context = null)
         {
-            return Process(Handler.DefaultSessionId(), jsonRpc, context);
+            return await Process(Handler.DefaultSessionId(), jsonRpc, context);
         }
-        public static Task<string> Process(string sessionId, string jsonRpc, object context = null)
-        { 
-            return Task<string>.Factory.StartNew((_) =>
-            {
-                var tuple = (Tuple<string, string, object>)_;
-                return ProcessInternal(tuple.Item1, tuple.Item2, tuple.Item3);
-            }, new Tuple<string, string, object>(sessionId, jsonRpc, context));
+        public static async Task<string> Process(string sessionId, string jsonRpc, object context = null)
+        {
+            return await ProcessInternal(sessionId, jsonRpc, context);
         }
 
-        private static string ProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext)
+        private static async Task<string> ProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext)
         {
             var handler = Handler.GetSessionHandler(sessionId);
 
@@ -97,7 +93,7 @@ namespace AustinHarris.JsonRpc
                 {
                     jsonResponse.Id = jsonRequest.Id;
 
-                    var data = handler.Handle(jsonRequest, jsonRpcContext);
+                    var data = await handler.Handle(jsonRequest, jsonRpcContext);
 
                     if (data == null) continue;
 
