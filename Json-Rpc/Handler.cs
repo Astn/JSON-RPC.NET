@@ -194,7 +194,7 @@
         /// <param name="Rpc">JsonRpc Request to be processed</param>
         /// <param name="RpcContext">Optional context that will be available from within the jsonRpcMethod.</param>
         /// <returns></returns>
-        public JsonResponse Handle(JsonRequest Rpc, Object RpcContext = null)
+        public async Task<JsonResponse> Handle(JsonRequest Rpc, Object RpcContext = null)
         {
             AddRpcContext(RpcContext);
 
@@ -333,8 +333,22 @@
 
             try
             {
-                var results = handle.DynamicInvoke(parameters);
-                
+                object results = handle.DynamicInvoke(parameters);
+                if (results is Task)
+                {
+                    var task = (Task)results;
+                    await task;
+                    PropertyInfo pInfo = task.GetType().GetRuntimeProperty("Result");
+                    if (pInfo != null && !pInfo.PropertyType.Name.Equals("VoidTaskResult"))
+                    {
+                        results = pInfo.GetValue(task);
+                    }
+                    else
+                    {
+                        results = null;
+                    }
+                }
+
                 var last = parameters.LastOrDefault();
                 var contextException = RpcGetAndRemoveRpcException();
                 JsonResponse response = null;
