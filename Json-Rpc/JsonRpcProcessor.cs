@@ -84,11 +84,6 @@ namespace AustinHarris.JsonRpc
                         new JsonRpcException(-32700, "Parse error",
                             "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
                 }
-                else if (jsonRequest.Id == null)
-                {
-                    jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(-32600, "Invalid Request", "Missing property 'id'"));
-                }
                 else if (jsonRequest.Method == null)
                 {
                     jsonResponse.Error = handler.ProcessParseException(jsonRpc,
