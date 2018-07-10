@@ -107,3 +107,11 @@ _UpgradeReport_Files/
 Backup*/
 UpgradeLog*.XML
 .nuget/NuGet.exe
+/.vs/AustinHarris.JsonRpc/v15/Server/sqlite3/storage.ide-wal
+/.vs/AustinHarris.JsonRpc/v15/Server/sqlite3/storage.ide-shm
+/.vs/AustinHarris.JsonRpc/v15/Server/sqlite3/storage.ide
+/.vs/AustinHarris.JsonRpc/v15/Server/sqlite3/db.lock
+/.vs/AustinHarris.JsonRpc/DesignTimeBuild/.dtbcache
+/.vs/VSWorkspaceState.json
+/.vs/slnx.sqlite
+/.vs/ProjectSettings.json
