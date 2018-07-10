@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace AustinHarris.JsonRpc
+﻿namespace AustinHarris.JsonRpc
 {
     /// <summary>
-    /// Provides access to a context specific to each JsonRpc method invocation.
-    /// This is a convienence class that wraps calls to Context specific methods on AustinHarris.JsonRpc.Handler
+    ///     Provides access to a context specific to each JsonRpc method invocation.
+    ///     This is a convienence class that wraps calls to Context specific methods on AustinHarris.JsonRpc.Handler
     /// </summary>
     public class JsonRpcContext
     {
@@ -17,13 +12,13 @@ namespace AustinHarris.JsonRpc
         }
 
         /// <summary>
-        /// The data associated with this context.
+        ///     The data associated with this context.
         /// </summary>
-        public object Value { get; private set; }
+        public object Value { get; }
 
         /// <summary>
-        /// Allows you to set the exception used in in the JsonRpc response.
-        /// Warning: Must be called from within the execution context of the jsonRpc method to function.
+        ///     Allows you to set the exception used in in the JsonRpc response.
+        ///     Warning: Must be called from within the execution context of the jsonRpc method to function.
         /// </summary>
         /// <param name="exception"></param>
         public static void SetException(JsonRpcException exception)
@@ -33,7 +28,7 @@ namespace AustinHarris.JsonRpc
 
 
         /// <summary>
-        /// Must be called from within the execution context of the jsonRpc Method to return the context
+        ///     Must be called from within the execution context of the jsonRpc Method to return the context
         /// </summary>
         /// <returns></returns>
         public static JsonRpcContext Current()

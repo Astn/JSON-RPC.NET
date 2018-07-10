@@ -3,7 +3,7 @@
 namespace AustinHarris.JsonRpc
 {
     /// <summary>
-    /// Represents a JsonRpc request
+    ///     Represents a JsonRpc request
     /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
     public class JsonRequest
