@@ -105,6 +105,7 @@ namespace AustinHarris.JsonRpc.AspNet
         /// <param name="encoding">The Encoding to be used to encode as the result.</param>
         static void CompressResponseIfPossible(HttpRequest request, HttpResponse response, String result, Encoding encoding)
         {
+            response.ContentType = "application/json-rpc";
             string acceptEncoding = request.Headers["Accept-Encoding"];
             if (acceptEncoding != null && acceptEncoding.Contains("gzip"))
             {
