@@ -5,6 +5,7 @@ using System.Text;
 using AustinHarris.JsonRpc;
 using System.Threading;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace TestServer_Console
 {
@@ -47,38 +48,27 @@ namespace TestServer_Console
         {
             Console.WriteLine("Starting benchmark");
            
-            var cnt = 40;
+            var cnt = 50;
             var iterations = 7;
             for (int iteration = 1; iteration <= iterations; iteration++)
             {
                 cnt *= iteration;
                 ctr = 0;
+                Task<string>[] tasks = new Task<string>[cnt];
                 var sw = Stopwatch.StartNew();
-                AutoResetEvent are = new AutoResetEvent(false);
-
-                var fn = new Action<System.Threading.Tasks.Task<String>>(_ => {
-                    if(Interlocked.Increment(ref ctr) == cnt)
-                        {
-                            sw.Stop();
-                            Console.WriteLine("processed {0} rpc in {1}ms for {2} rpc/sec",cnt,sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
-                            are.Set();
-                        }
-                });
 
                 var sessionid = Handler.DefaultSessionId();
                 for (int i = 0; i < cnt; i+=5)
                 {
-                    JsonRpcProcessor.Process(sessionid, "{'method':'add','params':[1,2],'id':1}").ContinueWith(fn);
-
-                    JsonRpcProcessor.Process(sessionid, "{'method':'addInt','params':[1,7],'id':2}").ContinueWith(fn);
-
-                    JsonRpcProcessor.Process(sessionid, "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}").ContinueWith(fn);
-
-                    JsonRpcProcessor.Process(sessionid, "{'method':'Test2','params':[3.456],'id':4}").ContinueWith(fn);
-
-                    JsonRpcProcessor.Process(sessionid, "{'method':'StringMe','params':['Foo'],'id':5}").ContinueWith(fn);
+                    tasks[i] = JsonRpcProcessor.Process(sessionid, "{'method':'add','params':[1,2],'id':1}");
+                    tasks[i+1] = JsonRpcProcessor.Process(sessionid, "{'method':'addInt','params':[1,7],'id':2}");
+                    tasks[i+2] = JsonRpcProcessor.Process(sessionid, "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}");
+                    tasks[i+3] = JsonRpcProcessor.Process(sessionid, "{'method':'Test2','params':[3.456],'id':4}");
+                    tasks[i+4] = JsonRpcProcessor.Process(sessionid, "{'method':'StringMe','params':['Foo'],'id':5}");
                 }
-                are.WaitOne();
+                Task.WaitAll(tasks);
+                sw.Stop();
+                Console.WriteLine("processed {0} rpc in {1}ms for {2} rpc/sec", cnt, sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
             }
 
 

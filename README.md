@@ -31,7 +31,28 @@ PM> Install-Package AustinHarris.JsonRpc.AspNet
 
 ##### Performance
 
-Under ideal conditions > 120k rpc/sec (cpu i7-2600,console server, no IO bottleneck)
+Under ideal conditions > 120k rpc/sec (cpu i7-2600, console test server)
+
+> 
+```
+Starting benchmark
+processed        50 rpc in      0ms for       ∞ rpc/sec
+processed       100 rpc in      2ms for  50,000 rpc/sec
+processed       300 rpc in      1ms for 300,000 rpc/sec
+processed     1,200 rpc in      6ms for 200,000 rpc/sec
+processed     6,000 rpc in     37ms for 162,162 rpc/sec
+processed    36,000 rpc in    228ms for 157,894 rpc/sec
+processed   252,000 rpc in  1,688ms for 149,289 rpc/sec
+processed 2,016,000 rpc in 13,930ms for 144,723 rpc/sec
+Finished benchmark...
+```
+
+###### Test machine
+
+i7 920 @ 2.67 GHz
+12.0 GB 
+
+
 
 ##### Getting Started & Documentation
 

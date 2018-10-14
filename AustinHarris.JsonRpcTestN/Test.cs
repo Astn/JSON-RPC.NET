@@ -79,14 +79,14 @@ namespace AustinHarris.JsonRpcTestN
 
             var actual1 = JObject.Parse(result.Result);
             var expected1 = JObject.Parse(expectedResult);
-            Assert.AreEqual(expected1, actual1);
+            Assert.IsTrue(JToken.DeepEquals(expected1, actual1));
 
             h.Destroy();
 
             var result2 = JsonRpcProcessor.Process("this one", request);
             result2.Wait();
 
-            Assert.AreEqual(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result)));
         }
 
         [Test()]
@@ -173,7 +173,7 @@ namespace AustinHarris.JsonRpcTestN
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"refException worked\",\"code\":-1,\"data\":null},\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
-            Assert.AreEqual(JObject.Parse(expectedResult), JObject.Parse(result.Result));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedResult), JObject.Parse(result.Result)));
         }
 
         [Test()]
@@ -1581,7 +1581,7 @@ namespace AustinHarris.JsonRpcTestN
 
             var actual1 = JObject.Parse(result.Result);
             var expected1 = JObject.Parse(expectedResult);
-            Assert.AreEqual(expected1, actual1);
+            Assert.IsTrue(JToken.DeepEquals(expected1, actual1));
             Assert.AreEqual(1, preHandler.run);
 
             h.Destroy();
@@ -1590,7 +1590,7 @@ namespace AustinHarris.JsonRpcTestN
             result2.Wait();
 
             Assert.AreEqual(1, preHandler.run);
-            Assert.AreEqual(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result)));
         }
 
         class PostProcessHandlerLocal
@@ -1821,7 +1821,7 @@ namespace AustinHarris.JsonRpcTestN
             
             var actual1 = JObject.Parse(result.Result);
             var expected1 = JObject.Parse(expectedResult);
-            Assert.AreEqual(expected1, actual1);
+            Assert.IsTrue(JToken.DeepEquals(expected1, actual1));
             Assert.AreEqual(1, postHandler.run);
 
             h.Destroy();
@@ -1830,7 +1830,7 @@ namespace AustinHarris.JsonRpcTestN
             result2.Wait();
 
             Assert.AreEqual(1, postHandler.run);
-            Assert.AreEqual(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedResultAfterDestroy), JObject.Parse(result2.Result)));
         }
 
         [Test()]
