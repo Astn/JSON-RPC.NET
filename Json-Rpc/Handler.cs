@@ -250,7 +250,7 @@
             if (Rpc.Params is Newtonsoft.Json.Linq.JArray)
             {
                 var jarr = ((Newtonsoft.Json.Linq.JArray)Rpc.Params);
-                for (int i = 0; i < loopCt; i++)
+                for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
                 {
                     parameters[i] = CleanUpParameter(jarr[i], metadata.parameters[i]);
                 }
