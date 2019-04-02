@@ -1844,6 +1844,16 @@ namespace AustinHarris.JsonRpcTestN
         }
 
         [Test()]
+        public void TestExtraPositionalParameters()
+        {
+            string request = @"{method:'ReturnsDateTime',params:[1,2,'mytext'],id:1}";
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.IsTrue(result.Result.Contains("error"));
+            Assert.IsTrue(result.Result.Contains("\"code\":-32602"));
+        }
+
+        [Test()]
         public void TestCustomParameterName()
         {
             Func<string, string> request = (string paramName) => String.Format("{{method:'TestCustomParameterName',params:{{ {0}:'some string'}},id:1}}", paramName);
