@@ -1889,6 +1889,12 @@ namespace AustinHarris.JsonRpcTestN
             Assert.AreEqual(expected, result.Result);
         }
 
+        [Test]
+        public void ThrowArgumentException_WhenInstantiatingAServiceMoreThanOnce()
+        {
+            Assert.Throws<ArgumentException>(() => new CalculatorService());
+        }
+
         private static void AssertJsonAreEqual(string expectedJson, string actualJson)
         {
             Newtonsoft.Json.Linq.JObject expected = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(expectedJson);
