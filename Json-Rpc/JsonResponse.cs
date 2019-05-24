@@ -13,7 +13,7 @@ namespace AustinHarris.JsonRpc
     public class JsonResponse
     {
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore, PropertyName = "jsonrpc")]
-        public string JsonRpc { get { return "2.0"; } }
+        public string JsonRpc { get; set; } = "2.0";
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore, PropertyName = "result")]
         public object Result { get; set; }
@@ -32,7 +32,7 @@ namespace AustinHarris.JsonRpc
     public class JsonResponse<T>
     {
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore, PropertyName = "jsonrpc")]
-        public string JsonRpc { get { return "2.0"; } }
+        public string JsonRpc { get; set; } = "2.0";
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore, PropertyName = "result")]
         public T Result { get; set; }
