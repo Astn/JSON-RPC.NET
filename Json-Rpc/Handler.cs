@@ -431,34 +431,34 @@
                     return bob.Value;
                 }
 
-                // Avoid calling DeserializeObject on types that JValue has an explicit converter for
-                // try to optimize for the most common types
-                if (metaData.ObjectType == typeof(string)) return (string)bob;
-                if (metaData.ObjectType == typeof(int)) return (int)bob;
-                if (metaData.ObjectType == typeof(double)) return (double)bob;
-                if (metaData.ObjectType == typeof(float)) return (float)bob;
-                //if (metaData.ObjectType == typeof(long)) return (long)bob;
-                //if (metaData.ObjectType == typeof(uint)) return (uint)bob;
-                //if (metaData.ObjectType == typeof(ulong)) return (ulong)bob;
-                //if (metaData.ObjectType == typeof(byte[])) return (byte[])bob;
-                //if (metaData.ObjectType == typeof(Guid)) return (Guid)bob;
-                if (metaData.ObjectType == typeof(decimal)) return (decimal)bob;
-                //if (metaData.ObjectType == typeof(TimeSpan)) return (TimeSpan)bob;
-                //if (metaData.ObjectType == typeof(short)) return (short)bob;
-                //if (metaData.ObjectType == typeof(ushort)) return (ushort)bob;
-                //if (metaData.ObjectType == typeof(char)) return (char)bob;
-                //if (metaData.ObjectType == typeof(DateTime)) return (DateTime)bob;
-                //if (metaData.ObjectType == typeof(bool)) return (bool)bob;
-                //if (metaData.ObjectType == typeof(DateTimeOffset)) return (DateTimeOffset)bob;
-
-                if (metaData.ObjectType.IsAssignableFrom(typeof(JValue)))
-                    return bob;
-
                 try
                 {
+                    // Avoid calling DeserializeObject on types that JValue has an explicit converter for
+                    // try to optimize for the most common types
+                    if (metaData.ObjectType == typeof(string)) return (string)bob;
+                    if (metaData.ObjectType == typeof(int)) return (int)bob;
+                    if (metaData.ObjectType == typeof(double)) return (double)bob;
+                    if (metaData.ObjectType == typeof(float)) return (float)bob;
+                    //if (metaData.ObjectType == typeof(long)) return (long)bob;
+                    //if (metaData.ObjectType == typeof(uint)) return (uint)bob;
+                    //if (metaData.ObjectType == typeof(ulong)) return (ulong)bob;
+                    //if (metaData.ObjectType == typeof(byte[])) return (byte[])bob;
+                    //if (metaData.ObjectType == typeof(Guid)) return (Guid)bob;
+                    if (metaData.ObjectType == typeof(decimal)) return (decimal)bob;
+                    //if (metaData.ObjectType == typeof(TimeSpan)) return (TimeSpan)bob;
+                    //if (metaData.ObjectType == typeof(short)) return (short)bob;
+                    //if (metaData.ObjectType == typeof(ushort)) return (ushort)bob;
+                    //if (metaData.ObjectType == typeof(char)) return (char)bob;
+                    //if (metaData.ObjectType == typeof(DateTime)) return (DateTime)bob;
+                    //if (metaData.ObjectType == typeof(bool)) return (bool)bob;
+                    //if (metaData.ObjectType == typeof(DateTimeOffset)) return (DateTimeOffset)bob;
+
+                    if (metaData.ObjectType.IsAssignableFrom(typeof(JValue)))
+                        return bob;
+
                     return bob.ToObject(metaData.ObjectType);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // no need to throw here, they will
                     // get an invalid cast exception right after this.
@@ -472,7 +472,7 @@
                         return JsonConvert.DeserializeObject((string)p, metaData.ObjectType);
                     return JsonConvert.DeserializeObject(p.ToString(), metaData.ObjectType);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // no need to throw here, they will
                     // get an invalid cast exception right after this.

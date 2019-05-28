@@ -101,6 +101,7 @@ namespace AustinHarris.JsonRpc
 
                     if (data == null) continue;
 
+                    jsonResponse.JsonRpc = data.JsonRpc;
                     jsonResponse.Error = data.Error;
                     jsonResponse.Result = data.Result;
 
@@ -119,8 +120,10 @@ namespace AustinHarris.JsonRpc
                     StringWriter sw = new StringWriter();
                     JsonTextWriter writer = new JsonTextWriter(sw);
                     writer.WriteStartObject();
-                    writer.WritePropertyName("jsonrpc"); writer.WriteValue("2.0");
-
+                    if (!string.IsNullOrEmpty(jsonResponse.JsonRpc))
+                    {
+                        writer.WritePropertyName("jsonrpc"); writer.WriteValue(jsonResponse.JsonRpc);
+                    }
                     if (jsonResponse.Error != null)
                     {
                         writer.WritePropertyName("error"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Error));
