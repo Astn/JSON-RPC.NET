@@ -338,11 +338,11 @@
 
             try
             {
-                var metaParamsList = handle.Method.GetParameters();
-                object[] paras = new object[metaParamsList.Length];
-                for (int i = 0; i < metaParamsList.Length; i++)
+                var methodParamsList = handle.Method.GetParameters();
+                object[] paras = new object[methodParamsList.Length];
+                for (int i = 0; i < methodParamsList.Length; i++)
                 {
-                    paras[metaParamsList[i].Position] = parameters.ElementAt(i).Value;
+                    paras[i] = parameters[metadata.parameters[i].Name];
                 }
                 var results = handle.DynamicInvoke(paras);
 
