@@ -258,29 +258,31 @@
             else if (Rpc.Params is Newtonsoft.Json.Linq.JObject)
             {
                 var asDict = Rpc.Params as IDictionary<string, Newtonsoft.Json.Linq.JToken>;
-                for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
-                {
-                    if (asDict.ContainsKey(metadata.parameters[i].Name) == true)
-                    {
-                        parameters[i] = CleanUpParameter(asDict[metadata.parameters[i].Name], metadata.parameters[i]);
-                        continue;
-                    }
-                    else
-                    {
-                        JsonResponse response = new JsonResponse()
-                        {
-                            Error = ProcessException(Rpc,
-                            new JsonRpcException(-32602,
-                                "Invalid params",
-                                string.Format("Named parameter '{0}' was not present.",
-                                                metadata.parameters[i].Name)
-                                )),
-                            Id = Rpc.Id
-                        };
-                        return PostProcess(Rpc, response, RpcContext);
-                    }
-                }
-            }
+				var keys = asDict.Keys.ToList();
+				for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
+				{
+					var param = metadata.parameters.Where(x => x.Name == keys[i]).FirstOrDefault();
+					if (param != null)
+					{
+						parameters[i] = CleanUpParameter(asDict[keys[i]], param);
+						continue;
+					}
+					else
+					{
+						JsonResponse response = new JsonResponse()
+						{
+							Error = ProcessException(Rpc,
+							new JsonRpcException(-32602,
+								"Invalid params",
+								string.Format("Named parameter '{0}' was not present.",
+												keys[i])
+								)),
+							Id = Rpc.Id
+						};
+						return PostProcess(Rpc, response, RpcContext);
+					}
+				}
+			}
 
             // Optional Parameter support
             // check if we still miss parameters compared to metadata which may include optional parameters.
