@@ -227,7 +227,7 @@
                 return PostProcess(Rpc, response, RpcContext);
             }
 
-            object[] parameters = null;
+            Dictionary<string, object> parameters = new Dictionary<string, object>();
             bool expectsRefException = false;
             var metaDataParamCount = metadata.parameters.Count(x => x != null);
 
@@ -245,59 +245,62 @@
                 paramCount++;
                 expectsRefException = true;
             }
-            parameters = new object[paramCount];
 
             if (Rpc.Params is Newtonsoft.Json.Linq.JArray)
             {
                 var jarr = ((Newtonsoft.Json.Linq.JArray)Rpc.Params);
                 for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
                 {
-                    parameters[i] = CleanUpParameter(jarr[i], metadata.parameters[i]);
+                    parameters.Add(metadata.parameters[i].Name, CleanUpParameter(jarr[i], metadata.parameters[i]));
                 }
             }
             else if (Rpc.Params is Newtonsoft.Json.Linq.JObject)
             {
                 var asDict = Rpc.Params as IDictionary<string, Newtonsoft.Json.Linq.JToken>;
-				var keys = asDict.Keys.ToList();
-				for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
-				{
-					var param = metadata.parameters.Where(x => x.Name == keys[i]).FirstOrDefault();
-					if (param != null)
-					{
-						parameters[i] = CleanUpParameter(asDict[keys[i]], param);
-						continue;
-					}
-					else
-					{
-						JsonResponse response = new JsonResponse()
-						{
-							Error = ProcessException(Rpc,
-							new JsonRpcException(-32602,
-								"Invalid params",
-								string.Format("Named parameter '{0}' was not present.",
-												keys[i])
-								)),
-							Id = Rpc.Id
-						};
-						return PostProcess(Rpc, response, RpcContext);
-					}
-				}
-			}
+                var keys = asDict.Keys.ToList();
+                var metaParamsList = metadata.parameters.ToList();
+                for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
+                {
+                    var param = metadata.parameters.Where(x => x.Name == keys[i]).FirstOrDefault();
+                    if (param != null)
+                    {
+                        parameters.Add(keys[i], CleanUpParameter(asDict[keys[i]], param));
+                        continue;
+                    }
+                    else
+                    {
+                        JsonResponse response = new JsonResponse()
+                        {
+                            Error = ProcessException(Rpc,
+                            new JsonRpcException(-32602,
+                                "Invalid params",
+                                string.Format("Named parameter '{0}' was not present.",
+                                                keys[i])
+                                )),
+                            Id = Rpc.Id
+                        };
+                        return PostProcess(Rpc, response, RpcContext);
+                    }
+                }
+            }
 
             // Optional Parameter support
             // check if we still miss parameters compared to metadata which may include optional parameters.
             // if the rpc-call didn't supply a value for an optional parameter, we should be assinging the default value of it.
-            if (parameters.Length < metaDataParamCount && metadata.defaultValues.Length > 0) // rpc call didn't set values for all optional parameters, so we need to assign the default values for them.
+            if (parameters.Count < metaDataParamCount && metadata.defaultValues.Length > 0) // rpc call didn't set values for all optional parameters, so we need to assign the default values for them.
             {
-                var suppliedParamsCount = parameters.Length; // the index we should start storing default values of optional parameters.
-                var missingParamsCount = metaDataParamCount - parameters.Length; // the amount of optional parameters without a value set by rpc-call.
-                Array.Resize(ref parameters, parameters.Length + missingParamsCount); // resize the array to include all optional parameters.
+                var suppliedParamsCount = parameters.Count; // the index we should start storing default values of optional parameters.
+                var missingParamsCount = metaDataParamCount - parameters.Count; // the amount of optional parameters without a value set by rpc-call.
 
-                for (int paramIndex = parameters.Length - 1, defaultIndex = metadata.defaultValues.Length - 1;     // fill missing parameters from the back 
-                    paramIndex >= suppliedParamsCount && defaultIndex >= 0;                                        // to don't overwrite supplied ones.
-                    paramIndex--, defaultIndex--)
+                //for (int paramIndex = parameters.Count - 1, defaultIndex = metadata.defaultValues.Length - 1;     // add missing parameters
+                //    paramIndex >= suppliedParamsCount && defaultIndex >= 0;
+                //    paramIndex--, defaultIndex--)
+                //{
+                //    parameters.Add(metadata.defaultValues[defaultIndex].Name, metadata.defaultValues[defaultIndex].Value);
+                //}
+                foreach (var item in metadata.defaultValues)        // add missing parameters
                 {
-                    parameters[paramIndex] = metadata.defaultValues[defaultIndex].Value;
+                    if (!parameters.ContainsKey(item.Name)) parameters.Add(item.Name, item.Value);
                 }
 
                 if (missingParamsCount > metadata.defaultValues.Length)
@@ -317,7 +320,7 @@
                 }
             }
 
-            if (parameters.Length != metaDataParamCount)
+            if (parameters.Count != metaDataParamCount)
             {
                 JsonResponse response = new JsonResponse()
                 {
@@ -326,7 +329,7 @@
                         "Invalid params",
                         string.Format("Expecting {0} parameters, and received {1}",
                                         metadata.parameters.Length,
-                                        parameters.Length)
+                                        parameters.Count)
                         )),
                     Id = Rpc.Id
                 };
@@ -335,8 +338,14 @@
 
             try
             {
-                var results = handle.DynamicInvoke(parameters);
-                
+                var metaParamsList = handle.Method.GetParameters();
+                object[] paras = new object[metaParamsList.Length];
+                for (int i = 0; i < metaParamsList.Length; i++)
+                {
+                    paras[metaParamsList[i].Position] = parameters.ElementAt(i).Value;
+                }
+                var results = handle.DynamicInvoke(paras);
+
                 var last = parameters.LastOrDefault();
                 var contextException = RpcGetAndRemoveRpcException();
                 JsonResponse response = null;
@@ -344,9 +353,9 @@
                 {
                     response = new JsonResponse() { Error = ProcessException(Rpc, contextException), Id = Rpc.Id };
                 }
-                else if (expectsRefException && last != null && last is JsonRpcException)
+                else if (expectsRefException && last.Value != null && last.Value is JsonRpcException)
                 {
-                    response = new JsonResponse() { Error = ProcessException(Rpc, last as JsonRpcException), Id = Rpc.Id };
+                    response = new JsonResponse() { Error = ProcessException(Rpc, last.Value as JsonRpcException), Id = Rpc.Id };
                 }
                 else
                 {
