@@ -1899,6 +1899,15 @@ namespace AustinHarris.JsonRpcTestN
             Assert.IsTrue(result.Result.Contains("\"code\":-32603"));
         }
 
+        [Test()]
+        public void TestWrongIdType()
+        {
+            string request = @"{method:'TestOptionalParamdouble',params:{input:5},id:{what:4,that:3}}";
+            var result = JsonRpcProcessor.Process(request);
+            result.Wait();
+            Assert.IsTrue(result.Result.Contains("error"));
+            Assert.IsTrue(result.Result.Contains("\"code\":-32600"));
+        }
 
         private static void AssertJsonAreEqual(string expectedJson, string actualJson)
         {
