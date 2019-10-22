@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AustinHarris.JsonRpc.Jsmn\AustinHarris.JsonRpc.Jsmn.csproj" />
+    <ProjectReference Include="..\AustinHarris.JsonRpc.Standard\AustinHarris.JsonRpc.Standard.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AustinHarris.JsonRpc.Newtonsoft\AustinHarris.JsonRpc.Newtonsoft.csproj" />
+    <ProjectReference Include="..\AustinHarris.JsonRpc.Standard\AustinHarris.JsonRpc.Standard.csproj" />
+  </ItemGroup>
+
+</Project>
