@@ -94,7 +94,7 @@ namespace AustinHarris.JsonRpc
             while (true)
             {
                 item = _pendingWork.Take();
-                item.tcs.SetResult(Process(item.handler, item.jsonRpc, item.context));
+                    item.tcs.SetResult(Process(item.handler, item.jsonRpc, item.context));    
             }
         }
 
@@ -217,7 +217,7 @@ namespace AustinHarris.JsonRpc
             for (int i = 0; i < json.Length; i++)
             {
                 if (json[i] == '{') return true;
-                else if (json[i] == '[') return false;
+                if (json[i] == '[') return false;
             }
             return true;
         }

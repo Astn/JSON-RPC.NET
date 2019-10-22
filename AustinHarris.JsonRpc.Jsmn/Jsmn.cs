@@ -102,6 +102,8 @@ namespace AustinHarris.JsonRpc.Jsmn
             
         }
 
+        static readonly string idField = "id"; 
+        static readonly string paramsField = "params"; 
         public static unsafe void DeserializeJsonRef<T>(string json, ref ValueTuple<T> functionParameters, ref string rawId, KeyValuePair<string, Type>[] info)
         {
             const int count = 20;
@@ -114,8 +116,7 @@ namespace AustinHarris.JsonRpc.Jsmn
                 found = jsmn_c.jsmn_parse(&parser, pjson, json.Length, tokens, count);
             }
 
-            const string idField = "id"; 
-            const string paramsField = "params"; 
+
             
             for (int i = 0; i < found; i++)
             {
@@ -157,9 +158,13 @@ namespace AustinHarris.JsonRpc.Jsmn
                                         if (i - level == 1)
                                             if (info[0].Value.IsGenericType && info[0].Value.GenericTypeArguments.Length==1)
                                             {
-                                                functionParameters.Item1 = (T)Convert.ChangeType(
-                                                    json.Substring(tokens[i].start, tokens[i].end - tokens[i].start),
-                                                    info[0].Value.GenericTypeArguments[0]);
+                                                var substr = json.Substring(tokens[i].start,
+                                                    tokens[i].end - tokens[i].start);
+                                                if(substr != "null"){
+                                                    functionParameters.Item1 = (T)Convert.ChangeType(
+                                                        substr,
+                                                        info[0].Value.GenericTypeArguments[0]);
+                                                }
                                             }
                                             else { 
                                                 functionParameters.Item1 =

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -48,9 +49,9 @@ namespace AustinHarris.JsonRpc.Newtonsoft
 //        }
        
         // JSMN implementation
+        private static string METHOD = "method";
         public string MethodName(string json)
         {
-            const string METHOD = "method";
             string value;
             if (jsmn.parseFirstField(json,METHOD,out value))
             {
@@ -66,52 +67,83 @@ namespace AustinHarris.JsonRpc.Newtonsoft
         const string envelope3 = "}";
         static int LenEnvelopeResult = envelopeResult1.Length + envelope2.Length + envelope3.Length;
         static int LenEnvelopeError = envelopeError1.Length + envelope2.Length + envelope3.Length;
-        [ThreadStatic]
-        static char[] respBuffer = null;
 
         public string ToJsonRpcResponse(ref InvokeResult response)
         {
-            if (respBuffer == null)
-            {
-                respBuffer = new char[200];
-            }
-
             if (String.IsNullOrEmpty(response.SerializedError))
             {
                 var respLen = response.SerializedResult.Length +
-                                            response.SerializedId.Length
+                                            (response.SerializedId !=null ? response.SerializedId.Length : 0)
                                             + LenEnvelopeResult;
-                if(respBuffer.Length < respLen)
+                string outs = string.Create(respLen, response, (span, result) =>
                 {
-                    Array.Resize(ref respBuffer, respLen);
-                }
-                var preC = 0;
-                var newC = 0;
-                envelopeResult1             .CopyTo(0, respBuffer, 0, newC = envelopeResult1.Length);
-                response.SerializedResult   .CopyTo(0, respBuffer, preC += newC, newC = response.SerializedResult.Length);
-                envelope2                   .CopyTo(0, respBuffer, preC += newC, newC = envelope2.Length);
-                response.SerializedId       .CopyTo(0, respBuffer, preC += newC, newC = response.SerializedId.Length);
-                envelope3                   .CopyTo(0, respBuffer, preC += newC, newC = envelope3.Length);
-                return new string(respBuffer, 0, preC += newC);
+                    var newC = 0;
+                    for (int i = 0; i < envelopeResult1.Length; i++)
+                    {
+                        span[newC++] = envelopeResult1[i];
+                    }
+
+                    for (int i = 0; i < result.SerializedResult.Length; i++)
+                    {
+                        span[newC++] = result.SerializedResult[i];
+                    }
+
+                    for (int i = 0; i < envelope2.Length; i++)
+                    {
+                        span[newC++] = envelope2[i];
+                    }
+
+                    if (result.SerializedId != null)
+                    {
+                        for (int i = 0; i < result.SerializedId.Length; i++)
+                        {
+                            span[newC++] = result.SerializedId[i];
+                        }
+                    }
+
+                    for (int i = 0; i < envelope3.Length; i++)
+                    {
+                        span[newC++] = envelope3[i];
+                    }
+                });
+                return outs;
             }
             else
             {
                 var respLen = response.SerializedError.Length +
                                             response.SerializedId.Length
                                             + LenEnvelopeError;
-                if (respBuffer.Length < respLen)
-                {
-                    Array.Resize(ref respBuffer, respLen);
-                }
 
-                var preC = 0;
-                var newC = 0;
-                envelopeError1              .CopyTo(0, respBuffer, 0, newC = envelopeError1.Length);
-                response.SerializedError    .CopyTo(0, respBuffer, preC += newC, newC = response.SerializedError.Length);
-                envelope2                   .CopyTo(0, respBuffer, preC += newC, newC = envelope2.Length);
-                response.SerializedId       .CopyTo(0, respBuffer, preC += newC, newC = response.SerializedId.Length);
-                envelope3                   .CopyTo(0, respBuffer, preC += newC, newC = envelope3.Length);
-                return new string(respBuffer, 0, preC += newC);
+                string outs = string.Create(respLen, response, (span, result) =>
+                {
+                    var newC = 0;
+                    for (int i = 0; i < envelopeError1.Length; i++)
+                    {
+                        span[newC++] = envelopeError1[i];
+                    }
+
+                    for (int i = 0; i < result.SerializedError.Length; i++)
+                    {
+                        span[newC++] = result.SerializedError[i];
+                    }
+
+                    for (int i = 0; i < envelope2.Length; i++)
+                    {
+                        span[newC++] = envelope2[i];
+                    }
+
+                    for (int i = 0; i < result.SerializedId.Length; i++)
+                    {
+                        span[newC++] = result.SerializedId[i];
+                    }
+
+                    for (int i = 0; i < envelope3.Length; i++)
+                    {
+                        span[newC++] = envelope3[i];
+                    }
+                });
+                return outs;
+                    
             }
         }
         static JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings();

@@ -6,6 +6,7 @@ using AustinHarris.JsonRpc;
 using System.Threading;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using AustinHarris.JsonRpc.Newtonsoft;
 
 namespace TestServer_Console
 {
@@ -44,10 +45,18 @@ namespace TestServer_Console
         }
 
         private static volatile int ctr;
+
+        private static string payload1 =  "{\"method\":\"Add\",\"params\":[1,2],\"id\":1}";
+        private static string payload2 = "{\"method\":\"AddInt\",\"params\":[1,7],\"id\":2}";
+        private static string payload3 = "{\"method\":\"NullableFloatToNullableFloat\",\"params\":[1.23],\"id\":3}";
+        private static string payload4 = "{\"method\":\"Test2\",\"params\":[3.456],\"id\":4}";
+        private static string payload5 = "{\"method\":\"StringMe\",\"params\":[\"Foo\"],\"id\":5}";
+        
         private static void Benchmark()
         {
             Console.WriteLine("Starting benchmark");
             AustinHarris.JsonRpc.Config.ConfigureFactory(new AustinHarris.JsonRpc.Newtonsoft.ObjectFactory());
+            //AustinHarris.JsonRpc.Config.ConfigureFactory(new AustinHarris.JsonRpc.Jsmn.ObjectFactory());
             var cnt = 50;
             var iterations = 8;
             for (int iteration = 1; iteration <= iterations; iteration++)
@@ -78,15 +87,15 @@ namespace TestServer_Console
 //                    tasks[i] = null;
 //                }
 //                GC.Collect();
-
+               
                 var sw = Stopwatch.StartNew();
                 for (int i = 0; i < cnt; i+=5)
                 {
-                    tasks[i] = JsonRpcProcessor.ProcessAsync2(handler, "{\"method\":\"Add\",\"params\":[1,2],\"id\":1}");
-                    tasks[i + 1] = JsonRpcProcessor.ProcessAsync2(handler, "{\"method\":\"AddInt\",\"params\":[1,7],\"id\":2}");
-                    tasks[i + 2] = JsonRpcProcessor.ProcessAsync2(handler, "{\"method\":\"NullableFloatToNullableFloat\",\"params\":[1.23],\"id\":3}");
-                    tasks[i + 3] = JsonRpcProcessor.ProcessAsync2(handler, "{\"method\":\"Test2\",\"params\":[3.456],\"id\":4}");
-                    tasks[i + 4] = JsonRpcProcessor.ProcessAsync2(handler, "{\"method\":\"StringMe\",\"params\":[\"Foo\"],\"id\":5}");
+                    tasks[i] = JsonRpcProcessor.ProcessAsync2(handler, payload1);
+                    tasks[i + 1] = JsonRpcProcessor.ProcessAsync2(handler, payload2);
+                    tasks[i + 2] = JsonRpcProcessor.ProcessAsync2(handler, payload3);
+                    tasks[i + 3] = JsonRpcProcessor.ProcessAsync2(handler, payload4);
+                    tasks[i + 4] = JsonRpcProcessor.ProcessAsync2(handler, payload5);
                 }
                 Task.WaitAll(tasks);
                 sw.Stop();
@@ -96,11 +105,11 @@ namespace TestServer_Console
                  sw = Stopwatch.StartNew();
                 for (int i = 0; i < cnt; i += 5)
                 {
-                    results[i] = JsonRpcProcessor.Process(handler, "{\"method\":\"Add\",\"params\":[1,2],\"id\":1}", null);
-                    results[i + 1] = JsonRpcProcessor.Process(handler, "{\"method\":\"AddInt\",\"params\":[1,7],\"id\":2}", null);
-                    results[i + 2] = JsonRpcProcessor.Process(handler, "{\"method\":\"NullableFloatToNullableFloat\",\"params\":[1.23],\"id\":3}", null);
-                    results[i + 3] = JsonRpcProcessor.Process(handler, "{\"method\":\"Test2\",\"params\":[3.456],\"id\":4}", null);
-                    results[i + 4] = JsonRpcProcessor.Process(handler, "{\"method\":\"StringMe\",\"params\":[\"Foo\"],\"id\":5}", null);
+                    results[i] = JsonRpcProcessor.Process(handler, payload1, null);
+                    results[i + 1] = JsonRpcProcessor.Process(handler, payload2, null);
+                    results[i + 2] = JsonRpcProcessor.Process(handler, payload3, null);
+                    results[i + 3] = JsonRpcProcessor.Process(handler, payload4, null);
+                    results[i + 4] = JsonRpcProcessor.Process(handler, payload5, null);
                 }
                 sw.Stop();
                 Console.WriteLine("Direct processed {0} rpc in {1}ms for {2} rpc/sec", cnt, sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
