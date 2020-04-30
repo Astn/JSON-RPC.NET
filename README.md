@@ -3,12 +3,12 @@
 
 json-rpc.net
 ============
-.Net [![astn-jsonrpc MyGet Build Status](https://www.myget.org/BuildSource/Badge/astn-jsonrpc?identifier=fbc64a4a-f9a7-4306-87ba-de0bb9d23cb7)](https://www.myget.org/feed/Activity/astn-jsonrpc) Mono [![Build Status](https://travis-ci.org/Astn/JSON-RPC.NET.svg?branch=master)](https://travis-ci.org/Astn/JSON-RPC.NET)
+![.github/workflows/buildtest.yml](https://github.com/Astn/JSON-RPC.NET/workflows/.github/workflows/buildtest.yml/badge.svg)
 
 JSON-RPC.Net is a high performance Json-Rpc 2.0 server, leveraging the popular JSON.NET library. Host in ASP.NET, also supports sockets and pipes, oh my!
 
 ##### Requirements
-* dotnet 4.0 or mono
+* dotnet-standard (dotnet core | mono | .net framework)
 
 ##### License
 JSON-RPC.net is licensed under The MIT License (MIT), check the [LICENSE](https://github.com/CoiniumServ/JSON-RPC.NET/blob/master/LICENSE) file for details.
@@ -29,10 +29,26 @@ To install JSON-RPC.NET AspNet, run the following command in the Package Manager
 PM> Install-Package AustinHarris.JsonRpc.AspNet
 ```
 
-##### Performance
+## Performance
 
-Under ideal conditions > 120k rpc/sec (cpu i7-2600, console test server)
+These are results from running the TestServer_Console project.
 
+##### Xeon E-2176M @ 2.70GHz 64.0 GB (Date: Thu Apr 30 17:34:22 2020 -0600)
+
+```
+Starting benchmark
+processed 50 rpc in 137ms for 364.963503649635 rpc/sec
+processed 100 rpc in 0ms for ∞ rpc/sec
+processed 300 rpc in 1ms for 300000 rpc/sec
+processed 1200 rpc in 7ms for 171428.57142857142 rpc/sec
+processed 6000 rpc in 25ms for 240000 rpc/sec
+processed 36000 rpc in 159ms for 226415.09433962265 rpc/sec
+processed 252000 rpc in 1075ms for 234418.60465116278 rpc/sec
+Finished benchmark...
+
+```
+
+##### Intel i7 920 @ 2.67GHz 12.0 GB (Date: Maybe in 2015?)
 > 
 ```
 Starting benchmark
@@ -47,10 +63,7 @@ processed 2,016,000 rpc in 13,930ms for 144,723 rpc/sec
 Finished benchmark...
 ```
 
-###### Test machine
 
-i7 920 @ 2.67 GHz
-12.0 GB 
 
 
 
