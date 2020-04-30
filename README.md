@@ -37,15 +37,14 @@ These are results from running the TestServer_Console project.
 
 ```
 Starting benchmark
-processed 50 rpc in 137ms for 364.963503649635 rpc/sec
-processed 100 rpc in 0ms for ∞ rpc/sec
-processed 300 rpc in 1ms for 300000 rpc/sec
-processed 1200 rpc in 7ms for 171428.57142857142 rpc/sec
-processed 6000 rpc in 25ms for 240000 rpc/sec
-processed 36000 rpc in 159ms for 226415.09433962265 rpc/sec
-processed 252000 rpc in 1075ms for 234418.60465116278 rpc/sec
+processed      50 rpc in   137ms for     364.96 rpc/sec
+processed     100 rpc in     0ms for          ∞ rpc/sec
+processed     300 rpc in     1ms for 300,000.00 rpc/sec
+processed   1,200 rpc in     7ms for 171,428.57 rpc/sec
+processed   6,000 rpc in    26ms for 230,769.23 rpc/sec
+processed  36,000 rpc in   166ms for 216,867.47 rpc/sec
+processed 252,000 rpc in 1,121ms for 224,799.29 rpc/sec
 Finished benchmark...
-
 ```
 
 ##### Intel i7 920 @ 2.67GHz 12.0 GB (Date: Maybe in 2015?)

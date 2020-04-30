@@ -68,7 +68,7 @@ namespace TestServer_Console
                 }
                 Task.WaitAll(tasks);
                 sw.Stop();
-                Console.WriteLine("processed {0} rpc in {1}ms for {2} rpc/sec", cnt, sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
+                Console.WriteLine("processed {0:N0} rpc in \t {1:N0}ms for \t {2:N} rpc/sec", cnt, sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
             }
 
 
