@@ -4,12 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BBFBBA8A-2F75-422C-ACCD-D05A6EF7244C}"
-	ProjectSection(SolutionItems) = preProject
-		AustinHarris.JsonRpc.vsmdi = AustinHarris.JsonRpc.vsmdi
-		Local.testsettings = Local.testsettings
-		Performance1.psess = Performance1.psess
-		TraceAndTestImpact.testsettings = TraceAndTestImpact.testsettings
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AustinHarris.JsonRpc", "Json-Rpc\AustinHarris.JsonRpc.csproj", "{24FC1A2A-0BC3-43A7-9BFE-B628C2C4A307}"
 EndProject
