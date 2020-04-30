@@ -9,15 +9,12 @@ jobs:
 
     strategy:
       matrix:
-        os: ['ubuntu-latest']
-#        dotnet-version : ['3.1.102','3.1.201']
-        dotnet-framework : ['netcoreapp3.1']
         project : ['Json-Rpc']
-#       runtime: ['ubuntu.16.04-x64']
-#        include:
-#          - os: windows-latest
-#            dotnet-version : '4.7.2'
-#            dotnet-framework : 'net40'
+        include:
+          - os: windows-latest
+            dotnet-version : '4.7.2'
+          - os: ubuntu-latest
+            dotnet-version: '3.1.201'
 
     runs-on: ${{ matrix.os }}
 
