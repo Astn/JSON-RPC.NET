@@ -10,9 +10,9 @@ jobs:
     strategy:
       matrix:
         os: ['ubuntu-latest']
-        dotnet-version : ['3.1.102','3.1.201']
+#        dotnet-version : ['3.1.102','3.1.201']
         dotnet-framework : ['netcoreapp3.1']
-        runtime: ['ubuntu.16.04-x64']
+#       runtime: ['ubuntu.16.04-x64']
 #        include:
 #          - os: windows-latest
 #            dotnet-version : '4.7.2'
@@ -29,6 +29,6 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build -r ${{matrix.runtime}} -f ${{matrix.dotnet-framework}} --configuration Release --no-restore
+        run: dotnet build -f ${{matrix.dotnet-framework}} --configuration Release
       - name: Test
-        run: dotnet test AustinHarris.JsonRpcTestN --no-restore --verbosity normal
+        run: dotnet test AustinHarris.JsonRpcTestN --verbosity normal
