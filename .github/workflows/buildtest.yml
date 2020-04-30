@@ -9,12 +9,9 @@ jobs:
 
     strategy:
       matrix:
+        os: ['windows-latest','ubuntu-latest']
+        dotnet-version: ['3.1.201']
         project : ['Json-Rpc']
-        include:
-          - os: windows-latest
-            dotnet-version : '4.7.2'
-          - os: ubuntu-latest
-            dotnet-version: '3.1.201'
 
     runs-on: ${{ matrix.os }}
 
@@ -27,6 +24,6 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build ${{matrix.project}} -f ${{matrix.dotnet-framework}} --configuration Release
+        run: dotnet build ${{matrix.project}} --configuration Release
       - name: Test
         run: dotnet test AustinHarris.JsonRpcTestN --verbosity normal
