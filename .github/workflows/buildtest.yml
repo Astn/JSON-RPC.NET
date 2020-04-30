@@ -28,6 +28,6 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build -f ${{dotnet-framework}} --configuration Release --no-restore
+        run: dotnet build -f ${{matrix.dotnet-framework}} --configuration Release --no-restore
       - name: Test
         run: dotnet test AustinHarris.JsonRpcTestN --no-restore --verbosity normal
