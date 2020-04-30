@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <Copyright>Austin Harris</Copyright>
-    <TargetFrameworks>net40;netcoreapp3.1</TargetFrameworks>
     <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
 
