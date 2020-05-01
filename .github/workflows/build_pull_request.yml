@@ -1,6 +1,8 @@
 name: Pull Reqest
 on:
   pull_request:
+    paths-ignore:
+      - "**/*.md"
     branches: [ master ]
 
 jobs:
