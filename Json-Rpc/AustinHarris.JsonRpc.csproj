@@ -4,8 +4,9 @@
         <Company>Austin Harris</Company>
         <Product>Json-Rpc.Net Core</Product>
         <Description>Core functionality for JsonRpc.Net</Description>
-        <AssemblyVersion>1.2.0.0</AssemblyVersion>
-        <FileVersion>1.2.0.0</FileVersion>
+        <AssemblyVersion>1.2.0.1</AssemblyVersion>
+        <VersionSuffix>preview</VersionSuffix>
+        <FileVersion>1.2.0.1</FileVersion>
         <Copyright>Austin Harris</Copyright>
         <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
