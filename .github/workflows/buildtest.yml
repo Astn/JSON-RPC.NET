@@ -24,9 +24,9 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build ${{matrix.project}} --configuration Release --version-suffix ci-${{ github.run_id }}
+        run: dotnet build ${{matrix.project}} --configuration Release --version-suffix ci-${{ github.run_id }}-${{ github.run_number }}
       - name: Test
         run: dotnet test AustinHarris.JsonRpcTestN 
       # Publish
       - name: publish nuget version change
-        run: dotnet nuget push Json-Rpc/bin/Release/*.nupkg  --skip-duplicate --api-key ${{secrets.NugetKey}} # API key for the NuGet feed
+        run: dotnet nuget push Json-Rpc/bin/Release/*.nupkg  --skip-duplicate --source "https://www.nuget.org" --api-key ${{secrets.NugetKey}} # API key for the NuGet feed
