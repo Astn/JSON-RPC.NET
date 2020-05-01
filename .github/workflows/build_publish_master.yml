@@ -1,9 +1,9 @@
 name: Build Master
 on:
   push:
-    branches: [ master ]
     paths-ignore:
       - "**/*.md"
+    branches: [ master ]
 
 jobs:
   build:
