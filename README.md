@@ -3,7 +3,7 @@
 
 json-rpc.net
 ============
-![.github/workflows/buildtest.yml](https://github.com/Astn/JSON-RPC.NET/workflows/.github/workflows/buildtest.yml/badge.svg)
+![Build Master](https://github.com/Astn/JSON-RPC.NET/workflows/Build%20Master/badge.svg)
 
 JSON-RPC.Net is a high performance Json-Rpc 2.0 server, leveraging the popular JSON.NET library. Host in ASP.NET, also supports sockets and pipes, oh my!
 
