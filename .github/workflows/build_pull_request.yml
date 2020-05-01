@@ -28,5 +28,6 @@ jobs:
         run: dotnet test AustinHarris.JsonRpcTestN
       # Publish
       - name: publish nuget version change
-        run: dotnet nuget push Json-Rpc\bin\Release\*.nupkg  --skip-duplicate --source "https://www.nuget.org" --api-key ${{secrets.NugetKey}} # API key for the NuGet feed
+        runs-on: ubuntu-latest
+        run: dotnet nuget push Json-Rpc/bin/Release/*.nupkg  --skip-duplicate --source "https://www.nuget.org" --api-key ${{secrets.NugetKey}} # API key for the NuGet feed
           
