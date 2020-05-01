@@ -1,0 +1,31 @@
+name: Build Master
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        os: ['ubuntu-latest']
+        dotnet-version: ['3.1.201']
+        project : ['Json-Rpc']
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{matrix.dotnet-version}}
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build ${{matrix.project}} --configuration Release
+      - name: Test
+        run: dotnet test AustinHarris.JsonRpcTestN
+      # Publish
+      - name: publish nuget version change
+        run: dotnet nuget push Json-Rpc/bin/Release/*.nupkg  --skip-duplicate --source "https://www.nuget.org" --api-key ${{secrets.NugetKey}} # API key for the NuGet feed
