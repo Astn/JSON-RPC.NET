@@ -4,9 +4,16 @@
         <Company>Austin Harris</Company>
         <Product>Json-Rpc.Net Core</Product>
         <Description>Core functionality for JsonRpc.Net</Description>
-        <VersionPrefix>1.2.1.2</VersionPrefix>
+        <VersionPrefix>1.2.2</VersionPrefix>
         <VersionSuffix>$(VersionSuffix)</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
+        <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>
+        <PackageLicenseUrl>https://raw.githubusercontent.com/Astn/JSON-RPC.NET/master/LICENSE</PackageLicenseUrl>
+        <PackageReleaseNotes>
+            Improves support for optional parameters - @HoMS1987 https://github.com/HoMS1987 
+            Fixes protocol validation of the ID property - @pedrolcl https://github.com/pedrolcl 
+            DotNet Core support - @astn https://github.com/astn
+        </PackageReleaseNotes>
         <TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.1</TargetFrameworks>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
