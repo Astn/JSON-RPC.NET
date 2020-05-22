@@ -267,6 +267,14 @@
                     }
                     else
                     {
+                        var foundDefault = metadata.defaultValues
+                            .FirstOrDefault(defaul => defaul.Name == metadata.parameters[i].Name);
+                        if (foundDefault != null)
+                        {
+                            parameters[i] = foundDefault.Value;
+                            continue;
+                        }
+                        
                         JsonResponse response = new JsonResponse()
                         {
                             Error = ProcessException(Rpc,
