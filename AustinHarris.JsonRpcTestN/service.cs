@@ -389,6 +389,12 @@ namespace AustinHarris.JsonRpcTestN
                     }
             };
         }
+        
+        [JsonRpcMethod]
+        private string TestDifferentOptionalParameters(string uid, string location = null, List<float> traces = null, List<float> wavelengths = null)
+        {
+            return "this is the requested measurement";
+        }
 
     }
 }
