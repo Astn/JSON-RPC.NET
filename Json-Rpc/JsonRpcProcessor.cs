@@ -93,6 +93,11 @@ namespace AustinHarris.JsonRpc
                     jsonResponse.Error = handler.ProcessParseException(jsonRpc,
                         new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
                 }
+                else if (!isSimpleValueType(jsonRequest.Id))
+                {
+                    jsonResponse.Error = handler.ProcessParseException(jsonRpc,
+                        new JsonRpcException(-32600, "Invalid Request", "Id property must be either null or string or integer."));
+                }
                 else
                 {
                     jsonResponse.Id = jsonRequest.Id;
@@ -173,6 +178,16 @@ namespace AustinHarris.JsonRpc
                 else if (json[i] == '[') return false;
             }
             return true;
+        }
+
+        private static bool isSimpleValueType(object property)
+        {
+            if (property == null)
+                return true;
+            return property.GetType() == typeof(System.String) ||
+                property.GetType() == typeof(System.Int64) ||
+                property.GetType() == typeof(System.Int32) ||
+                property.GetType() == typeof(System.Int16);
         }
     }
 }
