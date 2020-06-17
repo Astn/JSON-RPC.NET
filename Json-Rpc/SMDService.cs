@@ -203,7 +203,7 @@ namespace AustinHarris.JsonRpc
 
             foreach (var item in properties)
             {
-                if (item.GetAccessors().Where(x => x.IsPublic).Count() > 0)
+                if (item.GetAccessors().Any(x => x.IsPublic))
                 {
                     if (item.PropertyType != t)
                     {
