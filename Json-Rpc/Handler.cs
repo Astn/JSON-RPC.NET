@@ -1,14 +1,14 @@
-﻿namespace AustinHarris.JsonRpc
+﻿using System.Text.Json;
+
+namespace AustinHarris.JsonRpc
 {
     using System;
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
-    using Newtonsoft.Json;
     using System.Threading.Tasks;
     using System.Collections.Concurrent;
-    using Newtonsoft.Json.Linq;
     using System.Threading;
 
     public class Handler
@@ -232,37 +232,48 @@
             var metaDataParamCount = metadata.parameters.Count(x => x != null);
 
             
-            var loopCt = 0;
-            var getCount = Rpc.Params as ICollection;
-            if (getCount != null)
+            
+            JsonElement p = (JsonElement) Rpc.Params;
+ 
+            if (p.ValueKind == JsonValueKind.Array)
             {
-                loopCt = getCount.Count;
-            }
-
-            var paramCount = loopCt;
-            if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount - 1].ObjectType.Name.Equals(Name_of_JSONRPCEXCEPTION))
-            {
-                paramCount++;
-                expectsRefException = true;
-            }
-            parameters = new object[paramCount];
-
-            if (Rpc.Params is Newtonsoft.Json.Linq.JArray)
-            {
-                var jarr = ((Newtonsoft.Json.Linq.JArray)Rpc.Params);
-                for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
+                var loopCt = p.GetArrayLength();
+                var paramCount = loopCt;
+                if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount - 1].ObjectType.Name.Equals(Name_of_JSONRPCEXCEPTION))
                 {
-                    parameters[i] = CleanUpParameter(jarr[i], metadata.parameters[i]);
+                    paramCount++;
+                    expectsRefException = true;
+                }
+                parameters = new object[paramCount];
+                var enu = p.EnumerateArray();
+                for (int i = 0; enu.MoveNext() &&  i < metadata.parameters.Length; i++)
+                {
+                    
+                    parameters[i] = metadata.parameters[i].ExtractValue(enu.Current);
                 }
             }
-            else if (Rpc.Params is Newtonsoft.Json.Linq.JObject)
+            else if (p.ValueKind == JsonValueKind.Object)
             {
-                var asDict = Rpc.Params as IDictionary<string, Newtonsoft.Json.Linq.JToken>;
+                var enu = p.EnumerateObject();
+                var asDict = new Dictionary<string, JsonElement>();
+                foreach (var entry in enu)
+                {
+                    asDict.Add(entry.Name,entry.Value);
+                }
+
+                var loopCt = asDict.Count;
+                var paramCount = loopCt;
+                if (paramCount == metaDataParamCount - 1 && metadata.parameters[metaDataParamCount - 1].ObjectType.Name.Equals(Name_of_JSONRPCEXCEPTION))
+                {
+                    paramCount++;
+                    expectsRefException = true;
+                }
+                parameters = new object[paramCount];
                 for (int i = 0; i < loopCt && i < metadata.parameters.Length; i++)
                 {
                     if (asDict.ContainsKey(metadata.parameters[i].Name) == true)
                     {
-                        parameters[i] = CleanUpParameter(asDict[metadata.parameters[i].Name], metadata.parameters[i]);
+                        parameters[i] = metadata.parameters[i].ExtractValue(asDict[metadata.parameters[i].Name]);
                         continue;
                     }
                     else
@@ -426,68 +437,6 @@
         internal void SetParseErrorHandler(Func<string, JsonRpcException, JsonRpcException> handler)
         {
             parseErrorHandler = handler;
-        }
-       
-        private object CleanUpParameter(object p, SMDAdditionalParameters metaData)
-        {
-            var bob = p as JValue;
-
-            if (bob != null)
-            {
-                if (bob.Value == null || metaData.ObjectType == bob.Value.GetType())
-                {
-                    return bob.Value;
-                }
-
-                try
-                {
-                    // Avoid calling DeserializeObject on types that JValue has an explicit converter for
-                    // try to optimize for the most common types
-                    if (metaData.ObjectType == typeof(string)) return (string)bob;
-                    if (metaData.ObjectType == typeof(int)) return (int)bob;
-                    if (metaData.ObjectType == typeof(double)) return (double)bob;
-                    if (metaData.ObjectType == typeof(float)) return (float)bob;
-                    //if (metaData.ObjectType == typeof(long)) return (long)bob;
-                    //if (metaData.ObjectType == typeof(uint)) return (uint)bob;
-                    //if (metaData.ObjectType == typeof(ulong)) return (ulong)bob;
-                    //if (metaData.ObjectType == typeof(byte[])) return (byte[])bob;
-                    //if (metaData.ObjectType == typeof(Guid)) return (Guid)bob;
-                    if (metaData.ObjectType == typeof(decimal)) return (decimal)bob;
-                    //if (metaData.ObjectType == typeof(TimeSpan)) return (TimeSpan)bob;
-                    //if (metaData.ObjectType == typeof(short)) return (short)bob;
-                    //if (metaData.ObjectType == typeof(ushort)) return (ushort)bob;
-                    //if (metaData.ObjectType == typeof(char)) return (char)bob;
-                    //if (metaData.ObjectType == typeof(DateTime)) return (DateTime)bob;
-                    //if (metaData.ObjectType == typeof(bool)) return (bool)bob;
-                    //if (metaData.ObjectType == typeof(DateTimeOffset)) return (DateTimeOffset)bob;
-
-                    if (metaData.ObjectType.IsAssignableFrom(typeof(JValue)))
-                        return bob;
-
-                    return bob.ToObject(metaData.ObjectType);
-                }
-                catch (Exception)
-                {
-                    // no need to throw here, they will
-                    // get an invalid cast exception right after this.
-                }
-            }
-            else
-            {
-                try
-                {
-                    if (p is string)
-                        return JsonConvert.DeserializeObject((string)p, metaData.ObjectType);
-                    return JsonConvert.DeserializeObject(p.ToString(), metaData.ObjectType);
-                }
-                catch (Exception)
-                {
-                    // no need to throw here, they will
-                    // get an invalid cast exception right after this.
-                }
-            }
-
-            return p;
         }
 
         private JsonRpcException PreProcess(JsonRequest request, object context)

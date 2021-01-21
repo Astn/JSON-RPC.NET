@@ -113,9 +113,9 @@ namespace AustinHarris.JsonRpcTestN
             Assert.AreEqual(expectedDate, acutalDate);
         }
 
-        [TestCase(@"{method:'NullableFloatToNullableFloat',params:[1.2345],id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.2345,\"id\":1}")]
-        [TestCase(@"{method:'NullableFloatToNullableFloat',params:[3.14159],id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":3.14159,\"id\":1}")]
-        [TestCase(@"{method:'NullableFloatToNullableFloat',params:[null],id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":null,\"id\":1}")]
+        [TestCase(@"{""method"":""NullableFloatToNullableFloat"",""params"":[1.2345],""id"":1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.2345,\"id\":1}")]
+        [TestCase(@"{""method"":""NullableFloatToNullableFloat"",""params"":[3.14159],""id"":1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":3.14159,\"id\":1}")]
+        [TestCase(@"{""method"":""NullableFloatToNullableFloat"",""params"":[null],""id"":1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":null,\"id\":1}")]
         public string NullableFloatToNullableFloat(string request)
         {
             var result = JsonRpcProcessor.Process(request);
@@ -127,7 +127,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void DecimalToNullableDecimal()
         {
-            string request = @"{method:'DecimalToNullableDecimal',params:[0.0],id:1}";
+            string request = @"{""method"":""DecimalToNullableDecimal"",""params"":[0.0],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -149,11 +149,11 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void CustomStringToListOfString()
         {
-            string request = @"{method:'CustomStringToListOfString',params:[{str:'some string'}],id:1}";
+            string request = @"{""method"":""CustomStringToListOfString"",""params"":[{""str"":""some string""}],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"one\",\"two\",\"three\",\"some string\"],\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
-            Assert.AreEqual(result.Result, expectedResult);
+            Assert.AreEqual(expectedResult, result.Result);
             Assert.AreEqual(expectedResult, result.Result);
         }
 
@@ -209,7 +209,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void FloatToFloat()
         {
-            string request = @"{method:'FloatToFloat',params:[0.123],id:1}";
+            string request = @"{""method"":""FloatToFloat"",""params"":[0.123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.123,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -221,7 +221,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void IntToInt()
         {
-            string request = @"{method:'IntToInt',params:[789],id:1}";
+            string request = @"{""method"":""IntToInt"",""params"":[789],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -232,7 +232,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void OptionalParamInt16()
         {
-            string request = @"{method:'TestOptionalParamInt16',params:[789],id:1}";
+            string request = @"{""method"":""TestOptionalParamInt16"",""params"":[789],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -243,7 +243,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void OptionalParamInt16NoParam()
         {
-            string request = @"{method:'TestOptionalParamInt16',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamInt16"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -254,7 +254,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void Int16ToInt16()
         {
-            string request = @"{method:'Int16ToInt16',params:[789],id:1}";
+            string request = @"{""method"":""Int16ToInt16"",""params"":[789],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -265,7 +265,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void Int32ToInt32()
         {
-            string request = @"{method:'Int32ToInt32',params:[789],id:1}";
+            string request = @"{""method"":""Int32ToInt32"",""params"":[789],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":789,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -276,7 +276,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void Int64ToInt64()
         {
-            string request = @"{method:'Int64ToInt64',params:[78915984515564],id:1}";
+            string request = @"{""method"":""Int64ToInt64"",""params"":[78915984515564],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":78915984515564,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -288,7 +288,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamByteMissing()
         {
-            string request = @"{method:'TestOptionalParambyte',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParambyte"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1380,11 +1380,11 @@ namespace AustinHarris.JsonRpcTestN
             Assert.AreEqual(expectedResult, result.Result);
         }
         
-        [TestCase("{method:\"TestDifferentOptionalParameters\",params:{location:\"loc1\", uid:\"abc123\", wavelengths: [0.0], traces: [0.0]},id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
-        [TestCase("{method:\"TestDifferentOptionalParameters\",params:{uid:\"abc123\", wavelengths: [0.0], traces: [0.0]},id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
-        [TestCase("{method:\"TestDifferentOptionalParameters\",params:{location:\"loc1\", uid:\"abc123\", traces: [0.0]},id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
-        [TestCase("{method:\"TestDifferentOptionalParameters\",params:{location:\"loc1\", uid:\"abc123\", wavelengths: [0.0]},id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
-        [TestCase("{method:\"TestDifferentOptionalParameters\",params:{uid:\"abc123\", wavelengths: [0.0]},id:1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
+        [TestCase("{\"method\":\"TestDifferentOptionalParameters\",\"params\":{\"location\":\"loc1\", \"uid\":\"abc123\", \"wavelengths\": [0.0], \"traces\": [0.0]},\"id\":1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
+        [TestCase("{\"method\":\"TestDifferentOptionalParameters\",\"params\":{\"uid\":\"abc123\", \"wavelengths\": [0.0], \"traces\": [0.0]},\"id\":1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
+        [TestCase("{\"method\":\"TestDifferentOptionalParameters\",\"params\":{\"location\":\"loc1\", \"uid\":\"abc123\", \"traces\": [0.0]},\"id\":1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
+        [TestCase("{\"method\":\"TestDifferentOptionalParameters\",\"params\":{\"location\":\"loc1\", \"uid\":\"abc123\", \"wavelengths\": [0.0]},\"id\":1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
+        [TestCase("{\"method\":\"TestDifferentOptionalParameters\",\"params\":{\"uid\":\"abc123\", \"wavelengths\": [0.0]},\"id\":1}", ExpectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"this is the requested measurement\",\"id\":1}")]
         public string TestDifferentOptionalParametersNamedWorking(string request)
         {
             var result = JsonRpcProcessor.Process(request);

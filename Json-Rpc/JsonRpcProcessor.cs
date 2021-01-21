@@ -1,18 +1,18 @@
 ﻿using System;
-using System.Globalization;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Reflection;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace AustinHarris.JsonRpc
 {
     public static class JsonRpcProcessor
     {
+        
+        private static readonly JsonSerializerOptions DefaultOptions = new JsonSerializerOptions
+        {
+             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+             IgnoreNullValues = true
+        };
         public static void Process(JsonRpcStateAsync async, object context = null)
         {
             Process(Handler.DefaultSessionId(), async, context);
@@ -27,20 +27,21 @@ namespace AustinHarris.JsonRpc
                 async.SetCompleted();
             });
         }
-        public static Task<string> Process(string jsonRpc, object context = null)
+        public static Task<string> Process(string jsonRpc, object context = null, JsonSerializerOptions serializerOptions = null )
         {
-            return Process(Handler.DefaultSessionId(), jsonRpc, context);
+            return Process(Handler.DefaultSessionId(), jsonRpc, context, serializerOptions);
         }
-        public static Task<string> Process(string sessionId, string jsonRpc, object context = null)
+        public static Task<string> Process(string sessionId, string jsonRpc, object context = null, JsonSerializerOptions serializerOptions = null)
         { 
             return Task<string>.Factory.StartNew((_) =>
             {
                 var tuple = (Tuple<string, string, object>)_;
-                return ProcessInternal(tuple.Item1, tuple.Item2, tuple.Item3);
+                return ProcessInternal(tuple.Item1, tuple.Item2, tuple.Item3, serializerOptions ?? DefaultOptions);
             }, new Tuple<string, string, object>(sessionId, jsonRpc, context));
         }
 
-        private static string ProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext)
+        // todo: Work with and return utf8 at this level. We can deal with converting to and from utf8 in the 'Process' overloads
+        private static string ProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext, JsonSerializerOptions serializerOptions)
         {
             var handler = Handler.GetSessionHandler(sessionId);
 
@@ -50,29 +51,29 @@ namespace AustinHarris.JsonRpc
             {
                 if (isSingleRpc(jsonRpc))
                 {
-                    var foo = JsonConvert.DeserializeObject<JsonRequest>(jsonRpc);
+                    var foo = JsonSerializer.Deserialize<JsonRequest>(jsonRpc, serializerOptions);
                     batch = new[] { foo };
                 }
                 else
                 {
-                    batch = JsonConvert.DeserializeObject<JsonRequest[]>(jsonRpc);
+                    batch = JsonSerializer.Deserialize<JsonRequest[]>(jsonRpc, serializerOptions);
                 }
             }
             catch (Exception ex)
             {
-                return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
+                return JsonSerializer.Serialize(new JsonResponse
                 {
                     Error = handler.ProcessParseException(jsonRpc, new JsonRpcException(-32700, "Parse error", ex))
-                });
+                }, serializerOptions);
             }
 
             if (batch.Length == 0)
             {
-                return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
+                return JsonSerializer.Serialize(new JsonResponse
                 {
                     Error = handler.ProcessParseException(jsonRpc,
                         new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty."))
-                });
+                }, serializerOptions);
             }
 
             var singleBatch = batch.Length == 1;
@@ -106,7 +107,7 @@ namespace AustinHarris.JsonRpc
 
                     if (data == null) continue;
 
-                    jsonResponse.JsonRpc = data.JsonRpc;
+                    jsonResponse.Jsonrpc = data.Jsonrpc;
                     jsonResponse.Error = data.Error;
                     jsonResponse.Result = data.Result;
 
@@ -117,33 +118,14 @@ namespace AustinHarris.JsonRpc
                     // result : This member is REQUIRED on success.
                     // This member MUST NOT exist if there was an error invoking the method.    
                     // Either the result member or error member MUST be included, but both members MUST NOT be included.
-                    jsonResponse.Result = new Newtonsoft.Json.Linq.JValue((Object)null);
+                    jsonResponse.Result = null;
                 }
                 // special case optimization for single Item batch
-                if (singleBatch && (jsonResponse.Id != null || jsonResponse.Error != null))
+                if (singleBatch && (jsonResponse.Id.ValueKind != JsonValueKind.Null || jsonResponse.Error != null))
                 {
-                    StringWriter sw = new StringWriter();
-                    JsonTextWriter writer = new JsonTextWriter(sw);
-                    writer.WriteStartObject();
-                    if (!string.IsNullOrEmpty(jsonResponse.JsonRpc))
-                    {
-                        writer.WritePropertyName("jsonrpc"); writer.WriteValue(jsonResponse.JsonRpc);
-                    }
-                    if (jsonResponse.Error != null)
-                    {
-                        writer.WritePropertyName("error"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Error));
-                    }
-                    else
-                    {
-                        writer.WritePropertyName("result"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Result));
-                    }
-                    writer.WritePropertyName("id"); writer.WriteValue(jsonResponse.Id);
-                    writer.WriteEndObject();
-                    return sw.ToString();
-
-                    //return JsonConvert.SerializeObject(jsonResponse);
+                    return JsonSerializer.Serialize(jsonResponse, serializerOptions);
                 }
-                else if (jsonResponse.Id == null && jsonResponse.Error == null)
+                else if (jsonResponse.Id.ValueKind == JsonValueKind.Null && jsonResponse.Error == null)
                 {
                     // do nothing
                     sbResult = new StringBuilder(0);
@@ -156,7 +138,7 @@ namespace AustinHarris.JsonRpc
                         sbResult = new StringBuilder("[");
                     }
 
-                    sbResult.Append(JsonConvert.SerializeObject(jsonResponse));
+                    sbResult.Append(JsonSerializer.Serialize(jsonResponse, serializerOptions));
                     if (i < batch.Length - 1)
                     {
                         sbResult.Append(',');
@@ -180,14 +162,16 @@ namespace AustinHarris.JsonRpc
             return true;
         }
 
-        private static bool isSimpleValueType(object property)
+        private static bool isSimpleValueType(JsonElement property)
         {
-            if (property == null)
-                return true;
-            return property.GetType() == typeof(System.String) ||
-                property.GetType() == typeof(System.Int64) ||
-                property.GetType() == typeof(System.Int32) ||
-                property.GetType() == typeof(System.Int16);
+                JsonElement p = (JsonElement)property;
+                return p.ValueKind == JsonValueKind.Number
+                        || p.ValueKind == JsonValueKind.String
+                        || p.ValueKind == JsonValueKind.True
+                        || p.ValueKind == JsonValueKind.False
+                        || p.ValueKind == JsonValueKind.Null;
+
+            return false;
         }
     }
 }

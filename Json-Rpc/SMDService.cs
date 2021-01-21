@@ -2,63 +2,25 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+
 
 namespace AustinHarris.JsonRpc
 {
     public class SMD
     {
-        public string transport { get; set; }
-        public string envelope { get; set; }
-        public string target { get; set; }
-        public bool additonalParameters { get; set; }
-        public SMDAdditionalParameters[] parameters { get; set; }
-        [JsonIgnore]
-        public static List<string> TypeHashes { get; set; }
-        [JsonProperty("types")]
-        public static Dictionary<int,JObject> Types { get; set; }
-        [JsonProperty("services")]
         public Dictionary<string, SMDService> Services { get; set; }
 
         public SMD ()
 	    {
-            transport = "POST";
-            envelope = "URL";
-            target = "/json.rpc";
-            additonalParameters = false;
-            parameters = new SMDAdditionalParameters[0];
             Services = new Dictionary<string,SMDService>();
-            Types = new Dictionary<int, JObject>();
-            TypeHashes = new List<string>();
 	    }
 
         internal void AddService(string method, Dictionary<string,Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
         {
-            var newService = new SMDService(transport,"JSON-RPC-2.0",parameters, defaultValues, dele);
+            var newService = new SMDService(parameters, defaultValues, dele);
             Services.Add(method,newService);
-        }
-
-        public static int AddType(JObject jo)
-        {
-            var hash = string.Format("t_{0}", jo.ToString().GetHashCode());
-            
-            lock (TypeHashes)
-            {
-                if (TypeHashes.Contains(hash)) return TypeHashes.IndexOf(hash);
-                
-                TypeHashes.Add(hash);
-                var idx = TypeHashes.IndexOf(hash);                    
-                Types.Add(idx, jo);
-            }
-
-            return TypeHashes.IndexOf(hash); 
-        }
-
-        public static bool ContainsType(JObject jo)
-        {
-            return TypeHashes.Contains(string.Format("t_{0}", jo.ToString().GetHashCode()));
         }
     }
 
@@ -72,12 +34,10 @@ namespace AustinHarris.JsonRpc
         /// <param name="envelope">URL, PATH, JSON, JSON-RPC-1.0, JSON-RPC-1.1, JSON-RPC-2.0</param>
         /// <param name="parameters"></param>
         /// <param name="defaultValues"></param>
-        public SMDService(string transport, string envelope, Dictionary<string, Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
+        public SMDService(Dictionary<string, Type> parameters, Dictionary<string, object> defaultValues, Delegate dele)
         {
             // TODO: Complete member initialization
             this.dele = dele;
-            this.transport = transport;
-            this.envelope = envelope;
             this.parameters = new SMDAdditionalParameters[parameters.Count-1]; // last param is return type similar to Func<,>
             int ctr=0;
             foreach (var item in parameters)
@@ -97,11 +57,9 @@ namespace AustinHarris.JsonRpc
             }
 
             // this is getting the return type from the end of the param list
-            this.returns = new SMDResult(parameters.Values.LastOrDefault());
+            this.returns = parameters.Values.LastOrDefault();
         }
-        public string transport { get; private set; }
-        public string envelope { get; private set; }
-        public SMDResult returns { get; private set; }
+        public Type returns { get; private set; }
 
         /// <summary>
         /// This indicates what parameters may be supplied for the service calls. 
@@ -116,17 +74,6 @@ namespace AustinHarris.JsonRpc
         /// Stores default values for optional parameters.
         /// </summary>
         public ParameterDefaultValue[] defaultValues { get; private set; }
-    }
-
-    public class SMDResult
-    {
-        [JsonProperty("__type")]
-        public int Type { get; private set; }
-
-        public SMDResult(System.Type type)
-        {
-            Type = SMDAdditionalParameters.GetTypeRecursive(type);
-        }
     }
 
     /// <summary>
@@ -152,92 +99,39 @@ namespace AustinHarris.JsonRpc
 
     public class SMDAdditionalParameters
     {
+        private Func<JsonElement,object> __extractValue;
+
         public  SMDAdditionalParameters(string parametername, System.Type type)
         {
             Name = parametername;
-            Type = GetTypeRecursive(ObjectType = type);
-          
+            ObjectType = type;
+            // fallback... slow
+            __extractValue = (je) => je.ToObject(type);//throw new NotImplementedException($"Convert to type {type} not implemented");
+
+            if (type == typeof(string)) __extractValue = (je) => je.GetString();
+            if (type == typeof(short)) __extractValue = (je) => je.GetInt16();
+            if (type == typeof(int)) __extractValue = (je) => je.GetInt32();
+            if (type == typeof(Int64)) __extractValue = (je) => je.GetInt64();
+            if (type == typeof(float)) __extractValue = (je) => je.GetSingle();
+            if (type == typeof(double)) __extractValue = (je) => je.GetDouble();
+            if (type == typeof(decimal)) __extractValue = (je) => je.GetDecimal();
+            if (type == typeof(float?)) __extractValue = (je) => je.ValueKind == JsonValueKind.Null ? new float?() : je.GetSingle();
+            if (type == typeof(double?)) __extractValue = (je) => je.ValueKind == JsonValueKind.Null ? new double?() :je.GetDouble();
+            if (type == typeof(decimal?)) __extractValue = (je) => je.ValueKind == JsonValueKind.Null ? new decimal?() :je.GetDecimal();
+            if (type == typeof(Boolean)) __extractValue = (je) => je.GetBoolean();
+            if (type == typeof(DateTime)) __extractValue = (je) => je.GetDateTime();
+            if (type == typeof(DateTimeOffset)) __extractValue = (je) => je.GetDateTimeOffset();
+            
         }
 
-        [JsonIgnore()]
+       
         public Type ObjectType { get; set; }
-        [JsonProperty("__name")]
         public string Name { get; set; }
-        [JsonProperty("__type")]
-        public int Type { get; set; }
 
-        internal static int GetTypeRecursive(Type t)
+        public object ExtractValue(JsonElement je)
         {
-            JObject jo = new JObject();
-            jo.Add("__name", t.Name.ToLower());
-
-            if (isSimpleType(t) || SMD.ContainsType(jo))
-            {                
-                return SMD.AddType(jo);
-            }
-
-            var retVal = SMD.AddType(jo);
-
-            var genArgs = t.GetGenericArguments();
-            PropertyInfo[] properties = t.GetProperties();
-            FieldInfo[] fields = t.GetFields();
-
-            if (genArgs.Length > 0)
-            {
-                var ja = new JArray();
-                foreach (var item in genArgs)
-                {
-                    if (item != t)
-                    {
-                        var jt = GetTypeRecursive(item);
-                        ja.Add(jt);
-                    }
-                    else
-                    {
-                        // make a special case where -1 indicates this type
-                        ja.Add(-1);
-                    }
-                }
-                jo.Add("__genericArguments", ja);
-            }
-
-            foreach (var item in properties)
-            {
-                if (item.GetAccessors().Where(x => x.IsPublic).Count() > 0)
-                {
-                    if (item.PropertyType != t)
-                    {
-                        var jt = GetTypeRecursive(item.PropertyType);
-                        jo.Add(item.Name, jt);
-                    }
-                    else
-                    {
-                        // make a special case where -1 indicates this type
-                        jo.Add(item.Name, -1);
-                    }
-                }
-            }
-
-            foreach (var item in fields)
-            {
-                if (item.IsPublic)
-                {
-                    if (item.FieldType != t)
-                    {
-                        var jt = GetTypeRecursive(item.FieldType);
-                        jo.Add(item.Name, jt);
-                    }
-                    else
-                    {
-                        // make a special case where -1 indicates this type
-                        jo.Add(item.Name, -1);
-                    }
-                }
-            }
-
-            return retVal;
+            return this.__extractValue(je);
         }
-
         internal static bool isSimpleType(Type t)
         {
             var name = t.FullName.ToLower();

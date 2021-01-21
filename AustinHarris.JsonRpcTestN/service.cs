@@ -54,7 +54,7 @@ namespace AustinHarris.JsonRpcTestN
 
         public class CustomString
         {
-            public string str;
+            public string str { get; set; }
         }
 
         [JsonRpcMethod]

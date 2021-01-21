@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Copyright>Austin Harris</Copyright>
-    <TargetFrameworks>netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net5.0;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
   </PropertyGroup>
 
 

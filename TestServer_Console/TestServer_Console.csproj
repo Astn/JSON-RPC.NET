@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Copyright>Austin Harris</Copyright>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks>net5.0;netcoreapp3.1</TargetFrameworks>
   </PropertyGroup>
 
 

@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 
 namespace AustinHarris.JsonRpc
 {
@@ -29,16 +32,14 @@ namespace AustinHarris.JsonRpc
     ///  The remainder of the space is available for application defined errors.
     /// </summary>
     [Serializable]
-    [JsonObject(MemberSerialization.OptIn)]    
+    [JsonConverter(typeof(JsonRpcExceptionConverter))]
     public class JsonRpcException : System.ApplicationException
     {
-        [JsonProperty]
+        
         public int code { get; set; }
 
-        [JsonProperty]
         public string message { get; set; }
 
-        [JsonProperty]
         public object data { get; set; }
 
         public JsonRpcException(int code, string message, object data)
@@ -46,6 +47,33 @@ namespace AustinHarris.JsonRpc
             this.code = code;
             this.message = message;
             this.data = data;
+        }
+    }
+
+    public class JsonRpcExceptionConverter : JsonConverter<JsonRpcException>
+    {
+        public override JsonRpcException Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Write(Utf8JsonWriter writer, JsonRpcException value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+            writer.WriteNumber("code", value.code);
+            writer.WriteString("message", value.message);
+            if (value.data != null)
+            {
+                writer.WritePropertyName("data");
+                var spError = JsonSerializer.SerializeToUtf8Bytes(value.data, options);
+                using (JsonDocument document = JsonDocument.Parse(spError))
+                {
+                    document.RootElement.WriteTo(writer); 
+                }
+            }
+            writer.WriteEndObject();
+            
+            writer.Flush();
         }
     }
 }
