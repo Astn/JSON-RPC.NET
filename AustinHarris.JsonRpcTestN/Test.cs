@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using System;
 using System.Linq;
+using System.Text.Json;
 using AustinHarris.JsonRpc;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
@@ -42,7 +43,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestCanCreateMultipleServicesOfSameTypeInTheirOwnSessions()
         {
-            Func<int, string> request = (int param) => String.Format("{{method:'add',params:[{0}],id:1}}", param);
+            Func<int, string> request = (int param) => String.Format("{{\"method\":\"add\",\"params\":[{0}],\"id\":1}}", param);
             Func<int, string> expectedResult = (int param) => String.Format("{{\"jsonrpc\":\"2.0\",\"result\":{0},\"id\":1}}", param);
 
             for (int i = 0; i < 100; i++)
@@ -70,7 +71,7 @@ namespace AustinHarris.JsonRpcTestN
             }.ToDictionary(x => x.Item1, x => x.Item2);
             h.RegisterFuction("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
 
-            string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
+            string request = @"{""method"":""workie"",""params"":{""sooper"":""good""},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
             string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
             var result = JsonRpcProcessor.Process("this one", request);
@@ -92,7 +93,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestInProcessClient()
         {
-            string request = @"{method:'NullableFloatToNullableFloat',params:[0.0],id:1}";
+            string request = @"{""method"":""NullableFloatToNullableFloat"",""params"":[0.0],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -104,7 +105,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void NullableDateTimeToNullableDateTime()
         {
-            string request = @"{method:'NullableDateTimeToNullableDateTime',params:['2014-06-30T14:50:38.5208399+09:00'],id:1}";
+            string request = @"{""method"":""NullableDateTimeToNullableDateTime"",""params"":[""2014-06-30T14:50:38.5208399+09:00""],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"2014-06-30T14:50:38.5208399+09:00\",\"id\":1}";
             var expectedDate = DateTime.Parse("2014-06-30T14:50:38.5208399+09:00");
             var result = JsonRpcProcessor.Process(request);
@@ -138,7 +139,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void StringToListOfString()
         {
-            string request = @"{method:'StringToListOfString',params:['some string'],id:1}";
+            string request = @"{""method"":""StringToListOfString"",""params"":[""some string""],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"one\",\"two\",\"three\",\"some string\"],\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -160,7 +161,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void StringToThrowingException()
         {
-            string request = @"{method:'StringToThrowingException',params:['some string'],id:1}";
+            string request = @"{""method"":""StringToThrowingException"",""params"":[""some string""],""id"":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
             StringAssert.Contains("-32603", result.Result);
@@ -169,7 +170,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void StringToRefException()
         {
-            string request = @"{method:'StringToRefException',params:['some string'],id:1}";
+            string request = @"{""method"":""StringToRefException"",""params"":[""some string""],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"refException worked\",\"code\":-1,\"data\":null},\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -179,7 +180,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void StringToThrowJsonRpcException()
         {
-            string request = @"{method:'StringToThrowJsonRpcException',params:['some string'],id:1}";
+            string request = @"{""method"":""StringToThrowJsonRpcException"",""params"":[""some string""],""id"":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
             StringAssert.Contains("-2700", result.Result);
@@ -188,20 +189,24 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void ReturnsDateTime()
         {
-            string request = @"{method:'ReturnsDateTime',params:[],id:1}";
+            string request = @"{""method"":""ReturnsDateTime"",""params"":[],""id"":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
-            Assert.IsFalse(result.Result.Contains("error"));
+            
+            TestContext.Out.WriteLine(result.Result); 
+            var rojb = JsonSerializer.Deserialize<JsonResponse>(result.Result);
+            Assert.AreSame(null, rojb.Error?.data);
         }
 
         [Test()]
         public void ReturnsCustomRecursiveClass()
         {
-            string request = @"{method:'ReturnsCustomRecursiveClass',params:[],id:1}";
+            string request = @"{""method"":""ReturnsCustomRecursiveClass"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":{\"Nested1\":{\"Nested1\":null,\"Value1\":5},\"Value1\":10},\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
-            Assert.IsFalse(result.Result.Contains("error"));
+            var rojb = JsonSerializer.Deserialize<JsonResponse>(result.Result);
+            Assert.AreSame(null, rojb.Error?.data);
             Assert.AreEqual(expectedResult, result.Result);
         }
 
@@ -298,7 +303,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamSbyteMissing()
         {
-            string request = @"{method:'TestOptionalParamsbyte',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamsbyte"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -308,7 +313,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamShortMissing()
         {
-            string request = @"{method:'TestOptionalParamshort',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamshort"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -318,7 +323,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamintMissing()
         {
-            string request = @"{method:'TestOptionalParamint',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamint"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -328,7 +333,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamLongMissing()
         {
-            string request = @"{method:'TestOptionalParamlong',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamlong"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -338,7 +343,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUshortMissing()
         {
-            string request = @"{method:'TestOptionalParamushort',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamushort"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -348,7 +353,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUintMissing()
         {
-            string request = @"{method:'TestOptionalParamuint',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamuint"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -358,7 +363,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUlongMissing()
         {
-            string request = @"{method:'TestOptionalParamulong',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamulong"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -368,7 +373,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamFloatMissing()
         {
-            string request = @"{method:'TestOptionalParamfloat',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamfloat"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -378,7 +383,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDoubleMissing()
         {
-            string request = @"{method:'TestOptionalParamdouble',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamdouble"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -388,7 +393,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBoolMissing()
         {
-            string request = @"{method:'TestOptionalParambool',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParambool"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -398,7 +403,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamCharMissing()
         {
-            string request = @"{method:'TestOptionalParamchar',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamchar"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"a\",\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -408,7 +413,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDecimalMissing()
         {
-            string request = @"{method:'TestOptionalParamdecimal',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParamdecimal"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -419,7 +424,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBytePresent()
         {
-            string request = @"{method:'TestOptionalParambyte',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParambyte"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -429,7 +434,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamSbytePresent()
         {
-            string request = @"{method:'TestOptionalParamsbyte',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamsbyte"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -439,7 +444,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamShortPresent()
         {
-            string request = @"{method:'TestOptionalParamshort',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamshort"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -449,7 +454,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamintPresent()
         {
-            string request = @"{method:'TestOptionalParamint',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamint"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -459,7 +464,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamLongPresent()
         {
-            string request = @"{method:'TestOptionalParamlong',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamlong"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -469,7 +474,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUshortPresent()
         {
-            string request = @"{method:'TestOptionalParamushort',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamushort"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -479,7 +484,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUintPresent()
         {
-            string request = @"{method:'TestOptionalParamuint',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamuint"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -489,7 +494,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUlongPresent()
         {
-            string request = @"{method:'TestOptionalParamulong',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamulong"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -499,7 +504,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamFloatPresent()
         {
-            string request = @"{method:'TestOptionalParamfloat',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamfloat"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -509,7 +514,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDoublePresent()
         {
-            string request = @"{method:'TestOptionalParamdouble',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamdouble"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -519,7 +524,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBoolPresent()
         {
-            string request = @"{method:'TestOptionalParambool',params:[false],id:1}";
+            string request = @"{""method"":""TestOptionalParambool"",""params"":[false],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -529,7 +534,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamCharPresent()
         {
-            string request = @"{method:'TestOptionalParamchar',params:[" + (int)'b' + "],id:1}";
+            string request = @"{""method"":""TestOptionalParamchar"",""params"":[" + (int)'b' + @"],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"b\",\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -539,7 +544,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDecimalPresent()
         {
-            string request = @"{method:'TestOptionalParamdecimal',params:[71],id:1}";
+            string request = @"{""method"":""TestOptionalParamdecimal"",""params"":[71],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -550,7 +555,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBytePresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParambyte',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParambyte"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -560,7 +565,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamSbytePresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamsbyte',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamsbyte"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -570,7 +575,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamShortPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamshort',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamshort"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -580,7 +585,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamintPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamint',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamint"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -590,7 +595,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamLongPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamlong',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamlong"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -600,7 +605,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUshortPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamushort',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamushort"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -610,7 +615,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUintPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamuint',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamuint"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -620,7 +625,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUlongPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamulong',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamulong"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -630,7 +635,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamFloatPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamfloat',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamfloat"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -640,7 +645,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDoublePresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamdouble',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamdouble"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -650,7 +655,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBoolPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParambool',params:{'input':false},id:1}";
+            string request = @"{""method"":""TestOptionalParambool"",""params"":{""input"":false},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -660,7 +665,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamCharPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamchar',params:{'input':" + (int)'c' + "},id:1}";
+            string request = @"{""method"":""TestOptionalParamchar"",""params"":{""input"":" + (int)'c' + @"},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"c\",\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -670,7 +675,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDecimalPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamdecimal',params:{'input':71},id:1}";
+            string request = @"{""method"":""TestOptionalParamdecimal"",""params"":{""input"":71},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":71.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -681,7 +686,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamByteMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParambyte',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParambyte"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -691,7 +696,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamSbyteMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamsbyte',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamsbyte"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -701,7 +706,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamShortMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamshort',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamshort"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -711,7 +716,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamintMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamint',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamint"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -721,7 +726,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamLongMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamlong',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamlong"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -731,7 +736,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUshortMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamushort',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamushort"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -741,7 +746,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUintMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamuint',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamuint"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -751,7 +756,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUlongMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamulong',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamulong"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -761,7 +766,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamFloatMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamfloat',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamfloat"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -771,7 +776,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDoubleMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamdouble',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamdouble"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -781,7 +786,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBoolMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParambool',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParambool"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -791,7 +796,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamCharMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamchar',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamchar"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"a\",\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -801,7 +806,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDecimalMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamdecimal',params:{},id:1}";
+            string request = @"{""method"":""TestOptionalParamdecimal"",""params"":{},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":1.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -812,7 +817,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamByte_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParambyte_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParambyte_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -822,7 +827,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamSbyte_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamsbyte_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamsbyte_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":126,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -832,7 +837,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamShort_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamshort_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamshort_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -842,7 +847,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamint_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamint_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamint_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -852,7 +857,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamLong_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamlong_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamlong_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -862,7 +867,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUshort_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamushort_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamushort_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -872,7 +877,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUint_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamuint_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamuint_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -882,7 +887,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUlong_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamulong_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamulong_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -892,7 +897,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamFloat_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamfloat_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamfloat_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -902,7 +907,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDouble_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamdouble_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamdouble_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -912,7 +917,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBool_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParambool_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParambool_2x"",""params"":{input1:123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -922,7 +927,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamChar_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamchar_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamchar_2x"",""params"":{""input1"":123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -932,7 +937,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDecimal_2ndMissingObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamdecimal_2x',params:{input1:123},id:1}";
+            string request = @"{""method"":""TestOptionalParamdecimal_2x"",""params"":{""input1"":123},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -943,7 +948,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamByte_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParambyte_2x',params:{input1:123, input2: 67},id:1}";
+            string request = @"{""method"":""TestOptionalParambyte_2x"",""params"":{""input1"":123, input2: 67},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":67,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -953,7 +958,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamByte_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParambyte_2x',params:[123, 67],id:1}";
+            string request = @"{""method"":""TestOptionalParambyte_2x"",""params"":[123, 67],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":67,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -963,7 +968,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamByte_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParambyte_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParambyte_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -973,7 +978,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamSbyte_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamsbyte_2x',params:{input1:123, input2: 97},id:1}";
+            string request = @"{""method"":""TestOptionalParamsbyte_2x"",""params"":{""input1"":123, input2: 97},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":97,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -983,7 +988,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamSbyte_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamsbyte_2x',params:[123, 98],id:1}";
+            string request = @"{""method"":""TestOptionalParamsbyte_2x"",""params"":[123, 98],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":98,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -993,7 +998,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamSbyte_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamsbyte_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamsbyte_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":126,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1003,7 +1008,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamShort_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamshort_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParamshort_2x"",""params"":{""input1"":123, input2: 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1013,7 +1018,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamShort_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamshort_2x',params:[123, 671],id:1}";
+            string request = @"{""method"":""TestOptionalParamshort_2x"",""params"":[123, 671],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1023,7 +1028,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamShort_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamshort_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamshort_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1033,7 +1038,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamint_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamint_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParamint_2x"",""params"":{""input1"":123, input2: 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1043,7 +1048,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamint_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamint_2x',params:[123, 671],id:1}";
+            string request = @"{""method"":""TestOptionalParamint_2x"",""params"":[123, 671],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1053,7 +1058,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamint_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamint_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamint_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1063,7 +1068,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamLong_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamlong_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParamlong_2x"",""params"":{""input1"":123, input2: 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1073,7 +1078,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamLong_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamlong_2x',params:[123,  671],id:1}";
+            string request = @"{""method"":""TestOptionalParamlong_2x"",""params"":[123,  671],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1083,7 +1088,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamLong_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamlong_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamlong_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1093,7 +1098,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUshort_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamushort_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParamushort_2x"",""params"":{""input1"":123, input2: 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1103,7 +1108,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUshort_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamushort_2x',params:[123,  671],id:1}";
+            string request = @"{""method"":""TestOptionalParamushort_2x"",""params"":[123,  671],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1113,7 +1118,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUshort_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamushort_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamushort_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1123,7 +1128,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUint_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamuint_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParamuint_2x"",""params"":{""input1"":123, input2: 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1133,7 +1138,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUint_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamuint_2x',params:[123, 671],id:1}";
+            string request = @"{""method"":""TestOptionalParamuint_2x"",""params"":[123, 671],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1143,7 +1148,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUint_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamuint_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamuint_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1153,7 +1158,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUlong_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamulong_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParamulong_2x"",""params"":{""input1"":123, input2: 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1163,7 +1168,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUlong_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamulong_2x',params:[123, 671],id:1}";
+            string request = @"{""method"":""TestOptionalParamulong_2x"",""params"":[123, 671],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1173,7 +1178,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamUlong_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamulong_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamulong_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1183,7 +1188,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamFloat_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamfloat_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParamfloat_2x"",""params"":{""input1"":123, input2: 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1193,7 +1198,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamFloat_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamfloat_2x',params:[123, 671],id:1}";
+            string request = @"{""method"":""TestOptionalParamfloat_2x"",""params"":[123, 671],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1203,7 +1208,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamFloat_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamfloat_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamfloat_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1213,7 +1218,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDouble_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamdouble_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParamdouble_2x"",""params"":{""input1"":123, input2: 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1223,7 +1228,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDouble_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamdouble_2x',params:[123,  671],id:1}";
+            string request = @"{""method"":""TestOptionalParamdouble_2x"",""params"":[123,  671],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1233,7 +1238,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDouble_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamdouble_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamdouble_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1243,7 +1248,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBool_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParambool_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParambool_2x"",""params"":{""input1"":123, input2: 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1253,7 +1258,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBool_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParambool_2x',params:[true, false],id:1}";
+            string request = @"{""method"":""TestOptionalParambool_2x"",""params"":[true, false],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":false,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1263,7 +1268,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamBool_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParambool_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParambool_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1273,7 +1278,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamChar_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamchar_2x',params:{'input1':" + (int)'c' + ", 'input2':" + (int)'d' + "},id:1}";
+            string request = @"{""method"":""TestOptionalParamchar_2x"",""params"":{""input1"":" + (int)'c' + @", ""input2"":" + (int)'d' + @"},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1283,7 +1288,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamChar_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamchar_2x',params:[" + (int)'c' + ", " + (int)'d' + "],id:1}";
+            string request = @"{""method"":""TestOptionalParamchar_2x"",""params"":[" + (int)'c' + ", " + (int)'d' + @"],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1293,7 +1298,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamChar_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamchar_2x',params:[" + (int)'c' + "],id:1}";
+            string request = @"{""method"":""TestOptionalParamchar_2x"",""params"":[" + (int)'c' + @"],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"d\",\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1303,7 +1308,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDecimal_2ndPresentObjectSyntax()
         {
-            string request = @"{method:'TestOptionalParamdecimal_2x',params:{input1:123, input2: 671},id:1}";
+            string request = @"{""method"":""TestOptionalParamdecimal_2x"",""params"":{""input1"":123, ""input2"": 671},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1313,7 +1318,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDecimal_2ndPresentArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamdecimal_2x',params:[123, 671],id:1}";
+            string request = @"{""method"":""TestOptionalParamdecimal_2x"",""params"":[123, 671],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":671.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1323,7 +1328,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParamDecimal_2ndMissingArraySyntax()
         {
-            string request = @"{method:'TestOptionalParamdecimal_2x',params:[123],id:1}";
+            string request = @"{""method"":""TestOptionalParamdecimal_2x"",""params"":[123],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":987.0,\"id\":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
@@ -1334,7 +1339,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParametersStrings_BothMissing()
         {
-            string request = @"{method:'TestOptionalParameters_Strings',params:[],id:1}";
+            string request = @"{""method"":""TestOptionalParameters_Strings"",""params"":[],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[null,null],\"id\":1}";
 
             var result = JsonRpcProcessor.Process(request);
@@ -1346,7 +1351,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParametersStrings_SecondMissing()
         {
-            string request = @"{method:'TestOptionalParameters_Strings',params:['first'],id:1}";
+            string request = @"{""method"":""TestOptionalParameters_Strings"",""params"":[""first""],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"first\",null],\"id\":1}";
 
             var result = JsonRpcProcessor.Process(request);
@@ -1358,7 +1363,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestOptionalParametersStrings_BothExists()
         {
-            string request = @"{method:'TestOptionalParameters_Strings',params:['first','second'],id:1}";
+            string request = @"{""method"":""TestOptionalParameters_Strings"",""params"":[""first"",""second""],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":[\"first\",\"second\"],\"id\":1}";
 
             var result = JsonRpcProcessor.Process(request);
@@ -1434,7 +1439,7 @@ namespace AustinHarris.JsonRpcTestN
             var result = JsonRpcProcessor.Process(secondRequest);
             result.Wait();
             Console.WriteLine(result.Result);
-            Assert.IsTrue(result.Result.Contains("result"), "Json Rpc 2.0 Spec - 'result' - This member is REQUIRED on success. A function that returns void should have the result property included even though the value may be null.");
+            Assert.IsTrue(result.Result.Contains("result"), "Json Rpc 2.0 Spec - \"result\" - This member is REQUIRED on success. A function that returns void should have the result property included even though the value may be null.");
         }
 
         [Test()]
@@ -1492,7 +1497,7 @@ namespace AustinHarris.JsonRpcTestN
             try {
                 PreProcessHandlerLocal handler = new PreProcessHandlerLocal();
                 Config.SetPreProcessHandler(new PreProcessHandler(handler.PreProcess));
-                string request = @"{method:'TestPreProcessor',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPreProcessor"",""params"":{inputValue:""some string""},""id"":1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"Success!\",\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
@@ -1513,7 +1518,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PreProcessHandlerLocal handler = new PreProcessHandlerLocal();
                 Config.SetPreProcessHandler(new PreProcessHandler(handler.PreProcess));
-                string request = @"{method:'TestPreProcessorThrowsJsonRPCException',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPreProcessorThrowsJsonRPCException"",""params"":{inputValue:""some string""},""id"":1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-27000,\"message\":\"Just some testing\",\"data\":null},\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
@@ -1535,7 +1540,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PreProcessHandlerLocal handler = new PreProcessHandlerLocal();
                 Config.SetPreProcessHandler(new PreProcessHandler(handler.PreProcess));
-                string request = @"{method:'TestPreProcessorThrowsException',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPreProcessorThrowsException"",""params"":{""inputValue"":""some string""},""id"":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
                 StringAssert.Contains("-32603", result.Result);
@@ -1556,7 +1561,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PreProcessHandlerLocal handler = new PreProcessHandlerLocal();
                 Config.SetPreProcessHandler(new PreProcessHandler(handler.PreProcess));
-                string request = @"{method:'TestPreProcessorSetsException',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPreProcessorSetsException"",""params"":{inputValue:""some string""},""id"":1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-27000,\"message\":\"This exception was thrown using: JsonRpcContext.SetException()\",\"data\":null},\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
@@ -1585,7 +1590,7 @@ namespace AustinHarris.JsonRpcTestN
             }.ToDictionary(x => x.Item1, x => x.Item2);
             h.RegisterFuction("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
 
-            string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
+            string request = @"{""method"":""workie"",""params"":{""sooper"":""good""},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
             string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
             var result = JsonRpcProcessor.Process(sessionId, request);
@@ -1641,7 +1646,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PostProcessHandlerLocal handler = new PostProcessHandlerLocal(false);
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
-                string request = @"{method:'TestPostProcessor',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPostProcessor"",""params"":{inputValue:""some string""},""id"":1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"Success!\",\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
@@ -1665,7 +1670,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PostProcessHandlerLocal handler = new PostProcessHandlerLocal(false);
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
-                string request = @"{method:'TestPostProcessorThrowsJsonRPCException',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPostProcessorThrowsJsonRPCException"",""params"":{inputValue:""some string""},""id"":1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-27000,\"message\":\"Just some testing\",\"data\":null},\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
@@ -1692,7 +1697,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PostProcessHandlerLocal handler = new PostProcessHandlerLocal(false);
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
-                string request = @"{method:'TestPostProcessorThrowsException',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPostProcessorThrowsException"",""params"":{inputValue:""some string""},""id"":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
                 StringAssert.Contains("-32603", result.Result);
@@ -1717,7 +1722,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PostProcessHandlerLocal handler = new PostProcessHandlerLocal(false);
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
-                string request = @"{method:'TestPostProcessorSetsException',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPostProcessorSetsException"",""params"":{inputValue:""some string""},""id"":1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-27001,\"message\":\"This exception was thrown using: JsonRpcContext.SetException()\",\"data\":null},\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
@@ -1740,7 +1745,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PostProcessHandlerLocal handler = new PostProcessHandlerLocal(true);
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
-                string request = @"{method:'TestPostProcessor',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPostProcessor"",""params"":{inputValue:""some string""},""id"":1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-123,\"message\":\"Test error\",\"data\":null},\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
@@ -1765,7 +1770,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PostProcessHandlerLocal handler = new PostProcessHandlerLocal(true);
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
-                string request = @"{method:'TestPostProcessorThrowsJsonRPCException',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPostProcessorThrowsJsonRPCException"",""params"":{inputValue:""some string""},""id"":1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-123,\"message\":\"Test error\",\"data\":null},\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
@@ -1792,7 +1797,7 @@ namespace AustinHarris.JsonRpcTestN
             {
                 PostProcessHandlerLocal handler = new PostProcessHandlerLocal(true);
                 Config.SetPostProcessHandler(new PostProcessHandler(handler.PostProcess));
-                string request = @"{method:'TestPostProcessorThrowsException',params:{inputValue:'some string'},id:1}";
+                string request = @"{""method"":""TestPostProcessorThrowsException"",""params"":{inputValue:""some string""},""id"":1}";
                 string expectedResult = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Test error\",\"code\":-123,\"data\":null},\"id\":1}";
                 var result = JsonRpcProcessor.Process(request);
                 result.Wait();
@@ -1825,7 +1830,7 @@ namespace AustinHarris.JsonRpcTestN
             }.ToDictionary(x => x.Item1, x => x.Item2);
             h.RegisterFuction("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(), new Func<string, string>(x => "workie ... " + x));
 
-            string request = @"{method:'workie',params:{'sooper':'good'},id:1}";
+            string request = @"{""method"":""workie"",""params"":{""sooper"":""good""},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
             string expectedResultAfterDestroy = "{\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"Method not found\",\"code\":-32601,\"data\":\"The method does not exist / is not available.\"},\"id\":1}";
             var result = JsonRpcProcessor.Process(sessionId, request);
@@ -1848,7 +1853,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestExtraParameters()
         {
-            string request = @"{method:'ReturnsDateTime',params:{extra:'mytext'},id:1}";
+            string request = @"{""method"":""ReturnsDateTime"",""params"":{extra:""mytext""},""id"":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsTrue(result.Result.Contains("error"));
@@ -1858,7 +1863,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestExtraPositionalParameters()
         {
-            string request = @"{method:'ReturnsDateTime',params:[1,2,'mytext'],id:1}";
+            string request = @"{""method"":""ReturnsDateTime"",""params"":[1,2,""mytext""],""id"":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsTrue(result.Result.Contains("error"));
@@ -1868,7 +1873,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestCustomParameterName()
         {
-            Func<string, string> request = (string paramName) => String.Format("{{method:'TestCustomParameterName',params:{{ {0}:'some string'}},id:1}}", paramName);
+            Func<string, string> request = (string paramName) => String.Format("{{\"method\":\"TestCustomParameterName\",\"params\":{{ {0}:\"some string\"}},\"id\":1}}", paramName);
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             // Check custom param name specified in attribute works 
             var result = JsonRpcProcessor.Process(request("myCustomParameter"));
@@ -1877,13 +1882,13 @@ namespace AustinHarris.JsonRpcTestN
             // Check method can't be used with its actual parameter name 
             result = JsonRpcProcessor.Process(request("arg"));
             result.Wait();
-            StringAssert.Contains("-32602", result.Result); // check for 'invalid params' error code 
+            StringAssert.Contains("-32602", result.Result); // check for ""invalid params"" error code 
         }
 
         [Test()]
         public void TestCustomParameterWithNoSpecificName()
         {
-            Func<string, string> request = (string paramName) => String.Format("{{method:'TestCustomParameterWithNoSpecificName',params:{{ {0}:'some string'}},id:1}}", paramName);
+            Func<string, string> request = (string paramName) => String.Format("{{\"method\":\"TestCustomParameterWithNoSpecificName\",\"params\":{{ {0}:\"some string\"}},\"id\":1}}", paramName);
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":true,\"id\":1}";
             // Check method can be used with its parameter name 
             var result = JsonRpcProcessor.Process(request("arg"));
@@ -1904,7 +1909,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestWrongParamType()
         {
-            string request = @"{method:'TestOptionalParamdouble',params:{input:'mytext'},id:1}";
+            string request = @"{""method"":""TestOptionalParamdouble"",""params"":{input:""mytext""},""id"":1}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsTrue(result.Result.Contains("error"));
@@ -1914,7 +1919,7 @@ namespace AustinHarris.JsonRpcTestN
         [Test()]
         public void TestWrongIdType()
         {
-            string request = @"{method:'TestOptionalParamdouble',params:{input:5},id:{what:4,that:3}}";
+            string request = @"{""method"":""TestOptionalParamdouble"",""params"":{input:5},""id"":{what:4,that:3}}";
             var result = JsonRpcProcessor.Process(request);
             result.Wait();
             Assert.IsTrue(result.Result.Contains("error"));

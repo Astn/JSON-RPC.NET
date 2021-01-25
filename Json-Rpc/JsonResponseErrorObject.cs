@@ -54,7 +54,45 @@ namespace AustinHarris.JsonRpc
     {
         public override JsonRpcException Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            throw new NotImplementedException();
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                throw new JsonException();
+            }
+            var res = new JsonRpcException(0, "", null);
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    break;
+                }
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    throw new JsonException();
+                }
+
+                string propertyName = reader.GetString();
+                if (propertyName == "code")
+                {
+                    reader.Read();
+                    var code = reader.GetInt32();
+                    res.code = code;
+                }
+
+                if (propertyName == "message")
+                {
+                    reader.Read();
+                    var message = reader.GetString();
+                    res.message = message;
+                }
+
+                if (propertyName == "data")
+                {
+                    reader.Read();
+                    var data = reader.GetString();
+                    res.data = data;
+                }
+            }
+            return res;
         }
 
         public override void Write(Utf8JsonWriter writer, JsonRpcException value, JsonSerializerOptions options)
@@ -65,7 +103,11 @@ namespace AustinHarris.JsonRpc
             if (value.data != null)
             {
                 writer.WritePropertyName("data");
-                var spError = JsonSerializer.SerializeToUtf8Bytes(value.data, options);
+                var spError = value.data switch
+                {
+                    JsonException je => JsonSerializer.SerializeToUtf8Bytes(je.Message, options),
+                    { } o => JsonSerializer.SerializeToUtf8Bytes(o, options)
+                };
                 using (JsonDocument document = JsonDocument.Parse(spError))
                 {
                     document.RootElement.WriteTo(writer); 

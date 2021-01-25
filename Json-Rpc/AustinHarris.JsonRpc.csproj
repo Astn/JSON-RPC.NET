@@ -7,6 +7,7 @@
         <VersionPrefix>1.2.2</VersionPrefix>
         <VersionSuffix>$(VersionSuffix)</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
+        <LangVersion>8.0</LangVersion>
         <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>
         <PackageLicenseUrl>https://raw.githubusercontent.com/Astn/JSON-RPC.NET/master/LICENSE</PackageLicenseUrl>
         <PackageReleaseNotes>

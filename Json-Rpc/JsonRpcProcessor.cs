@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AustinHarris.JsonRpc
 {
@@ -11,8 +12,15 @@ namespace AustinHarris.JsonRpc
         private static readonly JsonSerializerOptions DefaultOptions = new JsonSerializerOptions
         {
              PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-             IgnoreNullValues = true
+             IgnoreNullValues = true,
+             Converters =
+             {
+                 new JsonRpcExceptionConverter(),
+                 new JsonResponseConverter(),
+                 new JsonStringEnumConverter()
+             }
         };
+
         public static void Process(JsonRpcStateAsync async, object context = null)
         {
             Process(Handler.DefaultSessionId(), async, context);

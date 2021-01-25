@@ -121,7 +121,8 @@ namespace AustinHarris.JsonRpc
             if (type == typeof(Boolean)) __extractValue = (je) => je.GetBoolean();
             if (type == typeof(DateTime)) __extractValue = (je) => je.GetDateTime();
             if (type == typeof(DateTimeOffset)) __extractValue = (je) => je.GetDateTimeOffset();
-            
+            if (type == typeof(char)) __extractValue = (je) => (char) je.GetInt32();
+
         }
 
        

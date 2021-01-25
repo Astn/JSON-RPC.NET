@@ -39,7 +39,52 @@ namespace AustinHarris.JsonRpc
     {
         public override JsonResponse Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            throw new NotImplementedException();
+            var jres = new JsonResponse();
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    break;
+                }
+                if (reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    var propname = reader.GetString();
+                    if (propname == "jsonrpc")
+                    {
+                        reader.Read();
+                        jres.Jsonrpc = reader.GetString();
+                    }
+
+                    if (propname == "result")
+                    {
+                        reader.Read();
+                        jres.Result = JsonDocument.ParseValue(ref reader);
+                    }
+                    
+                    if (propname == "id")
+                    {
+                        reader.Read();
+                        jres.Id = JsonDocument.ParseValue(ref reader).RootElement.Clone();
+                    }
+                    
+                    if (propname == "error")
+                    {
+                        reader.Read();
+                        if (reader.TokenType == JsonTokenType.Null || reader.TokenType == JsonTokenType.None)
+                        {
+                            
+                        }
+                        else
+                        {
+                            JsonRpcExceptionConverter exc = new JsonRpcExceptionConverter();
+                            jres.Error = exc.Read(ref reader, typeof(JsonRpcException), options);
+                        }
+                    }
+                }
+                
+            }
+
+            return jres;
         }
 
         public override void Write(Utf8JsonWriter writer, JsonResponse value, JsonSerializerOptions options)
@@ -73,14 +118,14 @@ namespace AustinHarris.JsonRpc
                     else
                     {
                         writer.WritePropertyName("result");
-                        document.RootElement.WriteTo(writer);   
+                        document.RootElement.Clone().WriteTo(writer);   
                     }
                 }
             }
-            if (value.Id.ValueKind != JsonValueKind.Null)
+            if (value.Id.ValueKind != JsonValueKind.Null && value.Id.ValueKind != JsonValueKind.Undefined)
             {
                 writer.WritePropertyName("id");
-                value.Id.WriteTo(writer);
+                value.Id.Clone().WriteTo(writer);
             }
             writer.WriteEndObject();
             
