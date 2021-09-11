@@ -71,7 +71,7 @@ namespace AustinHarris.JsonRpc
             {
                 return JsonSerializer.Serialize(new JsonResponse
                 {
-                    Error = handler.ProcessParseException(jsonRpc, new JsonRpcException(-32700, "Parse error", ex))
+                    Error = handler.ProcessParseException(jsonRpc, JsonRpcException.WithData( JsonRpcException.Ex_32700,ex))
                 }, serializerOptions);
             }
 
@@ -79,8 +79,7 @@ namespace AustinHarris.JsonRpc
             {
                 return JsonSerializer.Serialize(new JsonResponse
                 {
-                    Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty."))
+                    Error = handler.ProcessParseException(jsonRpc, JsonRpcException.Ex_3200)
                 }, serializerOptions);
             }
 
@@ -94,18 +93,18 @@ namespace AustinHarris.JsonRpc
                 if (jsonRequest == null)
                 {
                     jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(-32700, "Parse error",
+                        JsonRpcException.WithData(JsonRpcException.Ex_32700,
                             "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
                 }
                 else if (jsonRequest.Method == null)
                 {
                     jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
+                        JsonRpcException.WithData(JsonRpcException.Ex_32600, "Missing property 'method'"));
                 }
                 else if (!isSimpleValueType(jsonRequest.Id))
                 {
                     jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(-32600, "Invalid Request", "Id property must be either null or string or integer."));
+                        JsonRpcException.WithData(JsonRpcException.Ex_32600,"Id property must be either null or string or integer."));
                 }
                 else
                 {

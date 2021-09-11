@@ -48,6 +48,26 @@ namespace AustinHarris.JsonRpc
             this.message = message;
             this.data = data;
         }
+
+        public static readonly JsonRpcException Ex_32700 = new JsonRpcException(-32700, "Parse error",null);
+        public static readonly JsonRpcException Ex_3200 = new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty.");
+
+        public static readonly JsonRpcException Ex_32602 = new JsonRpcException(-32602,
+            "Invalid params",
+            null
+        );
+        public static readonly JsonRpcException Ex_32601 = new JsonRpcException(-32601, "Method not found",
+            "The method does not exist / is not available.");
+        
+        public static readonly JsonRpcException Ex_32600 =
+            new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'");
+        public static JsonRpcException WithData(JsonRpcException rpcEx, object data)
+        {
+            rpcEx.data = data;
+            return rpcEx;
+        }
+
+
     }
 
     public class JsonRpcExceptionConverter : JsonConverter<JsonRpcException>

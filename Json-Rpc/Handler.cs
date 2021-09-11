@@ -221,7 +221,7 @@ namespace AustinHarris.JsonRpc
                 JsonResponse response = new JsonResponse()
                 {
                     Result = null,
-                    Error = new JsonRpcException(-32601, "Method not found", "The method does not exist / is not available."),
+                    Error = JsonRpcException.Ex_32601,
                     Id = Rpc.Id
                 };
                 return PostProcess(Rpc, response, RpcContext);
