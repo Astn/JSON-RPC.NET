@@ -4,7 +4,7 @@
         <Company>Austin Harris</Company>
         <Product>Json-Rpc.Net Core</Product>
         <Description>Core functionality for JsonRpc.Net</Description>
-        <VersionPrefix>1.2.2</VersionPrefix>
+        <VersionPrefix>1.2.3</VersionPrefix>
         <VersionSuffix>$(VersionSuffix)</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
         <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>

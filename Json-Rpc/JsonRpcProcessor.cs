@@ -42,11 +42,11 @@ namespace AustinHarris.JsonRpc
             return Task<string>.Factory.StartNew((_) =>
             {
                 var tuple = (Tuple<string, string, object, JsonSerializerSettings>)_;
-                return ProcessInternal(tuple.Item1, tuple.Item2, tuple.Item3, tuple.Item4);
+                return ProcessSync(tuple.Item1, tuple.Item2, tuple.Item3, tuple.Item4);
             }, new Tuple<string, string, object, JsonSerializerSettings>(sessionId, jsonRpc, context, settings));
         }
 
-        private static string ProcessInternal(string sessionId, string jsonRpc, object jsonRpcContext,
+        public static string ProcessSync(string sessionId, string jsonRpc, object jsonRpcContext,
             JsonSerializerSettings settings = null)
         {
             var handler = Handler.GetSessionHandler(sessionId);
