@@ -138,11 +138,11 @@ namespace AustinHarris.JsonRpc
                     }
                     if (jsonResponse.Error != null)
                     {
-                        writer.WritePropertyName("error"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Error));
+                        writer.WritePropertyName("error"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Error, settings));
                     }
                     else
                     {
-                        writer.WritePropertyName("result"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Result));
+                        writer.WritePropertyName("result"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Result, settings));
                     }
                     writer.WritePropertyName("id"); writer.WriteValue(jsonResponse.Id);
                     writer.WriteEndObject();
