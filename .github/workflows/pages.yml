@@ -1,0 +1,40 @@
+name: Benchmark explorer (GitHub Pages)
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - "benchmarks/charts/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      # The committed outputs must match the data: a stale chart or explorer fails the deploy.
+      - name: Check the committed charts against the data
+        run: python3 benchmarks/charts/render.py --check
+      - name: Stage the site
+        run: |
+          mkdir -p site
+          cp benchmarks/charts/explorer.html site/index.html
+          cp benchmarks/charts/*.svg benchmarks/charts/*.json site/
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v5

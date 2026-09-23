@@ -1,0 +1,103 @@
+{
+  "machine": "AMD Ryzen 7 7800X3D, 8 cores / 16 threads, Windows 11, .NET 10, Release, Server GC",
+  "date": "2026-09-23",
+  "secondsPerCell": 2,
+  "pipeline": 256,
+  "connections": [
+    1,
+    2,
+    4,
+    8,
+    16
+  ],
+  "series": [
+    {
+      "name": "JSON-RPC.Net, TCP",
+      "kind": "ours",
+      "rpcPerSec": [
+        1753461,
+        2864903,
+        5134810,
+        8320994,
+        12342034
+      ]
+    },
+    {
+      "name": "JSON-RPC.Net, HTTP, batch of 100 per POST",
+      "kind": "ours",
+      "rpcPerSec": [
+        902499,
+        1655066,
+        3251689,
+        5803041,
+        9773010
+      ]
+    },
+    {
+      "name": "JSON-RPC.Net, HTTP, 1 request per POST",
+      "kind": "ours",
+      "rpcPerSec": [
+        16608,
+        34760,
+        68072,
+        136547,
+        194976
+      ]
+    },
+    {
+      "name": "StreamJsonRpc, TCP, newline \u002B System.Text.Json",
+      "kind": "theirs",
+      "rpcPerSec": [
+        259099,
+        489920,
+        734867,
+        960889,
+        1063106
+      ]
+    },
+    {
+      "name": "StreamJsonRpc, TCP, Content-Length \u002B System.Text.Json",
+      "kind": "theirs",
+      "rpcPerSec": [
+        270328,
+        476075,
+        657408,
+        1045688,
+        1117102
+      ]
+    },
+    {
+      "name": "StreamJsonRpc, TCP, Content-Length \u002B Json.NET",
+      "kind": "theirs",
+      "rpcPerSec": [
+        182308,
+        255019,
+        396942,
+        582792,
+        544394
+      ]
+    },
+    {
+      "name": "gRPC for .NET, unary",
+      "kind": "grpc",
+      "rpcPerSec": [
+        179749,
+        322979,
+        332854,
+        377916,
+        361627
+      ]
+    },
+    {
+      "name": "gRPC for .NET, bidirectional stream",
+      "kind": "grpc",
+      "rpcPerSec": [
+        62493,
+        113543,
+        204608,
+        246839,
+        265818
+      ]
+    }
+  ]
+}

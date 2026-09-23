@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <!-- The JSON-RPC server runs inside the browser: no ASP.NET Core, no Kestrel, just the core package
+         compiled to WebAssembly and called from JavaScript through JS interop. -->
+    <!-- [JSExport]/[JSImport] methods (the direct-marshalling interop paths benchmarked in index.html) need the generator's unsafe code. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- `dotnet publish -c Release` AOT-compiles the app (needs `dotnet workload install wasm-tools`); `dotnet run`
+         and `dotnet build` stay on the interpreter and need no workload. Pass -p:Aot=false to publish interpreted. -->
+    <Aot Condition="'$(Aot)' == '' and '$(_IsPublishing)' == 'true'">true</Aot>
+    <RunAOTCompilation Condition="'$(Aot)' == 'true'">true</RunAOTCompilation>
+    <DefineConstants Condition="'$(Aot)' == 'true' and '$(_IsPublishing)' == 'true'">$(DefineConstants);WASM_AOT</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Json-Rpc\AustinHarris.JsonRpc.csproj" />
+  </ItemGroup>
+
+</Project>

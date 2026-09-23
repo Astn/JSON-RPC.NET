@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="280" viewBox="0 0 940 280" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="a4f53e6a848f">
+<title>In-process paths: different execution boundaries</title><desc>No network. A direct call, a Pipe pair and a typed proxy cross different boundaries, so these rows are not a like-for-like comparison with each other or with the transport rows. Two 3 s runs; intervals span them. Data revision a4f53e6a848f.</desc>
+<rect width="940" height="280" rx="10" fill="#0d1117" stroke="#30363d"/>
+<text x="24.0" y="32.0" text-anchor="start" font-size="18" fill="#f0f6fc" font-weight="600">In-process paths: different execution boundaries</text>
+<text x="24.0" y="54.0" text-anchor="start" font-size="12" fill="#9da7b3">No network. A direct call, a Pipe pair and a typed proxy cross different boundaries, so these rows are not a</text>
+<text x="24.0" y="70.0" text-anchor="start" font-size="12" fill="#9da7b3">like-for-like comparison with each other or with the transport rows. Two 3 s runs; intervals span them.</text>
+<line x1="330.0" y1="96" x2="330.0" y2="238" stroke="#21262d" stroke-width="0.6"/>
+<text x="330.0" y="254.0" text-anchor="middle" font-size="10" fill="#9da7b3">50 k</text>
+<line x1="393.2" y1="96" x2="393.2" y2="238" stroke="#21262d" stroke-width="1"/>
+<text x="393.2" y="254.0" text-anchor="middle" font-size="11" fill="#9da7b3">100 k</text>
+<line x1="456.4" y1="96" x2="456.4" y2="238" stroke="#21262d" stroke-width="0.6"/>
+<text x="456.4" y="254.0" text-anchor="middle" font-size="10" fill="#9da7b3">200 k</text>
+<line x1="540.0" y1="96" x2="540.0" y2="238" stroke="#21262d" stroke-width="0.6"/>
+<text x="540.0" y="254.0" text-anchor="middle" font-size="10" fill="#9da7b3">500 k</text>
+<line x1="603.2" y1="96" x2="603.2" y2="238" stroke="#21262d" stroke-width="1"/>
+<text x="603.2" y="254.0" text-anchor="middle" font-size="11" fill="#9da7b3">1 M</text>
+<line x1="666.4" y1="96" x2="666.4" y2="238" stroke="#21262d" stroke-width="0.6"/>
+<text x="666.4" y="254.0" text-anchor="middle" font-size="10" fill="#9da7b3">2 M</text>
+<line x1="750.0" y1="96" x2="750.0" y2="238" stroke="#21262d" stroke-width="0.6"/>
+<text x="750.0" y="254.0" text-anchor="middle" font-size="10" fill="#9da7b3">5 M</text>
+<text x="750.0" y="270.0" text-anchor="end" font-size="11" fill="#9da7b3">requests per second, log scale</text>
+<text x="316.0" y="126.0" text-anchor="end" font-size="13" fill="#f0f6fc">JSON-RPC.Net, direct call, 1 thread</text>
+<text x="316.0" y="140.0" text-anchor="end" font-size="10" fill="#9da7b3">bytes in, bytes out, no transport</text>
+<line x1="690.4" y1="122.0" x2="720.0" y2="122.0" stroke="#009e73" stroke-width="3"/>
+<line x1="690.4" y1="116.0" x2="690.4" y2="128.0" stroke="#009e73" stroke-width="3"/>
+<line x1="720.0" y1="116.0" x2="720.0" y2="128.0" stroke="#009e73" stroke-width="3"/>
+<text x="768.0" y="126.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">2.6 M to 3.6 M</text>
+<text x="316.0" y="166.0" text-anchor="end" font-size="13" fill="#f0f6fc">StreamJsonRpc, Pipe pair, 1 client</text>
+<text x="316.0" y="180.0" text-anchor="end" font-size="10" fill="#9da7b3">newline framing, System.Text.Json, 256 pipelined</text>
+<line x1="407.5" y1="162.0" x2="425.2" y2="162.0" stroke="#0072b2" stroke-width="3"/>
+<line x1="407.5" y1="156.0" x2="407.5" y2="168.0" stroke="#0072b2" stroke-width="3"/>
+<line x1="425.2" y1="156.0" x2="425.2" y2="168.0" stroke="#0072b2" stroke-width="3"/>
+<text x="768.0" y="166.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">117 k to 142 k</text>
+<text x="316.0" y="206.0" text-anchor="end" font-size="13" fill="#f0f6fc">StreamJsonRpc, typed proxy</text>
+<text x="316.0" y="220.0" text-anchor="end" font-size="10" fill="#9da7b3">sequential await per call, 10 µs per round trip</text>
+<line x1="389.5" y1="202.0" x2="390.4" y2="202.0" stroke="#0072b2" stroke-width="3"/>
+<line x1="389.5" y1="196.0" x2="389.5" y2="208.0" stroke="#0072b2" stroke-width="3"/>
+<line x1="390.4" y1="196.0" x2="390.4" y2="208.0" stroke="#0072b2" stroke-width="3"/>
+<text x="768.0" y="206.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">96 k to 97 k</text>
+</svg>

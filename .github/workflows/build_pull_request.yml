@@ -1,4 +1,4 @@
-name: Pull Reqest
+name: Pull Request
 on:
   pull_request:
     paths-ignore:
@@ -11,25 +11,34 @@ jobs:
     strategy:
       matrix:
         os: ['windows-latest','ubuntu-latest']
-        dotnet-version: ['3.1.201']
-        project : ['Json-Rpc']
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: ${{matrix.dotnet-version}}
+          # global.json pins the SDK; the 8.0 runtime is needed for the net8.0 test target.
+          global-json-file: global.json
+          dotnet-version: |
+            8.0.x
+            10.0.x
       - name: Install dependencies
-        run: dotnet restore
+        run: dotnet restore AustinHarris.JsonRpc.sln
+      # Building the solution packs every package project (GeneratePackageOnBuild); `dotnet pack` on the
+      # solution would trip NU5026 with GeneratePackageOnBuild, so the packages come from the build.
       - name: Build
-        run: dotnet build ${{matrix.project}} --configuration Release --version-suffix ci-${{ github.run_id }}-${{ github.run_number }}
+        run: dotnet build AustinHarris.JsonRpc.sln --configuration Release --no-restore --version-suffix ci-${{ github.run_id }}-${{ github.run_number }}
       - name: Test
-        run: dotnet test AustinHarris.JsonRpcTestN
-      # Publish
+        run: dotnet test AustinHarris.JsonRpcTestN --configuration Release --no-build
+      # Publish all four pre-release packages: the core and the three companions (Json.NET, System.Text.Json, ASP.NET Core).
+      # Non-fatal: the build and tests are the pull-request verdict; a rejected key (403) or a fork's missing secret
+      # shows as a warning here and fails loudly in the master workflow instead.
       - name: publish nuget version change
-        if: ${{matrix.os == 'ubuntu-latest'}}
-        run: dotnet nuget push Json-Rpc/bin/Release/*.nupkg  --skip-duplicate --source "https://www.nuget.org" --api-key ${{secrets.NugetKey}} # API key for the NuGet feed
-          
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        continue-on-error: true
+        run: |
+          for project in Json-Rpc AustinHarris.JsonRpc.Newtonsoft AustinHarris.JsonRpc.SystemTextJson AustinHarris.JsonRpc.AspNetCore; do
+            dotnet nuget push "$project/bin/Release/"*.nupkg --skip-duplicate --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.NugetKey }} # API key for the NuGet feed
+          done

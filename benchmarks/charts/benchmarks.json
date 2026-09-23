@@ -1,0 +1,141 @@
+{
+  "schema": 1,
+  "machine": "AMD Ryzen 7 7800X3D (8 cores / 16 threads, 4.2 GHz), 64 GB, Windows 11",
+  "runtime": ".NET 10, Release, Server GC, built-in serializer",
+  "sets": {
+    "sync": {
+      "title": "JSON-RPC.Net alone, by worker threads",
+      "date": "2026-09-23",
+      "source": "README.md, Sync table; commit 192a97f",
+      "harness": "TestServer_Console --sync 3, and --sync 2 <n> for single rows",
+      "workload": "the five benchmark requests through the byte-level JsonRpcProcessor.Process in a loop; no scheduler, no transport",
+      "conditions": "idle box, WSL VM shut down; the 1-thread row from an idle core",
+      "policy": "observed low and high over the day's runs; run count not recorded; ns per request is the harness's reported figure for one run",
+      "x": { "name": "worker threads", "values": [1, 2, 4, 8, 16] },
+      "series": [
+        {
+          "id": "ours-sync",
+          "label": "JSON-RPC.Net, byte entry point",
+          "family": "ours",
+          "points": [
+            { "low": 4500000, "high": 4600000, "status": "range", "published": "4.5 M to 4.6 M", "ns": 217 },
+            { "low": 7600000, "high": 9500000, "status": "range", "published": "7.6 M to 9.5 M", "ns": 222 },
+            { "low": 16400000, "high": 17400000, "status": "range", "published": "16.4 M to 17.4 M", "ns": 230 },
+            { "low": 25100000, "high": 26800000, "status": "range", "published": "25.1 M to 26.8 M", "ns": 298 },
+            { "low": 30600000, "high": 35800000, "status": "range", "published": "30.6 M to 35.8 M", "ns": 446 }
+          ]
+        }
+      ]
+    },
+    "kestrel": {
+      "title": "JSON-RPC.Net by transport",
+      "date": "2026-09-23",
+      "source": "README.md, Kestrel table; commit 192a97f",
+      "harness": "TestServer_Console --kestrel 3",
+      "workload": "AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, 16 clients on the server's 8 cores",
+      "conditions": "WSL VM shut down; two 3 s runs",
+      "policy": "observed low and high over two runs",
+      "groups": [
+        { "heading": "", "rule": false, "series": ["ours-http-1", "ours-http-100", "ours-tcp"] },
+        { "heading": "Reference: no transport", "rule": true, "series": ["ours-inproc-16"] }
+      ],
+      "series": [
+        { "id": "ours-http-1", "label": "HTTP, 1 request per POST", "note": "each client awaits one POST at a time; 95 to 125 µs per round trip", "family": "ours", "low": 128000, "high": 168000, "status": "range", "published": "128 k to 168 k" },
+        { "id": "ours-http-100", "label": "HTTP, batch of 100 per POST", "note": "one POST outstanding per client, 100 RPCs in it", "family": "ours", "low": 12700000, "high": 13700000, "status": "range", "published": "12.7 M to 13.7 M" },
+        { "id": "ours-tcp", "label": "TCP, 256 pipelined", "note": "JsonRpcConnectionHandler, 256 requests in flight per connection", "family": "ours", "low": 15200000, "high": 15500000, "status": "range", "published": "15.2 M to 15.5 M" },
+        { "id": "ours-inproc-16", "label": "in-process, 16 threads", "note": "the same requests through the byte entry point", "family": "scale", "low": 30800000, "high": 31300000, "status": "range", "published": "30.8 M to 31.3 M" }
+      ]
+    },
+    "compare": {
+      "title": "JSON-RPC.Net vs StreamJsonRpc vs gRPC for .NET, 16 connections",
+      "date": "2026-09-23",
+      "source": "README.md, comparison table; commit 192a97f",
+      "harness": "TestServer_Console --compare 3",
+      "workload": "the same five calls on the same Kestrel; 16 connections or channels with 256 requests in flight each; every request carries \"jsonrpc\":\"2.0\"",
+      "conditions": "WSL VM shut down; two 3 s runs",
+      "policy": "observed low and high over two runs; a single figure is one value that both runs rounded to",
+      "versions": "StreamJsonRpc 2.25.29, gRPC for .NET 2.84.0",
+      "groups": [
+        { "heading": "JSON-RPC.Net", "rule": false, "series": ["ours-tcp-jsonrpc"] },
+        { "heading": "StreamJsonRpc 2.25", "rule": false, "series": ["sjr-newline-stj", "sjr-cl-stj", "sjr-cl-newtonsoft"] },
+        { "heading": "gRPC for .NET 2.84: its .NET client shares the server's cores", "rule": false, "series": ["grpc-unary", "grpc-stream"] }
+      ],
+      "series": [
+        { "id": "ours-tcp-jsonrpc", "label": "over Kestrel TCP", "note": "raw documents", "family": "ours", "low": 13700000, "high": 14600000, "status": "range", "published": "13.7 M to 14.6 M" },
+        { "id": "sjr-newline-stj", "label": "over Kestrel TCP", "note": "newline framing, System.Text.Json formatter", "family": "theirs", "low": 1380000, "high": 1440000, "status": "range", "published": "1.38 M to 1.44 M" },
+        { "id": "sjr-cl-stj", "label": "over Kestrel TCP", "note": "Content-Length framing, System.Text.Json formatter", "family": "theirs", "low": 1410000, "high": 1450000, "status": "range", "published": "1.41 M to 1.45 M" },
+        { "id": "sjr-cl-newtonsoft", "label": "over Kestrel TCP", "note": "Content-Length framing, Json.NET formatter (default)", "family": "theirs", "low": 625000, "high": 625000, "status": "single", "published": "625 k" },
+        { "id": "grpc-unary", "label": "unary calls", "note": "HTTP/2 + protobuf, 16 channels × 256 in flight", "family": "grpc", "low": 192000, "high": 198000, "status": "range", "published": "192 k to 198 k" },
+        { "id": "grpc-stream", "label": "bidirectional stream", "note": "one stream per channel, 256 in flight, batched writes", "family": "grpc", "low": 200000, "high": 209000, "status": "range", "published": "200 k to 209 k" }
+      ]
+    },
+    "inprocess": {
+      "title": "In-process paths: different execution boundaries",
+      "date": "2026-09-23",
+      "source": "README.md, comparison table; commit 192a97f",
+      "harness": "TestServer_Console --compare 3",
+      "workload": "the same five calls with no network: a direct call, a Pipe pair, a typed proxy",
+      "conditions": "WSL VM shut down; two 3 s runs",
+      "policy": "observed low and high over two runs",
+      "groups": [
+        { "heading": "", "rule": false, "series": ["ours-direct-1", "sjr-pipe", "sjr-proxy"] }
+      ],
+      "series": [
+        { "id": "ours-direct-1", "label": "JSON-RPC.Net, direct call, 1 thread", "note": "bytes in, bytes out, no transport", "family": "ours", "low": 2600000, "high": 3600000, "status": "range", "published": "2.6 M to 3.6 M" },
+        { "id": "sjr-pipe", "label": "StreamJsonRpc, Pipe pair, 1 client", "note": "newline framing, System.Text.Json, 256 pipelined", "family": "theirs", "low": 117000, "high": 142000, "status": "range", "published": "117 k to 142 k" },
+        { "id": "sjr-proxy", "label": "StreamJsonRpc, typed proxy", "note": "sequential await per call, 10 µs per round trip", "family": "theirs", "low": 96000, "high": 97000, "status": "range", "published": "96 k to 97 k" }
+      ]
+    },
+    "sweep": {
+      "title": "Every library and transport, by client connections",
+      "source": "TestServer_Console --sweep 2 <file>; one file per run, matched by the pattern below",
+      "runs": "sweep*.json",
+      "workload": "the same five calls on the same Kestrel, clients on the server's 8 cores; each cell warmed for 2 s, then timed",
+      "conditions": "WSL VM running and other sessions active: a separate session from the tables, so its absolute figures are not comparable with them",
+      "policy": "observed low, high and median over the runs; each run contributes one observation per cell",
+      "x": { "name": "client connections (gRPC: channels)" },
+      "series": [
+        { "id": "sweep-ours-tcp", "name": "JSON-RPC.Net, TCP", "label": "TCP", "family": "ours", "style": 0, "concurrency": "256 requests in flight per connection" },
+        { "id": "sweep-ours-http-100", "name": "JSON-RPC.Net, HTTP, batch of 100 per POST", "label": "HTTP, batch of 100 per POST", "family": "ours", "style": 1, "concurrency": "one POST outstanding per connection, 100 RPCs in it" },
+        { "id": "sweep-ours-http-1", "name": "JSON-RPC.Net, HTTP, 1 request per POST", "label": "HTTP, 1 request per POST", "family": "ours", "style": 2, "concurrency": "one POST outstanding per connection" },
+        { "id": "sweep-sjr-newline-stj", "name": "StreamJsonRpc, TCP, newline + System.Text.Json", "label": "TCP, newline + System.Text.Json", "family": "theirs", "style": 0, "concurrency": "256 requests in flight per connection" },
+        { "id": "sweep-sjr-cl-stj", "name": "StreamJsonRpc, TCP, Content-Length + System.Text.Json", "label": "TCP, Content-Length + System.Text.Json", "family": "theirs", "style": 1, "concurrency": "256 requests in flight per connection" },
+        { "id": "sweep-sjr-cl-newtonsoft", "name": "StreamJsonRpc, TCP, Content-Length + Json.NET", "label": "TCP, Content-Length + Json.NET", "family": "theirs", "style": 2, "concurrency": "256 requests in flight per connection" },
+        { "id": "sweep-grpc-unary", "name": "gRPC for .NET, unary", "label": "unary", "family": "grpc", "style": 0, "concurrency": "256 calls in flight per channel" },
+        { "id": "sweep-grpc-stream", "name": "gRPC for .NET, bidirectional stream", "label": "bidirectional stream", "family": "grpc", "style": 1, "concurrency": "one stream per channel, 256 in flight, batched writes" }
+      ]
+    },
+    "wasm": {
+      "title": "In the browser: interpreter vs AOT",
+      "date": "2026-09-23",
+      "source": "samples/WasmHost/README.md table; commit 41371ec",
+      "harness": "samples/WasmHost, Run benchmark in Chrome 152",
+      "workload": "add(1, 2) through each interop path, 20,000 RPCs per row",
+      "conditions": "8-core desktop; interpreter from dotnet run, AOT from dotnet publish -c Release with the wasm-tools workload",
+      "policy": "interpreter: one run; AOT: the better of two runs. The interpreter-to-AOT distance is a deployment difference, not a range",
+      "modes": [
+        { "id": "interp", "label": "interpreter", "marker": "circle", "policy": "one run" },
+        { "id": "aot", "label": "AOT", "marker": "diamond", "policy": "better of two runs" }
+      ],
+      "groups": [
+        { "heading": "plain Blazor interop, one method per operation", "rule": false, "series": ["wasm-plain-invoke", "wasm-plain-invoke-async", "wasm-plain-jsexport"] },
+        { "heading": "JSON-RPC, one request document per call", "rule": false, "series": ["wasm-rpc-invoke", "wasm-rpc-invoke-async", "wasm-rpc-jsexport", "wasm-rpc-bytes"] },
+        { "heading": "JSON-RPC, a batch of 100 per call", "rule": false, "series": ["wasm-rpc-invoke-100", "wasm-rpc-jsexport-100", "wasm-rpc-bytes-100"] },
+        { "heading": "Reference: the server in a .NET loop, no interop", "rule": true, "series": ["wasm-loop"] }
+      ],
+      "series": [
+        { "id": "wasm-plain-invoke", "label": "invokeMethod Add", "family": "scale", "values": { "interp": 15700, "aot": 66600 }, "published": { "interp": "15,700", "aot": "66,600" } },
+        { "id": "wasm-plain-invoke-async", "label": "invokeMethodAsync Add", "family": "scale", "values": { "interp": 14500, "aot": 59300 }, "published": { "interp": "14,500", "aot": "59,300" } },
+        { "id": "wasm-plain-jsexport", "label": "[JSExport] AddExported, typed arguments", "family": "scale", "values": { "interp": 2860000, "aot": 3230000 }, "published": { "interp": "2,860,000", "aot": "3,230,000" } },
+        { "id": "wasm-rpc-invoke", "label": "invokeMethod Process", "family": "ours", "values": { "interp": 6000, "aot": 33500 }, "published": { "interp": "6,000", "aot": "33,500" } },
+        { "id": "wasm-rpc-invoke-async", "label": "invokeMethodAsync Process", "family": "ours", "values": { "interp": 5700, "aot": 36000 }, "published": { "interp": "5,700", "aot": "36,000" } },
+        { "id": "wasm-rpc-jsexport", "label": "[JSExport] ProcessExported, strings", "family": "ours", "values": { "interp": 17100, "aot": 151600 }, "published": { "interp": "17,100", "aot": "151,600" } },
+        { "id": "wasm-rpc-bytes", "label": "[JSExport] ProcessBytes, UTF-8 buffers", "family": "ours", "values": { "interp": 19000, "aot": 142000 }, "published": { "interp": "19,000", "aot": "142,000" } },
+        { "id": "wasm-rpc-invoke-100", "label": "invokeMethod Process", "family": "ours", "values": { "interp": 13000, "aot": 136000 }, "published": { "interp": "13,000", "aot": "136,000" } },
+        { "id": "wasm-rpc-jsexport-100", "label": "[JSExport] ProcessExported, strings", "family": "ours", "values": { "interp": 25000, "aot": 185500 }, "published": { "interp": "25,000", "aot": "185,500" } },
+        { "id": "wasm-rpc-bytes-100", "label": "[JSExport] ProcessBytes, UTF-8 buffers", "family": "ours", "values": { "interp": 27000, "aot": 210500 }, "published": { "interp": "27,000", "aot": "210,500" } },
+        { "id": "wasm-loop", "label": "ProcessMany, the string request N times", "family": "scale", "values": { "interp": 17600, "aot": 169800 }, "published": { "interp": "17,600", "aot": "169,800" } }
+      ]
+    }
+  }
+}

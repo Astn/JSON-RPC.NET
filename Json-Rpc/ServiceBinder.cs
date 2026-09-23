@@ -1,13 +1,82 @@
-﻿namespace AustinHarris.JsonRpc
+namespace AustinHarris.JsonRpc
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
-    using AustinHarris.JsonRpc;
+    using AustinHarris.JsonRpc.Invocation;
 
-    public static class ServiceBinder
+    public static partial class ServiceBinder
     {
+        /// <summary>Compatibility overload preserving the original default-session registration signature.</summary>
+        public static void BindMethod(string name, Delegate implementation, string[] parameterNames, IDictionary<string, object> defaults)
+        {
+            BindMethod(name, implementation, parameterNames, defaults, RpcContextFlow.None);
+        }
+
+        /// <summary>Compatibility overload preserving the original session registration signature.</summary>
+        public static void BindMethod(string sessionID, string name, Delegate implementation, string[] parameterNames, IDictionary<string, object> defaults)
+        {
+            BindMethod(sessionID, name, implementation, parameterNames, defaults, RpcContextFlow.None);
+        }
+
+        /// <summary>Registers <paramref name="implementation"/> as method <paramref name="name"/> on the default session. See the session overload.</summary>
+        public static void BindMethod(string name, Delegate implementation, string[] parameterNames = null, IDictionary<string, object> defaults = null, RpcContextFlow contextFlow = RpcContextFlow.None)
+        {
+            BindMethod(Handler.DefaultSessionId(), name, implementation, parameterNames, defaults, contextFlow);
+        }
+
+        /// <summary>
+        /// Registers any delegate (a lambda, a method group, a closed instance method) as JSON-RPC method
+        /// <paramref name="name"/> on session <paramref name="sessionID"/>, without attributes or a service class.
+        /// Parameters bind by the delegate's signature: positional params by order, named params by
+        /// <paramref name="parameterNames"/> when given (null entries keep the lambda's own name), else by the
+        /// lambda's parameter names, else <c>arg1</c>, <c>arg2</c>... for a delegate whose names are not recoverable.
+        /// <paramref name="defaults"/> (keyed by JSON name) make those parameters optional. The name must be free:
+        /// re-registering a name is an error, unlike attribute binding; unbind it first with <see cref="UnbindMethod"/>.
+        /// Task and ValueTask delegates require ProcessAsync; async void is rejected.
+        /// <paramref name="contextFlow"/> controls ambient context across awaits.
+        /// </summary>
+        public static void BindMethod(string sessionID, string name, Delegate implementation, string[] parameterNames = null, IDictionary<string, object> defaults = null, RpcContextFlow contextFlow = RpcContextFlow.None)
+        {
+            if (sessionID == null) throw new ArgumentNullException(nameof(sessionID));
+            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A JSON-RPC method name is required.", nameof(name));
+            if (implementation == null) throw new ArgumentNullException(nameof(implementation));
+
+            var rpc = RpcMethod.FromDelegate(name, implementation, parameterNames, defaults, contextFlow);
+            var handler = Handler.GetSessionHandler(sessionID);
+            if (handler.MetaData.Services.ContainsKey(name))
+            {
+                throw new ArgumentException("JSON-RPC method '" + name + "' is already registered on session '" + sessionID + "'; unbind it first.", nameof(name));
+            }
+
+            var paras = new Dictionary<string, Type>();
+            var defaultValues = new Dictionary<string, object>();
+            foreach (var p in rpc.Parameters)
+            {
+                if (paras.ContainsKey(p.Name))
+                {
+                    throw new ArgumentException("JSON-RPC method '" + name + "': parameter name '" + p.Name + "' is used more than once.", nameof(parameterNames));
+                }
+                paras.Add(p.Name, p.Type);
+                if (p.HasDefault) defaultValues.Add(p.Name, p.DefaultValue);
+            }
+            paras.Add("returns", rpc.ResultType);
+            handler.MetaData.AddService(name, paras, defaultValues, implementation, rpc);
+        }
+
+        /// <summary>Removes method <paramref name="name"/> from session <paramref name="sessionID"/>; false when it was not registered.</summary>
+        public static bool UnbindMethod(string sessionID, string name)
+        {
+            return Handler.GetSessionHandler(sessionID).MetaData.RemoveService(name);
+        }
+
+        /// <summary>Removes method <paramref name="name"/> from the default session; false when it was not registered.</summary>
+        public static bool UnbindMethod(string name)
+        {
+            return UnbindMethod(Handler.DefaultSessionId(), name);
+        }
+
         public static void BindService<T>() where T : new()
         {
             BindService<T>(Handler.DefaultSessionId());
@@ -19,51 +88,60 @@
 
         public static void BindService(string sessionID, Object instance)
         {
-            var item = instance.GetType(); // var item = typeof(T);
+            var item = instance.GetType();
 
-            var methods = item.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Where(m => m.GetCustomAttributes(typeof(JsonRpcMethodAttribute), false).Length > 0);
+            var methods = item.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+                .Where(m => m.GetCustomAttributes(typeof(JsonRpcMethodAttribute), false).Length > 0);
             foreach (var meth in methods)
             {
                 Dictionary<string, Type> paras = new Dictionary<string, Type>();
-                Dictionary<string, object> defaultValues = new Dictionary<string, object>(); // dictionary that holds default values for optional params.
+                Dictionary<string, object> defaultValues = new Dictionary<string, object>();
 
                 var paramzs = meth.GetParameters();
+                var jsonNames = new string[paramzs.Length];
 
-                List<Type> parameterTypeArray = new List<Type>();
                 for (int i = 0; i < paramzs.Length; i++)
                 {
-                    string paramName; 
-                    var paramAttrs = paramzs[i].GetCustomAttributes(typeof(JsonRpcParamAttribute), false); 
-                    if (paramAttrs.Length > 0) 
-                    { 
+                    string paramName;
+                    var paramAttrs = paramzs[i].GetCustomAttributes(typeof(JsonRpcParamAttribute), false);
+                    if (paramAttrs.Length > 0)
+                    {
                         paramName = ((JsonRpcParamAttribute)paramAttrs[0]).JsonParamName;
                         if (string.IsNullOrEmpty(paramName))
                         {
-                            paramName = paramzs[i].Name; 
+                            paramName = paramzs[i].Name;
                         }
-                    } 
-                    else 
-                    { 
-                        paramName = paramzs[i].Name; 
-                    } 
-                    // reflection attribute information for optional parameters
-                    //http://stackoverflow.com/questions/2421994/invoking-methods-with-optional-parameters-through-reflection
+                    }
+                    else
+                    {
+                        paramName = paramzs[i].Name;
+                    }
+                    jsonNames[i] = paramName;
                     paras.Add(paramName, paramzs[i].ParameterType);
 
-                    if (paramzs[i].IsOptional) // if the parameter is an optional, add the default value to our default values dictionary.
+                    if (paramzs[i].IsOptional)
                         defaultValues.Add(paramName, paramzs[i].DefaultValue);
                 }
 
                 var resType = meth.ReturnType;
-                paras.Add("returns", resType); // add the return type to the generic parameters list.
+                paras.Add("returns", resType); // the return type travels as the last entry, like Func<,>
 
                 var atdata = meth.GetCustomAttributes(typeof(JsonRpcMethodAttribute), false);
                 foreach (JsonRpcMethodAttribute handlerAttribute in atdata)
                 {
-                    var methodName = handlerAttribute.JsonMethodName == string.Empty ? meth.Name : handlerAttribute.JsonMethodName;
-                    var newDel = Delegate.CreateDelegate(System.Linq.Expressions.Expression.GetDelegateType(paras.Values.ToArray()), instance /*Need to add support for other methods outside of this instance*/, meth);
+                    var methodName = string.IsNullOrEmpty(handlerAttribute.JsonMethodName) ? meth.Name : handlerAttribute.JsonMethodName;
+                    var rpc = RpcMethod.FromMethod(methodName, meth, meth.IsStatic ? null : instance, jsonNames, handlerAttribute.ContextFlow);
+                    Delegate legacy = null;
+                    try
+                    {
+                        legacy = Delegate.CreateDelegate(System.Linq.Expressions.Expression.GetDelegateType(paras.Values.ToArray()), meth.IsStatic ? null : instance, meth);
+                    }
+                    catch (ArgumentException)
+                    {
+                        // e.g. ref parameters: no Func<> shape exists; the compiled invoker still works
+                    }
                     var handlerSession = Handler.GetSessionHandler(sessionID);
-                    handlerSession.MetaData.AddService(methodName, paras, defaultValues, newDel);
+                    handlerSession.MetaData.AddService(methodName, paras, defaultValues, legacy, rpc);
                 }
             }
         }

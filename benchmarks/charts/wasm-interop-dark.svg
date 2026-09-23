@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="644" viewBox="0 0 940 644" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="a4f53e6a848f">
+<title>In the browser: interpreter vs AOT</title><desc>samples/WasmHost in Chrome 152, .NET 10, 20,000 RPCs per row. Interpreter: one run. AOT: the better of two runs. Batches are per RPC. The interpreter-to-AOT distance is a deployment difference, not a range. Data revision a4f53e6a848f.</desc>
+<rect width="940" height="644" rx="10" fill="#0d1117" stroke="#30363d"/>
+<text x="24.0" y="32.0" text-anchor="start" font-size="18" fill="#f0f6fc" font-weight="600">In the browser: interpreter vs AOT</text>
+<text x="24.0" y="54.0" text-anchor="start" font-size="12" fill="#9da7b3">samples/WasmHost in Chrome 152, .NET 10, 20,000 RPCs per row. Interpreter: one run. AOT: the better of two runs.</text>
+<text x="24.0" y="70.0" text-anchor="start" font-size="12" fill="#9da7b3">Batches are per RPC. The interpreter-to-AOT distance is a deployment difference, not a range.</text>
+<line x1="300.0" y1="96" x2="300.0" y2="578" stroke="#21262d" stroke-width="0.6"/>
+<line x1="342.1" y1="96" x2="342.1" y2="578" stroke="#21262d" stroke-width="1"/>
+<text x="342.1" y="594.0" text-anchor="middle" font-size="11" fill="#9da7b3">10 k</text>
+<line x1="384.3" y1="96" x2="384.3" y2="578" stroke="#21262d" stroke-width="0.6"/>
+<line x1="440.0" y1="96" x2="440.0" y2="578" stroke="#21262d" stroke-width="0.6"/>
+<line x1="482.1" y1="96" x2="482.1" y2="578" stroke="#21262d" stroke-width="1"/>
+<text x="482.1" y="594.0" text-anchor="middle" font-size="11" fill="#9da7b3">100 k</text>
+<line x1="524.3" y1="96" x2="524.3" y2="578" stroke="#21262d" stroke-width="0.6"/>
+<line x1="580.0" y1="96" x2="580.0" y2="578" stroke="#21262d" stroke-width="0.6"/>
+<line x1="622.1" y1="96" x2="622.1" y2="578" stroke="#21262d" stroke-width="1"/>
+<text x="622.1" y="594.0" text-anchor="middle" font-size="11" fill="#9da7b3">1 M</text>
+<line x1="664.3" y1="96" x2="664.3" y2="578" stroke="#21262d" stroke-width="0.6"/>
+<line x1="720.0" y1="96" x2="720.0" y2="578" stroke="#21262d" stroke-width="0.6"/>
+<text x="720.0" y="612.0" text-anchor="end" font-size="11" fill="#9da7b3">add(1, 2) operations per second, log scale</text>
+<circle cx="30.0" cy="608.0" r="4" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<text x="42.0" y="612.0" text-anchor="start" font-size="11" fill="#9da7b3">interpreter (one run)</text>
+<polygon points="230.0,602.8 235.2,608.0 230.0,613.2 224.8,608.0" fill="#009e73" stroke="#009e73" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="242.0" y="612.0" text-anchor="start" font-size="11" fill="#9da7b3">AOT (better of two runs)</text>
+<text x="738.0" y="94.0" text-anchor="start" font-size="11" fill="#9da7b3" font-weight="600">interpreter</text>
+<text x="828.0" y="94.0" text-anchor="start" font-size="11" fill="#9da7b3" font-weight="600">AOT</text>
+<text x="24.0" y="116.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">plain Blazor interop, one method per operation</text>
+<text x="286.0" y="151.0" text-anchor="end" font-size="12" fill="#f0f6fc">invokeMethod Add</text>
+<line x1="369.6" y1="147.0" x2="457.4" y2="147.0" stroke="#767676" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="369.6" cy="147.0" r="4.5" fill="#0d1117" stroke="#767676" stroke-width="2"/>
+<text x="738.0" y="151.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">15,700</text>
+<polygon points="457.4,141.2 463.3,147.0 457.4,152.8 451.6,147.0" fill="#767676" stroke="#767676" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="151.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">66,600</text>
+<text x="286.0" y="181.0" text-anchor="end" font-size="12" fill="#f0f6fc">invokeMethodAsync Add</text>
+<line x1="364.7" y1="177.0" x2="450.4" y2="177.0" stroke="#767676" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="364.7" cy="177.0" r="4.5" fill="#0d1117" stroke="#767676" stroke-width="2"/>
+<text x="738.0" y="181.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">14,500</text>
+<polygon points="450.4,171.2 456.2,177.0 450.4,182.8 444.5,177.0" fill="#767676" stroke="#767676" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="181.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">59,300</text>
+<text x="286.0" y="211.0" text-anchor="end" font-size="12" fill="#f0f6fc">[JSExport] AddExported, typed arguments</text>
+<line x1="686.0" y1="207.0" x2="693.4" y2="207.0" stroke="#767676" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="686.0" cy="207.0" r="4.5" fill="#0d1117" stroke="#767676" stroke-width="2"/>
+<text x="738.0" y="211.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">2,860,000</text>
+<polygon points="693.4,201.2 699.3,207.0 693.4,212.8 687.6,207.0" fill="#767676" stroke="#767676" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="211.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">3,230,000</text>
+<text x="24.0" y="236.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">JSON-RPC, one request document per call</text>
+<text x="286.0" y="271.0" text-anchor="end" font-size="12" fill="#f0f6fc">invokeMethod Process</text>
+<line x1="311.1" y1="267.0" x2="415.7" y2="267.0" stroke="#009e73" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="311.1" cy="267.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<text x="738.0" y="271.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">6,000</text>
+<polygon points="415.7,261.1 421.5,267.0 415.7,272.9 409.8,267.0" fill="#009e73" stroke="#009e73" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="271.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">33,500</text>
+<text x="286.0" y="301.0" text-anchor="end" font-size="12" fill="#f0f6fc">invokeMethodAsync Process</text>
+<line x1="308.0" y1="297.0" x2="420.0" y2="297.0" stroke="#009e73" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="308.0" cy="297.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<text x="738.0" y="301.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">5,700</text>
+<polygon points="420.0,291.1 425.9,297.0 420.0,302.9 414.2,297.0" fill="#009e73" stroke="#009e73" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="301.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">36,000</text>
+<text x="286.0" y="331.0" text-anchor="end" font-size="12" fill="#f0f6fc">[JSExport] ProcessExported, strings</text>
+<line x1="374.8" y1="327.0" x2="507.4" y2="327.0" stroke="#009e73" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="374.8" cy="327.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<text x="738.0" y="331.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">17,100</text>
+<polygon points="507.4,321.1 513.3,327.0 507.4,332.9 501.6,327.0" fill="#009e73" stroke="#009e73" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="331.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">151,600</text>
+<text x="286.0" y="361.0" text-anchor="end" font-size="12" fill="#f0f6fc">[JSExport] ProcessBytes, UTF-8 buffers</text>
+<line x1="381.2" y1="357.0" x2="503.5" y2="357.0" stroke="#009e73" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="381.2" cy="357.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<text x="738.0" y="361.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">19,000</text>
+<polygon points="503.5,351.1 509.3,357.0 503.5,362.9 497.6,357.0" fill="#009e73" stroke="#009e73" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="361.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">142,000</text>
+<text x="24.0" y="386.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">JSON-RPC, a batch of 100 per call</text>
+<text x="286.0" y="421.0" text-anchor="end" font-size="12" fill="#f0f6fc">invokeMethod Process</text>
+<line x1="358.1" y1="417.0" x2="500.8" y2="417.0" stroke="#009e73" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="358.1" cy="417.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<text x="738.0" y="421.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">13,000</text>
+<polygon points="500.8,411.1 506.7,417.0 500.8,422.9 495.0,417.0" fill="#009e73" stroke="#009e73" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="421.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">136,000</text>
+<text x="286.0" y="451.0" text-anchor="end" font-size="12" fill="#f0f6fc">[JSExport] ProcessExported, strings</text>
+<line x1="397.9" y1="447.0" x2="519.7" y2="447.0" stroke="#009e73" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="397.9" cy="447.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<text x="738.0" y="451.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">25,000</text>
+<polygon points="519.7,441.1 525.6,447.0 519.7,452.9 513.9,447.0" fill="#009e73" stroke="#009e73" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="451.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">185,500</text>
+<text x="286.0" y="481.0" text-anchor="end" font-size="12" fill="#f0f6fc">[JSExport] ProcessBytes, UTF-8 buffers</text>
+<line x1="402.5" y1="477.0" x2="527.4" y2="477.0" stroke="#009e73" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="402.5" cy="477.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<text x="738.0" y="481.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">27,000</text>
+<polygon points="527.4,471.1 533.2,477.0 527.4,482.9 521.5,477.0" fill="#009e73" stroke="#009e73" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="481.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">210,500</text>
+<line x1="24" y1="498" x2="916" y2="498" stroke="#30363d"/>
+<text x="24.0" y="518.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">Reference: the server in a .NET loop, no interop</text>
+<text x="286.0" y="553.0" text-anchor="end" font-size="12" fill="#f0f6fc">ProcessMany, the string request N times</text>
+<line x1="376.5" y1="549.0" x2="514.3" y2="549.0" stroke="#767676" stroke-width="1.5" stroke-opacity="0.6"/>
+<circle cx="376.5" cy="549.0" r="4.5" fill="#0d1117" stroke="#767676" stroke-width="2"/>
+<text x="738.0" y="553.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">17,600</text>
+<polygon points="514.3,543.1 520.2,549.0 514.3,554.9 508.5,549.0" fill="#767676" stroke="#767676" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="828.0" y="553.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">169,800</text>
+</svg>
