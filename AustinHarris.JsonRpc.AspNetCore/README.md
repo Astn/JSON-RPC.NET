@@ -5,6 +5,15 @@ UTF-8 bytes, so the HTTP endpoint reads the body with `PipeReader` and writes st
 `Response.BodyWriter`; nothing is turned into a string on the way through. A `ConnectionHandler` does the
 same for JSON-RPC over a raw Kestrel connection (TCP, Unix socket, named pipe).
 
+## Install
+
+```
+dotnet add package AustinHarris.JsonRpc.AspNetCore
+```
+
+Targets `net8.0` and `net10.0`; depends on the `AustinHarris.JsonRpc` core package and the ASP.NET Core shared
+framework.
+
 ## HTTP endpoint
 
 ```csharp
@@ -31,15 +40,16 @@ public class CalculatorService
     public CalculatorService(ILogger<CalculatorService> log) => _log = log;
 
     [JsonRpcMethod]
-    public double add(double l, double r) => l + r;
+    public double add(double l, double r)
+    {
+        _log.LogDebug("add {L} {R}", l, r);
+        return l + r;
+    }
 }
 ```
 
 `POST /rpc` with a request or a batch answers `200 application/json`; a notification answers `204`.
 Inside a method `JsonRpcContext.Current().Value` is the `HttpContext` (override with `ContextFactory`).
-Classes deriving from `JsonRpcService` still bind themselves; `AddJsonRpcService<T>()` is for classes that
-take constructor dependencies, and `AddJsonRpcServicesFromAssembly(typeof(Program).Assembly)` registers every
-class that declares a `[JsonRpcMethod]`, MVC controllers included.
 
 Because it is an ordinary endpoint, `RequireAuthorization()`, rate limiting, output caching and the rest of
 the middleware pipeline compose with it:
@@ -48,35 +58,90 @@ the middleware pipeline compose with it:
 app.MapJsonRpc("/rpc").RequireAuthorization("api");
 ```
 
-## Raw connection (TCP)
+`MapJsonRpc` adds no authorization, TLS requirement, rate limit or request deadline by itself; apply those
+policies explicitly. `MaxRequestBytes` limits the HTTP body, but there is no batch-count or response-size limit.
+Keep `Config.IncludeExceptionDetails` off for untrusted clients; the default still sends an unhandled exception's
+CLR type name and message, see [Exception disclosure](https://github.com/Astn/JSON-RPC.NET#exception-disclosure)
+in the main README.
+
+`MapJsonRpc(pattern = "/jsonrpc", options = null)` uses the options from `AddJsonRpc` unless you pass your own,
+so two endpoints can serve two sessions, for example a strict API next to a lenient one for older clients:
+
+```csharp
+app.MapJsonRpc("/rpc");
+app.MapJsonRpc("/legacy", new JsonRpcOptions { SessionId = "legacy-clients", Serializer = new NewtonsoftJsonRpcSerializer() });
+```
+
+## Services and lifetime
+
+`AddJsonRpcService<T>()` registers `T` as a singleton unless `T` is already registered. When the host starts,
+each registered service is resolved once from the root container and bound; that one instance then serves every
+HTTP request and every raw connection, concurrently. So `T` and its dependencies must be thread-safe, and `T`
+cannot take scoped dependencies such as an EF Core `DbContext`: with scope validation on, the host fails at
+startup; with it off, the dependency leaks. For per-request services, resolve them inside the method from
+`((HttpContext)Handler.RpcContext()).RequestServices` on HTTP; a raw connection's context is the
+`ConnectionContext`, which has no request scope. Do not inject request-scoped state into a service; read
+per-request data from the context instead.
+
+`AddJsonRpcServicesFromAssembly(assembly)` does the same for every non-abstract class in the assembly that
+declares a `[JsonRpcMethod]`. Private methods count, so the attribute is the whole access list, and an MVC
+controller that carries it becomes a singleton too.
+
+A class deriving from `JsonRpcService` binds itself to the default session in its constructor. Registering it here
+as well is harmless when the effective session is the default. With `SessionId` set, the host binds it to that
+session in addition, so it stays reachable on the default session too.
+
+## Raw connection (TCP, Unix socket, named pipe)
 
 ```csharp
 builder.WebHost.ConfigureKestrel(k =>
 {
-    k.ListenAnyIP(9000, l => l.UseConnectionHandler<JsonRpcConnectionHandler>());
+    k.ListenLocalhost(9000, l => l.UseConnectionHandler<JsonRpcConnectionHandler>());
+    // k.ListenUnixSocket("/tmp/rpc.sock", l => l.UseConnectionHandler<JsonRpcConnectionHandler>());
+    // k.ListenNamedPipe("rpc", l => l.UseConnectionHandler<JsonRpcConnectionHandler>());
 });
 ```
 
-Clients write JSON documents back to back (a newline between them is fine); each document is answered in
-order on the same connection, notifications produce nothing. The `ConnectionContext` is the RPC context.
+Clients write JSON documents back to back (whitespace or newlines between them are fine) and read the responses
+in the same order, also back to back with no newline or `Content-Length` prefix, so the client must parse one
+complete JSON value at a time. Notifications produce nothing. The `ConnectionContext` is the RPC context.
 
-With `EnableAsyncMethods = true`, HTTP awaits `ProcessAsync` with `HttpContext.RequestAborted`;
-the body reader remains leased until invocation finishes. Raw connections await each framed document
-before starting the next and flush earlier completed replies before waiting for a slow document.
-Notifications are awaited and keep the same HTTP status rules. Connection cancellation is cooperative:
-the processor waits for the running method to terminate before releasing input and discards its staged response.
-Mark a `CancellationToken` parameter with `[JsonRpcCancellation]` to receive that token.
-The default mode preserves synchronous processing and rejects async methods at call time.
+The framer accepts strict JSON only, even with the Json.NET serializer or a lenient `JsmnSerializer` selected.
+A document larger than `MaxRequestBytes` aborts the connection. Documents on one connection are processed one at
+a time, in order; separate connections run concurrently.
+
+A raw connection does not pass through the HTTP middleware pipeline, so it has no authentication, authorisation
+or rate limiting. Listen on loopback or a Unix socket, or configure transport security, authentication and
+connection limits at the Kestrel listener or in a surrounding protocol.
+
+## Async methods
+
+Set `EnableAsyncMethods = true` to serve `Task` and `ValueTask` methods through `ProcessAsync`. With it off (the
+default), requests are processed synchronously and an async method is answered with `-32603` without being
+invoked.
+
+- **HTTP:** the call is cancelled when the client disconnects (`HttpContext.RequestAborted`). Notifications are
+  awaited and still answer `204`. The body reader stays leased until the invocation finishes.
+- **Raw connections:** documents are processed one at a time, in order. Replies already finished are flushed
+  before the connection waits on a slow method. When the connection closes, the running method is waited for and
+  its response discarded.
+
+A method receives the token by declaring a `[JsonRpcCancellation] CancellationToken` parameter; see
+[Asynchronous methods and cancellation](https://github.com/Astn/JSON-RPC.NET#asynchronous-methods-and-cancellation)
+in the main README.
 
 ## Options
 
-| Option | Default | Meaning |
-|---|---|---|
-| `EnableAsyncMethods` | false | use ProcessAsync for Task/ValueTask methods, with host cancellation |
-| `SessionId` | default session | which session's methods answer |
-| `SessionSelector` | null | pick the session per HTTP request |
-| `Serializer` | session, then `Config.Serializer` | serializer for this host |
-| `ContextFactory` | `HttpContext` | what `JsonRpcContext.Current()` returns |
-| `MaxRequestBytes` | 4 MB | larger bodies get 413 (HTTP) or abort the connection |
-| `ResponseContentType` | `application/json` | |
-| `NoContentForNotifications` | true | 204 for notifications, otherwise 200 with an empty body |
+| Option | Default | Scope | Meaning |
+|---|---|---|---|
+| `EnableAsyncMethods` | false | HTTP and raw | use `ProcessAsync` for `Task`/`ValueTask` methods, with host cancellation |
+| `SessionId` | default session | HTTP and raw | which session's methods answer |
+| `SessionSelector` | null | HTTP | pick the session per request from the `HttpContext`; it must map to a fixed set of ids, because an unknown id creates a session that persists |
+| `Serializer` | session, then `Config.Serializer` | HTTP and raw | serializer for this host |
+| `ContextFactory` | `HttpContext` | HTTP | what `JsonRpcContext.Current()` returns |
+| `MaxRequestBytes` | 4 MB | HTTP body, or one raw document | larger bodies get 413; a larger raw document aborts the connection |
+| `ResponseContentType` | `application/json` | HTTP | |
+| `NoContentForNotifications` | true | HTTP | 204 for notifications, otherwise 200 with an empty body |
+
+For raw connections the RPC context is always the `ConnectionContext`; `SessionSelector`, `ContextFactory`,
+`ResponseContentType` and `NoContentForNotifications` are not used.
