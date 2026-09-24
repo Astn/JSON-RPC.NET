@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 
 namespace AustinHarris.JsonRpc
@@ -19,8 +15,8 @@ namespace AustinHarris.JsonRpc
         public string JsonRpc { get; set; }
         public string Result { get; set; }
 
-        private AsyncCallback cb = null;
-        private Object asyncState;
+        private readonly AsyncCallback cb;
+        private readonly object asyncState;
         public object AsyncState
         {
             get

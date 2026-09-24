@@ -1,21 +1,27 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Copyright>Austin Harris</Copyright>
-    <TargetFrameworks>netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.6.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="NUnit" Version="3.12.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="6.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Json-Rpc\AustinHarris.JsonRpc.csproj" />
+    <ProjectReference Include="..\AustinHarris.JsonRpc.Newtonsoft\AustinHarris.JsonRpc.Newtonsoft.csproj" />
+    <ProjectReference Include="..\AustinHarris.JsonRpc.SystemTextJson\AustinHarris.JsonRpc.SystemTextJson.csproj" />
+    <ProjectReference Include="..\AustinHarris.JsonRpc.AspNetCore\AustinHarris.JsonRpc.AspNetCore.csproj" />
   </ItemGroup>
 
 </Project>

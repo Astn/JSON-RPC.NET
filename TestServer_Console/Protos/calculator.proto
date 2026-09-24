@@ -1,0 +1,54 @@
+// The benchmark's five methods as a gRPC service, so the compare mode can drive gRPC for .NET (HTTP/2, protobuf)
+// with the same calls it sends as JSON-RPC. protobuf has no decimal: DecimalValue is the units/nanos shape the
+// gRPC for .NET documentation recommends. Nullable values use proto3 `optional` / message presence.
+syntax = "proto3";
+
+option csharp_namespace = "TestServer_Console.Proto";
+
+package calculator;
+
+service Calculator {
+  rpc Add (AddRequest) returns (DoubleReply);
+  rpc AddInt (AddIntRequest) returns (IntReply);
+  rpc NullableFloatToNullableFloat (NullableFloatRequest) returns (NullableFloatReply);
+  rpc Test2 (DecimalRequest) returns (NullableDecimalReply);
+  rpc StringMe (StringRequest) returns (StringReply);
+  // The five calls multiplexed on one bidirectional stream: the gRPC analogue of a pipelined connection.
+  rpc Stream (stream Call) returns (stream Reply);
+}
+
+message AddRequest { double l = 1; double r = 2; }
+message DoubleReply { double value = 1; }
+
+message AddIntRequest { int32 l = 1; int32 r = 2; }
+message IntReply { int32 value = 1; }
+
+message NullableFloatRequest { optional float a = 1; }
+message NullableFloatReply { optional float value = 1; }
+
+message DecimalValue { int64 units = 1; sfixed32 nanos = 2; }
+message DecimalRequest { DecimalValue x = 1; }
+message NullableDecimalReply { DecimalValue value = 1; }
+
+message StringRequest { string x = 1; }
+message StringReply { string value = 1; }
+
+message Call {
+  oneof call {
+    AddRequest add = 1;
+    AddIntRequest add_int = 2;
+    NullableFloatRequest nullable_float = 3;
+    DecimalRequest test2 = 4;
+    StringRequest string_me = 5;
+  }
+}
+
+message Reply {
+  oneof reply {
+    DoubleReply add = 1;
+    IntReply add_int = 2;
+    NullableFloatReply nullable_float = 3;
+    NullableDecimalReply test2 = 4;
+    StringReply string_me = 5;
+  }
+}

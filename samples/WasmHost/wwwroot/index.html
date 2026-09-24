@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSON-RPC.Net in WebAssembly</title>
+    <base href="/" />
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 60rem; margin: 2rem auto; padding: 0 1rem; }
+        textarea, pre { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; }
+        pre { background: #f4f4f4; padding: 0.75rem; min-height: 3rem; white-space: pre-wrap; }
+        button { padding: 0.4rem 1rem; }
+        input[type=number] { width: 7rem; }
+        table { border-collapse: collapse; width: 100%; margin-top: 1rem; font-variant-numeric: tabular-nums; }
+        th, td { text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid #ddd; vertical-align: top; }
+        td.num { text-align: right; white-space: nowrap; }
+        .bar { height: 0.9rem; background: #3b82f6; min-width: 1px; }
+        .bar.ours { background: #16a34a; }
+        .bar.nointerop { background: #9ca3af; }
+        .note { color: #555; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>JSON-RPC.Net in the browser</h1>
+    <p>
+        The JSON-RPC server is C# running in this page as WebAssembly. Nothing is sent to a server:
+        the request text goes to <code>JsonRpcProcessor</code> through JS interop and the response comes back.
+    </p>
+    <textarea id="request" rows="4">{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}</textarea>
+    <p>
+        <button id="send" disabled>Send</button>
+        <button id="batch" disabled>Send a batch</button>
+        <button id="platform" disabled>Ask where it runs</button>
+        <span id="status">loading .NET runtime…</span>
+    </p>
+    <pre id="response"></pre>
+
+    <h2>Benchmark: JSON-RPC vs plain Blazor interop</h2>
+    <p class="note">
+        Every row performs the same <code>add(1, 2)</code>. The plain-interop rows call one exported .NET method
+        per operation, the way Blazor apps usually do; the JSON-RPC rows send a request document to the single
+        <code>Process</code> entry point. <code>invokeMethod</code> is the <code>[JSInvokable]</code> path (Blazor
+        serialises arguments and result with System.Text.Json); <code>getAssemblyExports</code> is the
+        <code>[JSExport]</code> path (direct marshalling); the "UTF-8 buffers" rows write the request bytes straight
+        into WebAssembly memory and read the response bytes back, with no string marshalled in either direction.
+        The last row runs the server in a .NET loop with no interop at all, which is the floor for the JSON-RPC rows.
+    </p>
+    <p>
+        <label>Calls per row <input id="iterations" type="number" value="20000" min="100" step="100" /></label>
+        <button id="bench" disabled>Run benchmark</button>
+        <span id="benchStatus"></span>
+    </p>
+    <table id="results" hidden>
+        <thead>
+            <tr><th>Path</th><th>Calls/s</th><th>µs/call</th><th>RPC/s</th><th style="width:40%" class="note">log scale</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
+    <script>
+        const $ = id => document.getElementById(id);
+        const addRequest = '{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}';
+        const addResponse = '{"jsonrpc":"2.0","result":3.0,"id":1}';
+        const batch100 = '[' + Array.from({ length: 100 }, (_, i) => `{"jsonrpc":"2.0","method":"add","params":[1,2],"id":${i}}`).join(',') + ']';
+
+        const process = json => {
+            const started = performance.now();
+            const response = DotNet.invokeMethod('WasmHost', 'Process', json);
+            $('response').textContent = (response || '(no response: notification)');
+            $('status').textContent = (performance.now() - started).toFixed(3) + ' ms in WebAssembly';
+        };
+
+        let exports = null;   // [JSExport] surface, when the runtime exposes it
+        let inView = null, outView = null;   // zero-copy views of the pinned request/response buffers in wasm memory
+        const encoder = new TextEncoder(), decoder = new TextDecoder();
+        const addRequestBytes = encoder.encode(addRequest);
+        const batch100Bytes = encoder.encode(batch100);
+        // One JSON-RPC call over bytes: copy the UTF-8 request into the input view, run, decode the response.
+        const processBytes = bytes => {
+            inView.set(bytes);
+            const n = exports.JsonRpcInterop.ProcessBytes(bytes.length);
+            return decoder.decode(outView.slice(0, n));   // slice copies just the response out of wasm memory
+        };
+
+        const expect = (actual, expected, label) => {
+            if (actual !== expected) throw new Error(`${label}: expected ${expected}, got ${actual}`);
+        };
+
+        // One benchmark case: `call()` performs one interop call worth `rpcs` RPCs; `check()` validates one result.
+        // Time is measured around the whole loop. Sync cases use a plain loop; async cases await each call.
+        const timeSync = (n, fn) => { const t = performance.now(); for (let i = 0; i < n; i++) fn(); return performance.now() - t; };
+        const timeAsync = async (n, fn) => { const t = performance.now(); for (let i = 0; i < n; i++) await fn(); return performance.now() - t; };
+
+        const cases = () => [
+            { label: 'plain interop: invokeMethod Add(1,2)', kind: 'plain', rpcs: 1,
+              check: () => expect(DotNet.invokeMethod('WasmHost', 'Add', 1, 2), 3, 'Add'),
+              run: n => timeSync(n, () => DotNet.invokeMethod('WasmHost', 'Add', 1, 2)) },
+            { label: 'plain interop: invokeMethodAsync Add(1,2)', kind: 'plain', rpcs: 1,
+              check: async () => expect(await DotNet.invokeMethodAsync('WasmHost', 'Add', 1, 2), 3, 'Add async'),
+              run: n => timeAsync(n, () => DotNet.invokeMethodAsync('WasmHost', 'Add', 1, 2)) },
+            { label: 'plain interop: getAssemblyExports AddExported(1,2)', kind: 'plain', rpcs: 1, needsExports: true,
+              check: () => expect(exports.JsonRpcInterop.AddExported(1, 2), 3, 'AddExported'),
+              run: n => timeSync(n, () => exports.JsonRpcInterop.AddExported(1, 2)) },
+            { label: 'JSON-RPC: invokeMethod Process(request)', kind: 'ours', rpcs: 1,
+              check: () => expect(DotNet.invokeMethod('WasmHost', 'Process', addRequest), addResponse, 'Process'),
+              run: n => timeSync(n, () => DotNet.invokeMethod('WasmHost', 'Process', addRequest)) },
+            { label: 'JSON-RPC: invokeMethodAsync Process(request)', kind: 'ours', rpcs: 1,
+              check: async () => expect(await DotNet.invokeMethodAsync('WasmHost', 'Process', addRequest), addResponse, 'Process async'),
+              run: n => timeAsync(n, () => DotNet.invokeMethodAsync('WasmHost', 'Process', addRequest)) },
+            { label: 'JSON-RPC: getAssemblyExports ProcessExported(request)', kind: 'ours', rpcs: 1, needsExports: true,
+              check: () => expect(exports.JsonRpcInterop.ProcessExported(addRequest), addResponse, 'ProcessExported'),
+              run: n => timeSync(n, () => exports.JsonRpcInterop.ProcessExported(addRequest)) },
+            { label: 'JSON-RPC: getAssemblyExports ProcessBytes(request), UTF-8 buffers', kind: 'ours', rpcs: 1, needsExports: true,
+              check: () => expect(processBytes(addRequestBytes), addResponse, 'ProcessBytes'),
+              run: n => timeSync(n, () => processBytes(addRequestBytes)) },
+            { label: 'JSON-RPC: invokeMethod Process(batch of 100)', kind: 'ours', rpcs: 100,
+              check: () => { const r = DotNet.invokeMethod('WasmHost', 'Process', batch100); if (!r.startsWith('[{"jsonrpc":"2.0","result":3.0,"id":0}')) throw new Error('batch: ' + r.slice(0, 80)); },
+              run: n => timeSync(Math.max(1, Math.round(n / 100)), () => DotNet.invokeMethod('WasmHost', 'Process', batch100)),
+              calls: n => Math.max(1, Math.round(n / 100)) },
+            { label: 'JSON-RPC: getAssemblyExports ProcessExported(batch of 100)', kind: 'ours', rpcs: 100, needsExports: true,
+              check: () => { const r = exports.JsonRpcInterop.ProcessExported(batch100); if (!r.startsWith('[{"jsonrpc":"2.0","result":3.0,"id":0}')) throw new Error('batch: ' + r.slice(0, 80)); },
+              run: n => timeSync(Math.max(1, Math.round(n / 100)), () => exports.JsonRpcInterop.ProcessExported(batch100)),
+              calls: n => Math.max(1, Math.round(n / 100)) },
+            { label: 'JSON-RPC: getAssemblyExports ProcessBytes(batch of 100), UTF-8 buffers', kind: 'ours', rpcs: 100, needsExports: true,
+              check: () => { const r = processBytes(batch100Bytes); if (!r.startsWith('[{"jsonrpc":"2.0","result":3.0,"id":0}')) throw new Error('batch bytes: ' + r.slice(0, 80)); },
+              run: n => timeSync(Math.max(1, Math.round(n / 100)), () => processBytes(batch100Bytes)),
+              calls: n => Math.max(1, Math.round(n / 100)) },
+            { label: 'JSON-RPC in a .NET loop (no interop per call)', kind: 'nointerop', rpcs: 1,
+              check: () => {},
+              run: n => DotNet.invokeMethod('WasmHost', 'ProcessMany', addRequest, n) },
+        ];
+
+        const yieldToBrowser = () => new Promise(r => setTimeout(r, 0));
+
+        async function runBenchmark() {
+            const n = Math.max(100, parseInt($('iterations').value, 10) || 20000);
+            const tbody = $('results').querySelector('tbody');
+            tbody.innerHTML = '';
+            $('results').hidden = false;
+            $('bench').disabled = true;
+            const rows = [];
+            try {
+                for (const c of cases()) {
+                    if (c.needsExports && !exports) { rows.push({ ...c, skipped: '[JSExport] surface not available' }); continue; }
+                    $('benchStatus').textContent = 'running: ' + c.label;
+                    await yieldToBrowser();
+                    await c.check();
+                    await c.run(Math.min(n, 500));           // warm-up: JIT/jiterpreter, interop caches
+                    await yieldToBrowser();
+                    const ms = await c.run(n);
+                    const calls = c.calls ? c.calls(n) : n;
+                    rows.push({ ...c, ms, calls, rpcs: calls * c.rpcs });
+                    render(tbody, rows);
+                }
+                $('benchStatus').textContent = `done: ${n.toLocaleString()} RPCs per row, ${exports?.JsonRpcInterop.IsAot() ? 'AOT' : 'interpreter'}, ${navigator.userAgent.match(/(Chrome|Firefox|Safari)\/[\d.]+/)?.[0] ?? ''}`;
+            } catch (e) {
+                $('benchStatus').textContent = 'failed: ' + e.message;
+                console.error(e);
+            } finally {
+                $('bench').disabled = false;
+            }
+        }
+
+        function render(tbody, rows) {
+            // log-scale bars: the [JSExport] add is two orders of magnitude above everything else
+            const maxLog = Math.log10(Math.max(...rows.filter(r => !r.skipped).map(r => r.rpcs / r.ms * 1000)));
+            const width = rpcPerSec => (Math.max(0, Math.log10(rpcPerSec)) / maxLog * 100).toFixed(1);
+            tbody.innerHTML = '';
+            for (const r of rows) {
+                const tr = document.createElement('tr');
+                if (r.skipped) {
+                    tr.innerHTML = `<td>${r.label}</td><td colspan="4" class="note">${r.skipped}</td>`;
+                } else {
+                    const callsPerSec = r.calls / r.ms * 1000, rpcPerSec = r.rpcs / r.ms * 1000;
+                    tr.innerHTML = `<td>${r.label}</td>
+                        <td class="num">${Math.round(callsPerSec).toLocaleString()}</td>
+                        <td class="num">${(r.ms * 1000 / r.calls).toFixed(2)}</td>
+                        <td class="num">${Math.round(rpcPerSec).toLocaleString()}</td>
+                        <td><div class="bar ${r.kind}" style="width:${width(rpcPerSec)}%"></div></td>`;
+                }
+                tbody.appendChild(tr);
+            }
+        }
+
+        Blazor.start().then(async () => {
+            try {
+                const runtime = await globalThis.getDotnetRuntime(0);
+                runtime.setModuleImports('wasmhost', { buffersReady: (input, output) => { inView = input; outView = output; } });
+                exports = await runtime.getAssemblyExports('WasmHost.dll');
+                if (!exports?.JsonRpcInterop?.AddExported) exports = null;
+                else exports.JsonRpcInterop.ExposeBuffers();
+            } catch (e) {
+                console.warn('[JSExport] surface not available', e);
+                exports = null;
+            }
+            $('status').textContent = 'ready' + (exports ? (exports.JsonRpcInterop.IsAot() ? ', AOT-compiled' : ', interpreter') + ', [JSExport] available' : '');
+            for (const id of ['send', 'batch', 'platform', 'bench']) $(id).disabled = false;
+            $('send').onclick = () => process($('request').value);
+            $('batch').onclick = () => process('[{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1},{"jsonrpc":"2.0","method":"echo","params":["hi"],"id":2},{"jsonrpc":"2.0","method":"nope","id":3}]');
+            $('platform').onclick = () => process('{"jsonrpc":"2.0","method":"platform","id":1}');
+            $('bench').onclick = runBenchmark;
+        });
+    </script>
+</body>
+</html>

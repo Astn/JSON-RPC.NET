@@ -1,27 +1,109 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using AustinHarris.JsonRpc;
-using System.Threading;
-using System.Diagnostics;
-using System.Threading.Tasks;
+using Hardware.Info;
 
 namespace TestServer_Console
 {
     class Program
     {
-        static object[] services = new object[] {
-           new CalculatorService()
-        };
+        // Bound explicitly in Main: a static field initializer (beforefieldinit) is not guaranteed to run,
+        // and without it every benchmark request answered "Method not found".
+        static object[] services;
 
         static void Main(string[] args)
         {
-            PrintOptions();
-            for (string line = Console.ReadLine(); line != "q"; line = Console.ReadLine())
+            // When stdout is a pipe (CI, `dotnet run | tee`) there is no console buffer to clear or reposition.
+            services = new object[] { new CalculatorService() };
+            // `dotnet run -- --async [seconds] [workers]` exercises real asynchronous invocation.
+            if (args.Length > 0 && args[0] == "--async")
             {
-                if (string.IsNullOrWhiteSpace(line))
-                    Benchmark();
+                double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 3;
+                int workers = args.Length > 2 && int.TryParse(args[2], out var t) ? t : 1;
+                AsyncBenchmark.RunAsync(Console.WriteLine, seconds, workers).GetAwaiter().GetResult();
+                return;
+            }
+
+            var interactive = !Console.IsOutputRedirected;
+            if (interactive) Console.Clear();
+            IHardwareInfo hardwareInfo = new HardwareInfo();
+            hardwareInfo.RefreshAll();
+            HardwarePrinter.PrintHardware(hardwareInfo);
+            System.Threading.ThreadPool.SetMinThreads(Environment.ProcessorCount * 3, Environment.ProcessorCount * 3);
+            Console.WriteLine("Setting task pool size to {0}", Environment.ProcessorCount * 4);
+
+            // `dotnet run -- --sync [seconds] [threads]` runs the direct synchronous benchmark and exits (CI / scripted runs).
+            if (args.Length > 0 && args[0] == "--sync")
+            {
+                double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 3;
+                int threads = args.Length > 2 && int.TryParse(args[2], out var t) ? t : 0;
+                BenchmarkRunner.BenchmarkSync(Console.WriteLine, null, threads, seconds);
+                return;
+            }
+
+            // `dotnet run -- --kestrel [seconds]` hosts the AspNetCore package in-process and drives it over HTTP and TCP.
+            if (args.Length > 0 && args[0] == "--kestrel")
+            {
+                double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 3;
+                KestrelBenchmark.RunAsync(Console.WriteLine, seconds).GetAwaiter().GetResult();
+                return;
+            }
+
+            // `dotnet run -- --sweep [seconds] [output.json]` measures every library and transport at 1, 2, 4, 8 and 16 connections.
+            if (args.Length > 0 && args[0] == "--sweep")
+            {
+                double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 2;
+                CompareBenchmark.SweepAsync(Console.WriteLine, seconds, args.Length > 2 ? args[2] : null).GetAwaiter().GetResult();
+                return;
+            }
+
+            // `dotnet run -- --compare [seconds]` benchmarks the same requests through JSON-RPC.Net, StreamJsonRpc and gRPC for .NET.
+            if (args.Length > 0 && args[0] == "--compare")
+            {
+                double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 3;
+                CompareBenchmark.RunAsync(Console.WriteLine, seconds).GetAwaiter().GetResult();
+                return;
+            }
+
+            PrintOptions();
+            for (string line = Console.ReadLine(); line != null && line != "q"; line = Console.ReadLine())
+            {
+                if (!interactive && string.IsNullOrWhiteSpace(line))
+                {
+                    BenchmarkRunner.Benchmark(Console.WriteLine);
+                }
+                else if (line.StartsWith("s", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    BenchmarkRunner.BenchmarkSync(Console.WriteLine);
+                }
+                else if (line.StartsWith("k", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    KestrelBenchmark.RunAsync(Console.WriteLine).GetAwaiter().GetResult();
+                }
+                else if (line.StartsWith("x", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    CompareBenchmark.RunAsync(Console.WriteLine).GetAwaiter().GetResult();
+                }
+                else if (string.IsNullOrWhiteSpace(line))
+                {
+                    Console.CursorVisible = false;
+                    HardwarePrinter.PrintHardware(hardwareInfo);
+                    var pos = Console.CursorTop;
+                    BenchmarkRunner.Benchmark((update) =>
+                    {
+                        // Clear the console from pos to current position first
+                        var currentline = Console.CursorTop;
+                        var fullLine = new string(' ', Console.WindowWidth);
+                        Console.SetCursorPosition(0, pos);
+                        for (int i = 0; i < currentline-pos; i++)
+                        {
+                            Console.WriteLine( fullLine);
+                        }
+                        
+                        Console.SetCursorPosition(0, pos);
+                        Console.WriteLine(update);
+                    });
+                    Console.CursorVisible = true;
+                }
                 else if (line.StartsWith("c", StringComparison.CurrentCultureIgnoreCase))
                     ConsoleInput();
                 PrintOptions();
@@ -30,7 +112,10 @@ namespace TestServer_Console
 
         private static void PrintOptions()
         {
-            Console.WriteLine("Hit Enter to run benchmark");
+            Console.WriteLine("Hit Enter to run the Task-based benchmark");
+            Console.WriteLine("'s' to run the direct synchronous benchmark (bytes in, bytes out)");
+            Console.WriteLine("'k' to run the Kestrel benchmark (AspNetCore package over HTTP and TCP)");
+            Console.WriteLine("'x' to compare against StreamJsonRpc and gRPC for .NET (same calls, same Kestrel)");
             Console.WriteLine("'c' to start reading console input");
             Console.WriteLine("'q' to quit");
         }
@@ -43,37 +128,6 @@ namespace TestServer_Console
             }
         }
 
-        private static volatile int ctr;
-        private static void Benchmark()
-        {
-            Console.WriteLine("Starting benchmark");
-           
-            var cnt = 50;
-            var iterations = 7;
-            for (int iteration = 1; iteration <= iterations; iteration++)
-            {
-                cnt *= iteration;
-                ctr = 0;
-                Task<string>[] tasks = new Task<string>[cnt];
-                var sw = Stopwatch.StartNew();
-
-                var sessionid = Handler.DefaultSessionId();
-                for (int i = 0; i < cnt; i+=5)
-                {
-                    tasks[i] = JsonRpcProcessor.Process(sessionid, "{'method':'add','params':[1,2],'id':1}");
-                    tasks[i+1] = JsonRpcProcessor.Process(sessionid, "{'method':'addInt','params':[1,7],'id':2}");
-                    tasks[i+2] = JsonRpcProcessor.Process(sessionid, "{'method':'NullableFloatToNullableFloat','params':[1.23],'id':3}");
-                    tasks[i+3] = JsonRpcProcessor.Process(sessionid, "{'method':'Test2','params':[3.456],'id':4}");
-                    tasks[i+4] = JsonRpcProcessor.Process(sessionid, "{'method':'StringMe','params':['Foo'],'id':5}");
-                }
-                Task.WaitAll(tasks);
-                sw.Stop();
-                Console.WriteLine("processed {0:N0} rpc in \t {1:N0}ms for \t {2:N} rpc/sec", cnt, sw.ElapsedMilliseconds, (double)cnt * 1000d / sw.ElapsedMilliseconds);
-            }
-
-
-            Console.WriteLine("Finished benchmark...");
-        }
 
     }
 

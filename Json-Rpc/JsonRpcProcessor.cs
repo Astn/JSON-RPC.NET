@@ -1,28 +1,102 @@
-﻿using System;
-using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Reflection;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
+using System;
+using System.Buffers;
 using System.Text;
-using Newtonsoft.Json;
+using System.Threading.Tasks;
+using AustinHarris.JsonRpc.Serialization;
 
 namespace AustinHarris.JsonRpc
 {
-    public static class JsonRpcProcessor
+    /// <summary>
+    /// Entry points for processing JSON-RPC documents. The native shape is bytes in, bytes out:
+    /// <see cref="Process(string, in ReadOnlySequence{byte}, IBufferWriter{byte}, object, JsonRpcSerializer)"/>
+    /// takes what a PipeReader hands you and writes to a PipeWriter / HTTP BodyWriter. The string overloads
+    /// transcode once at the edge and are kept for existing hosts.
+    /// </summary>
+    public static partial class JsonRpcProcessor
     {
-        public static void Process(JsonRpcStateAsync async, object context = null,
-            JsonSerializerSettings settings = null)
+        // ------------------------------------------------------------------ bytes in, bytes out
+
+        /// <summary>Processes one document (a request or a batch). Writes the response bytes to <paramref name="output"/>; writes nothing for notifications.</summary>
+        public static void Process(string sessionId, in ReadOnlySequence<byte> request, IBufferWriter<byte> output, object context = null, JsonRpcSerializer serializer = null)
         {
-            Process(Handler.DefaultSessionId(), async, context, settings);
+            if (request.IsSingleSegment)
+            {
+                Process(sessionId, request.First, output, context, serializer);
+                return;
+            }
+            int length = checked((int)request.Length);
+            var scratch = Scratch.Rent();
+            try
+            {
+                var buffer = scratch.Input(length);
+                request.CopyTo(buffer);
+                ProcessCore(sessionId, new ReadOnlyMemory<byte>(buffer, 0, length), output, context, serializer, scratch);
+            }
+            finally
+            {
+                scratch.Return();
+            }
         }
 
-        public static void Process(string sessionId, JsonRpcStateAsync async, object context = null,
-            JsonSerializerSettings settings = null)
+        /// <summary>Processes one document held in memory. The memory must stay valid until the call returns.</summary>
+        public static void Process(string sessionId, ReadOnlyMemory<byte> request, IBufferWriter<byte> output, object context = null, JsonRpcSerializer serializer = null)
         {
-            Process(sessionId, async.JsonRpc, context, settings)
+            var scratch = Scratch.Rent();
+            try
+            {
+                ProcessCore(sessionId, request, output, context, serializer, scratch);
+            }
+            finally
+            {
+                scratch.Return();
+            }
+        }
+
+        /// <summary>Processes one document from a span (copied into a pooled buffer).</summary>
+        public static void Process(string sessionId, ReadOnlySpan<byte> request, IBufferWriter<byte> output, object context = null, JsonRpcSerializer serializer = null)
+        {
+            var scratch = Scratch.Rent();
+            try
+            {
+                var buffer = scratch.Input(request.Length);
+                request.CopyTo(buffer);
+                ProcessCore(sessionId, new ReadOnlyMemory<byte>(buffer, 0, request.Length), output, context, serializer, scratch);
+            }
+            finally
+            {
+                scratch.Return();
+            }
+        }
+
+        /// <summary>Processes a UTF-8 document and returns the UTF-8 response (empty for notifications).</summary>
+        public static byte[] ProcessBytes(string sessionId, ReadOnlySpan<byte> request, object context = null, JsonRpcSerializer serializer = null)
+        {
+            var scratch = Scratch.Rent();
+            try
+            {
+                var buffer = scratch.Input(request.Length);
+                request.CopyTo(buffer);
+                var output = scratch.Output;
+                output.Clear();
+                ProcessCore(sessionId, new ReadOnlyMemory<byte>(buffer, 0, request.Length), output, context, serializer, scratch, true);
+                return output.ToArray();
+            }
+            finally
+            {
+                scratch.Return();
+            }
+        }
+
+        // ------------------------------------------------------------------ strings (compatibility)
+
+        public static void Process(JsonRpcStateAsync async, object context = null, JsonRpcSerializer serializer = null)
+        {
+            Process(Handler.DefaultSessionId(), async, context, serializer);
+        }
+
+        public static void Process(string sessionId, JsonRpcStateAsync async, object context = null, JsonRpcSerializer serializer = null)
+        {
+            Process(sessionId, async.JsonRpc, context, serializer)
                 .ContinueWith(t =>
                 {
                     async.Result = t.Result;
@@ -30,171 +104,186 @@ namespace AustinHarris.JsonRpc
                 });
         }
 
-        public static Task<string> Process(string jsonRpc, object context = null,
-            JsonSerializerSettings settings = null)
+        public static Task<string> Process(string jsonRpc, object context = null)
         {
-            return Process(Handler.DefaultSessionId(), jsonRpc, context, settings);
+            return Process(Handler.DefaultSessionId(), jsonRpc, context, null);
         }
 
-        public static Task<string> Process(string sessionId, string jsonRpc, object context = null,
-            JsonSerializerSettings settings = null)
+        /// <summary>
+        /// Processes on the default session with an explicit serializer. The serializer comes first so that
+        /// <c>Process(sessionId, json, context)</c> can never bind here by mistake.
+        /// </summary>
+        public static Task<string> Process(JsonRpcSerializer serializer, string jsonRpc, object context = null)
         {
-            return Task<string>.Factory.StartNew((_) =>
+            return Process(Handler.DefaultSessionId(), jsonRpc, context, serializer);
+        }
+
+        public static Task<string> Process(string sessionId, string jsonRpc, object context = null, JsonRpcSerializer serializer = null)
+        {
+            return Task.Factory.StartNew(state =>
             {
-                var tuple = (Tuple<string, string, object, JsonSerializerSettings>)_;
+                var tuple = (Tuple<string, string, object, JsonRpcSerializer>)state;
                 return ProcessSync(tuple.Item1, tuple.Item2, tuple.Item3, tuple.Item4);
-            }, new Tuple<string, string, object, JsonSerializerSettings>(sessionId, jsonRpc, context, settings));
+            }, Tuple.Create(sessionId, jsonRpc, context, serializer));
         }
 
-        public static string ProcessSync(string sessionId, string jsonRpc, object jsonRpcContext,
-            JsonSerializerSettings settings = null)
+        public static string ProcessSync(string jsonRpc, object context = null)
         {
-            var handler = Handler.GetSessionHandler(sessionId);
+            return ProcessSync(Handler.DefaultSessionId(), jsonRpc, context, null);
+        }
 
+        /// <summary>Synchronous processing on the default session with an explicit serializer (serializer first, see <see cref="Process(JsonRpcSerializer, string, object)"/>).</summary>
+        public static string ProcessSync(JsonRpcSerializer serializer, string jsonRpc, object context = null)
+        {
+            return ProcessSync(Handler.DefaultSessionId(), jsonRpc, context, serializer);
+        }
 
-            JsonRequest[] batch = null;
+        /// <summary>Processes a request synchronously on the calling thread. Returns the response JSON, or an empty string for notifications.</summary>
+        // jsonRpcContext is deliberately required: with it optional, ProcessSync(json, null) would bind here
+        // (null converts to string better than to object) with a null document.
+        public static string ProcessSync(string sessionId, string jsonRpc, object jsonRpcContext, JsonRpcSerializer serializer = null)
+        {
+            var scratch = Scratch.Rent();
             try
             {
-                if (isSingleRpc(jsonRpc))
+                int max = Encoding.UTF8.GetMaxByteCount(jsonRpc.Length);
+                var buffer = scratch.Input(max);
+                int length = Encoding.UTF8.GetBytes(jsonRpc, 0, jsonRpc.Length, buffer, 0);
+                var output = scratch.Output;
+                output.Clear();
+                ProcessCore(sessionId, new ReadOnlyMemory<byte>(buffer, 0, length), output, jsonRpcContext, serializer, scratch, true);
+                return output.ToString();
+            }
+            finally
+            {
+                scratch.Return();
+            }
+        }
+
+        // ------------------------------------------------------------------ core
+
+        private static void ProcessCore(string sessionId, ReadOnlyMemory<byte> document, IBufferWriter<byte> destination, object context, JsonRpcSerializer serializer, Scratch scratch, bool destinationIsScratch = false)
+        {
+            var handler = Handler.GetSessionHandler(sessionId);
+            serializer = serializer ?? handler.Serializer ?? Config.Serializer;
+
+            // Always render into the rewindable scratch buffer, then hand the bytes to the caller's writer.
+            PooledByteBufferWriter output = scratch.Output;
+            if (!destinationIsScratch) output.Clear();
+
+            var reader = scratch.GetReader(serializer);
+            try
+            {
+                if (!reader.TryParse(document, out var parseError))
                 {
-                    var foo = JsonConvert.DeserializeObject<JsonRequest>(jsonRpc, settings);
-                    batch = new[] { foo };
+                    var ex = new JsonRpcException(-32700, "Parse error", parseError);
+                    if (handler.HasParseErrorHandler) ex = handler.ProcessParseException(Utf8Json.ToStringUtf8(document.Span), ex);
+                    Handler.WriteErrorEnvelope(output, serializer, ex, default);
+                }
+                else if (!reader.IsBatch)
+                {
+                    handler.HandleRequest(reader, 0, serializer, output, context);
+                }
+                else if (reader.Count == 0)
+                {
+                    var ex = new JsonRpcException(-32600, "Invalid Request", "Batch of calls was empty.");
+                    if (handler.HasParseErrorHandler) ex = handler.ProcessParseException(Utf8Json.ToStringUtf8(document.Span), ex);
+                    Handler.WriteErrorEnvelope(output, serializer, ex, default);
                 }
                 else
                 {
-                    batch = JsonConvert.DeserializeObject<JsonRequest[]>(jsonRpc, settings);
-                }
-            }
-            catch (Exception ex)
-            {
-                return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
-                {
-                    Error = handler.ProcessParseException(jsonRpc, new JsonRpcException(-32700, "Parse error", ex))
-                }, settings);
-            }
-
-            if (batch.Length == 0)
-            {
-                return Newtonsoft.Json.JsonConvert.SerializeObject(new JsonResponse
-                {
-                    Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(3200, "Invalid Request", "Batch of calls was empty."))
-                }, settings);
-            }
-
-            var singleBatch = batch.Length == 1;
-            StringBuilder sbResult = null;
-            for (var i = 0; i < batch.Length; i++)
-            {
-                var jsonRequest = batch[i];
-                var jsonResponse = new JsonResponse();
-
-                if (jsonRequest == null)
-                {
-                    jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(-32700, "Parse error",
-                            "Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text."));
-                }
-                else if (jsonRequest.Method == null)
-                {
-                    jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(-32600, "Invalid Request", "Missing property 'method'"));
-                }
-                else if (!isSimpleValueType(jsonRequest.Id))
-                {
-                    jsonResponse.Error = handler.ProcessParseException(jsonRpc,
-                        new JsonRpcException(-32600, "Invalid Request", "Id property must be either null or string or integer."));
-                }
-                else
-                {
-                    jsonResponse.Id = jsonRequest.Id;
-
-                    var data = handler.Handle(jsonRequest, jsonRpcContext);
-
-                    if (data == null) continue;
-
-                    jsonResponse.JsonRpc = data.JsonRpc;
-                    jsonResponse.Error = data.Error;
-                    jsonResponse.Result = data.Result;
-
-                }
-                if (jsonResponse.Result == null && jsonResponse.Error == null)
-                {
-                    // Per json rpc 2.0 spec
-                    // result : This member is REQUIRED on success.
-                    // This member MUST NOT exist if there was an error invoking the method.    
-                    // Either the result member or error member MUST be included, but both members MUST NOT be included.
-                    jsonResponse.Result = new Newtonsoft.Json.Linq.JValue((Object)null);
-                }
-                // special case optimization for single Item batch
-                if (singleBatch && (jsonResponse.Id != null || jsonResponse.Error != null))
-                {
-                    StringWriter sw = new StringWriter();
-                    JsonTextWriter writer = new JsonTextWriter(sw);
-                    writer.WriteStartObject();
-                    if (!string.IsNullOrEmpty(jsonResponse.JsonRpc))
+                    int start = output.WrittenCount;
+                    output.Write((byte)'[');
+                    int written = 0;
+                    for (int i = 0; i < reader.Count; i++)
                     {
-                        writer.WritePropertyName("jsonrpc"); writer.WriteValue(jsonResponse.JsonRpc);
+                        int before = output.WrittenCount;
+                        if (written > 0) output.Write((byte)',');
+                        if (handler.HandleRequest(reader, i, serializer, output, context)) written++;
+                        else output.Rewind(before);
                     }
-                    if (jsonResponse.Error != null)
+                    // A batch answers with an array whenever it produced a response (even a single one);
+                    // a batch of notifications only produces nothing at all.
+                    if (written == 0)
                     {
-                        writer.WritePropertyName("error"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Error, settings));
+                        output.Rewind(start);
                     }
                     else
                     {
-                        writer.WritePropertyName("result"); writer.WriteRawValue(JsonConvert.SerializeObject(jsonResponse.Result, settings));
-                    }
-                    writer.WritePropertyName("id"); writer.WriteValue(jsonResponse.Id);
-                    writer.WriteEndObject();
-                    return sw.ToString();
-
-                    //return JsonConvert.SerializeObject(jsonResponse);
-                }
-                else if (jsonResponse.Id == null && jsonResponse.Error == null)
-                {
-                    // do nothing
-                    sbResult = new StringBuilder(0);
-                }
-                else
-                {
-                    // write out the response
-                    if (i == 0)
-                    {
-                        sbResult = new StringBuilder("[");
-                    }
-
-                    sbResult.Append(JsonConvert.SerializeObject(jsonResponse, settings));
-                    if (i < batch.Length - 1)
-                    {
-                        sbResult.Append(',');
-                    }
-                    else if (i == batch.Length - 1)
-                    {
-                        sbResult.Append(']');
+                        output.Write((byte)']');
                     }
                 }
             }
-            return sbResult.ToString();
-        }
-
-        private static bool isSingleRpc(string json)
-        {
-            for (int i = 0; i < json.Length; i++)
+            finally
             {
-                if (json[i] == '{') return true;
-                else if (json[i] == '[') return false;
+                reader.Release();
             }
-            return true;
+
+            if (!destinationIsScratch && output.WrittenCount > 0)
+            {
+                output.CopyTo(destination);
+            }
         }
 
-        private static bool isSimpleValueType(object property)
+        /// <summary>Per-thread pooled buffers and a cached reader. Re-entrant calls get a fresh instance.</summary>
+        private sealed class Scratch
         {
-            if (property == null)
-                return true;
-            return property.GetType() == typeof(System.String) ||
-                property.GetType() == typeof(System.Int64) ||
-                property.GetType() == typeof(System.Int32) ||
-                property.GetType() == typeof(System.Int16);
+            [ThreadStatic] private static Scratch _current;
+
+            private byte[] _input = ArrayPool<byte>.Shared.Rent(4096);
+            public readonly PooledByteBufferWriter Output = new PooledByteBufferWriter(4096);
+            private JsonRpcSerializer _readerOwner;
+            private JsonRpcRequestReader _reader;
+            private bool _inUse;
+
+            public static Scratch Rent()
+            {
+                var s = _current;
+                if (s == null)
+                {
+                    s = new Scratch();
+                    _current = s;
+                }
+                else if (s._inUse)
+                {
+                    return new Scratch { _inUse = true };
+                }
+                s._inUse = true;
+                return s;
+            }
+
+            public void Return()
+            {
+                if (ReferenceEquals(this, _current))
+                {
+                    _inUse = false;
+                    return;
+                }
+                // a nested (re-entrant) instance is used once: give its buffers back to the pool
+                ArrayPool<byte>.Shared.Return(_input);
+                _input = null;
+                Output.Dispose();
+            }
+
+            public byte[] Input(int length)
+            {
+                if (_input.Length < length)
+                {
+                    ArrayPool<byte>.Shared.Return(_input);
+                    _input = ArrayPool<byte>.Shared.Rent(length);
+                }
+                return _input;
+            }
+
+            public JsonRpcRequestReader GetReader(JsonRpcSerializer serializer)
+            {
+                if (!ReferenceEquals(_readerOwner, serializer) || _reader == null)
+                {
+                    _reader = serializer.CreateReader();
+                    _readerOwner = serializer;
+                }
+                return _reader;
+            }
         }
     }
 }

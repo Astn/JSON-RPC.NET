@@ -108,3 +108,9 @@ Backup*/
 UpgradeLog*.XML
 .nuget/NuGet.exe
 .vs/
+
+# JetBrains Rider / IntelliJ
+.idea/
+
+# Python renderer caches
+__pycache__/

@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace AustinHarris.JsonRpc
+﻿namespace AustinHarris.JsonRpc
 {
     /// <summary>
     /// Provides access to a context specific to each JsonRpc method invocation.
     /// This is a convienence class that wraps calls to Context specific methods on AustinHarris.JsonRpc.Handler
     /// </summary>
-    public class JsonRpcContext
+    public sealed class JsonRpcContext
     {
         private JsonRpcContext(object value)
         {
@@ -39,6 +34,16 @@ namespace AustinHarris.JsonRpc
         public static JsonRpcContext Current()
         {
             return new JsonRpcContext(Handler.RpcContext());
+        }
+
+        /// <summary>
+        /// The id of the request being served, as an owned snapshot (see <see cref="JsonRpcRequestId"/>); absent
+        /// for a notification and outside an invocation. Same as <see cref="Handler.RpcRequestId"/>; the raw bytes
+        /// are available from <see cref="Handler.RpcRequestIdRaw"/>. Must be called on the thread running the method.
+        /// </summary>
+        public static JsonRpcRequestId CurrentRequestId()
+        {
+            return Handler.RpcRequestId();
         }
     }
 }

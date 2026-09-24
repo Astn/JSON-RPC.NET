@@ -1,0 +1,24 @@
+name: Benchmark charts
+# The committed charts, the explorer page and the README figures must agree with benchmarks/charts/benchmarks.json.
+on:
+  pull_request:
+    paths:
+      - "benchmarks/charts/**"
+      - "README.md"
+      - "samples/WasmHost/README.md"
+  push:
+    branches: [ master ]
+    paths:
+      - "benchmarks/charts/**"
+      - "README.md"
+      - "samples/WasmHost/README.md"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Renderer tests
+        run: python3 -m unittest benchmarks/charts/test_render.py
+      - name: Committed outputs and README figures match the data
+        run: python3 benchmarks/charts/render.py --check
