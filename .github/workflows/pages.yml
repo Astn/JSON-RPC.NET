@@ -35,10 +35,11 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+      # No cache-dependency-path: the action would pre-compile page.typ without its --input values and fail.
+      # build.py downloads the cmarker package on the first compile instead.
       - uses: typst-community/setup-typst@v5
         with:
           typst-version: "0.14.2"
-          cache-dependency-path: site/page.typ
       - run: pip install pygments==2.19.2
       # The committed charts must match the data: a stale chart or explorer fails the deploy.
       - name: Check the committed charts against the data
