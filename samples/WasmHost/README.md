@@ -1,8 +1,9 @@
 # WasmHost: JSON-RPC.Net running in the browser
 
 A standalone Blazor WebAssembly app that hosts a JSON-RPC.Net server inside the page. There is no HTTP
-and no Kestrel: JavaScript passes request text to `JsonRpcProcessor.ProcessSync` through JS interop and
-gets the response text back.
+and no Kestrel: JavaScript hands a request to the server through JS interop and reads the response back,
+either as a string (`JsonRpcProcessor.ProcessSync`) or as UTF-8 bytes written straight into WebAssembly
+memory (`JsonRpcProcessor.Process`). Both paths are measured below.
 
 ```
 dotnet run --project samples/WasmHost
@@ -18,9 +19,10 @@ The relevant pieces:
 - [wwwroot/index.html](wwwroot/index.html): starts the runtime with `Blazor.start()`, calls
   `DotNet.invokeMethod('WasmHost', 'Process', json)`, and contains the benchmark below.
 
-Only the core package is referenced. It targets `net8.0`/`net10.0` (and `netstandard2.0`/`2.1`), has no
-JSON library dependency, and does not use reflection emit, so it runs under the WebAssembly interpreter and
-under AOT (`<RunAOTCompilation>true</RunAOTCompilation>` with the `wasm-tools` workload).
+The sample targets `net10.0` and needs the .NET 10 SDK. It references only the core project, which also
+produces `net8.0`, `netstandard2.1` and `netstandard2.0` assets, has no JSON library dependency, and does not
+use reflection emit, so it runs under the WebAssembly interpreter and under AOT
+(`<RunAOTCompilation>true</RunAOTCompilation>`). The `wasm-tools` workload is needed only for the AOT publish.
 
 ## Benchmark: JSON-RPC vs plain Blazor interop
 
@@ -41,7 +43,9 @@ reach .NET here, and reports calls per second, microseconds per call, and RPCs p
 
 Measured on an 8-core desktop in Chrome 152 with .NET 10, 20,000 RPCs per row, once under the interpreter
 (`dotnet run`, no AOT) and once AOT-compiled (`dotnet publish -c Release` with the `wasm-tools` workload; the
-better of two runs per row):
+better of two runs per row). These are illustrative observations from one machine, not confidence intervals:
+the better of two runs favours the faster observation, and a future update should report a median and range
+over a fixed number of runs.
 
 | Path | interpreter, µs per call | RPC/s | AOT, µs per call | RPC/s |
 |---|---:|---:|---:|---:|
@@ -68,9 +72,12 @@ What the numbers say:
   numbers costs about 64 µs, because the JSON marshalling of the argument array and result that the runtime
   does runs in the interpreter. Sending a whole JSON-RPC document through `[JSExport]` (58 µs) is cheaper
   than that.
-- **Bytes beat strings.** The UTF-8 buffer path (53 µs) is faster than the string `[JSExport]` (58 µs) and
-  faster than the string request in a pure .NET loop (57 µs): with no string marshalled and no UTF-16 to UTF-8
-  transcoding, the interop is gone and what remains is the parse, dispatch and response write themselves.
+- **Bytes avoid the string marshalling.** Under the interpreter the UTF-8 buffer path (53 µs) is faster than
+  the string `[JSExport]` (58 µs) and than the string request in a pure .NET loop (57 µs): with no string
+  marshalled and no UTF-16 to UTF-8 transcoding, what remains is the parse, dispatch and response write
+  themselves. Under AOT the two single-request rows are within noise of each other (6.6 µs for the string,
+  7.0 µs for the bytes), so this table does not show a universal advantage for bytes; the batch rows favour
+  bytes in both columns.
 - **One entry point, batched, beats one interop call per operation.** A batch of 100 over the byte path
   gets to 27,000 RPC/s (37 µs per request), well above the single-call `[JSInvokable]` rate for a bare add.
   If the page has many calls to make at once, batch them.
@@ -84,8 +91,9 @@ What the numbers say:
   batch of 100 over bytes reaches 210,000 RPC/s) and the `[JSInvokable]` rows 3 to 4×, while the typed
   `[JSExport]` add, which had almost no interpreted code to begin with, stays at 0.3 µs. Under AOT the interop
   costs about 1 µs of the 7 (compare the byte path with the .NET loop); the rest is the server itself in
-  WebAssembly. The same request takes about 225 ns on the .NET 10 JIT (see the top-level README), so AOT
-  WebAssembly is still some 25× off native, down from 250× interpreted.
+  WebAssembly. On the .NET 10 JIT the top-level README's one-thread run measures about 217 ns per request for
+  a similar five-request mix, a different harness and workload, so AOT WebAssembly is roughly 30× off native
+  and the interpreter roughly 240×.
 
 How to get the most out of it, in order of payoff:
 
@@ -95,7 +103,8 @@ How to get the most out of it, in order of payoff:
    with any static server (`python -m http.server --directory <that folder>` will do) and the page reports
    "AOT-compiled" next to "ready". The typed add stub barely changes; the JSON-RPC rows, which are .NET code,
    get 7 to 9× faster, as the AOT columns above show.
-2. **Enter through `[JSExport]` with UTF-8 buffers, not `invokeMethod`.** Same document, 3× faster, no
-   loss of generality: this is `ProcessBytes` above.
+2. **Enter through `[JSExport]`, not `invokeMethod`.** Same document, 3× faster under the interpreter and
+   4× under AOT, no loss of generality. Use the UTF-8 buffer form (`ProcessBytes` above) when the page already
+   has bytes or wants to batch; for one string request the two `[JSExport]` forms cost about the same.
 3. **Batch.** Per-document setup is amortised.
 4. **Typed `[JSExport]` stubs for the two or three hottest methods**, JSON-RPC for everything else.
