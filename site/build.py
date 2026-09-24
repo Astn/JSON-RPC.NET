@@ -200,8 +200,8 @@ def build(out_dir: Path) -> None:
     for output, source, title, label, group, description in PAGES:
         print(f"{source} -> {output}")
         pages_json = json.dumps([
-            {"href": href, "label": lbl, "current": href == output}
-            for href, lbl, _ in nav_entries
+            {"href": href, "label": lbl, "group": group, "current": href == output}
+            for href, lbl, group in nav_entries
         ])
         raw = out_dir / (output + ".typst.html")
         run_typst(source, title, description, pages_json, raw)

@@ -45,6 +45,21 @@
   html.elem("a", attrs: attrs, p.label)
 }
 
+// The page list, with a small heading whenever the group changes.
+#let page-list(pages) = {
+  let group = none
+  for p in pages {
+    if p.group != group {
+      group = p.group
+      html.elem("p", attrs: (class: "group"), group)
+    }
+    page-link(p)
+  }
+}
+
+// A small favicon inline: the initials on a rounded square, no request needed.
+#let favicon = "data:image/svg+xml," + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230969da'/%3E%3Ctext x='16' y='21' font-family='Arial,sans-serif' font-size='14' font-weight='700' fill='white' text-anchor='middle'%3ERPC%3C/text%3E%3C/svg%3E"
+
 #html.elem("html", attrs: (lang: "en"), {
   html.elem("head", {
     html.elem("meta", attrs: (charset: "utf-8"))
@@ -54,6 +69,7 @@
     if description != "" { html.elem("meta", attrs: (name: "description", content: description)) }
     html.elem("link", attrs: (rel: "stylesheet", href: "style.css"))
     html.elem("link", attrs: (rel: "stylesheet", href: "highlight.css"))
+    html.elem("link", attrs: (rel: "icon", href: favicon))
   })
   html.elem("body", {
     html.elem("a", attrs: (class: "skip", href: "#content"), "Skip to content")
@@ -66,7 +82,7 @@
       })
     })
     html.elem("div", attrs: (class: "layout"), {
-      html.elem("nav", attrs: (class: "pages", "aria-label": "Pages"), for p in pages { page-link(p) })
+      html.elem("nav", attrs: (class: "pages", "aria-label": "Pages"), page-list(pages))
       html.elem("main", attrs: (id: "content"), content)
       html.elem("nav", attrs: (class: "toc", id: "toc", "aria-label": "On this page"), none)
     })
