@@ -114,3 +114,6 @@ UpgradeLog*.XML
 
 # Python renderer caches
 __pycache__/
+
+# Documentation site build output (site/build.py)
+site/_out/

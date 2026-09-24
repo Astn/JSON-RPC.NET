@@ -9,6 +9,8 @@ JSON-RPC.Net is a high performance [JSON-RPC 2.0](https://www.jsonrpc.org/specif
 
 Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer pluggable. The core has no JSON library dependency; Json.NET and System.Text.Json ship as separate packages, and a built-in serializer needs neither. On one core it answers a small request in about 250 ns with no allocation; a Kestrel host on an 8-core desktop answers over 14 million requests per second over pipelined TCP.
 
+Documentation site: [astn.github.io/JSON-RPC.NET](https://astn.github.io/JSON-RPC.NET/).
+
 - [Packages](#packages)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -455,7 +457,7 @@ gRPC for .NET 2.84.0 with default settings apart from Kestrel's `MaxStreamsPerCo
 
 `--sweep` runs every one of those paths at 1, 2, 4, 8 and 16 client connections (gRPC: channels) and writes one JSON file per run; the chart above is five 2 s runs per point, the marker at the median and the whisker from the lowest to the highest run. It is a separate session from the tables: the WSL virtual machine was running and other work was active, so its absolute figures sit below the table rows (JSON-RPC.Net over TCP 10.9 M to 13.0 M at 16 connections against 13.7 M to 14.6 M in the table), and its gRPC unary figure runs higher (360 k to 404 k against 192 k to 198 k; the cause is not pinned down, and the table keeps the `--compare` figure). What the sweep adds is the shape: JSON-RPC.Net over TCP and batched HTTP climb almost linearly with connections, StreamJsonRpc gains 8 to 10× from one connection to sixteen, and gRPC's .NET client is flat from two channels on because it competes with the server for the same eight cores.
 
-The [benchmark explorer](https://astn.github.io/JSON-RPC.NET/) is the same data as an interactive page: toggle series, hover or tab to a point for the exact low, median, high and every run, switch the axis between log and linear, and download the data. It is one self-contained HTML file, [benchmarks/charts/explorer.html](benchmarks/charts/explorer.html), so it also works saved to disk.
+The [benchmark explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) is the same data as an interactive page: toggle series, hover or tab to a point for the exact low, median, high and every run, switch the axis between log and linear, and download the data. It is one self-contained HTML file, [benchmarks/charts/explorer.html](benchmarks/charts/explorer.html), so it also works saved to disk.
 
 ### WebAssembly: in the browser
 
@@ -503,16 +505,12 @@ dotnet test AustinHarris.JsonRpcTestN
 
 The test suite runs its protocol cases once per serializer (built-in, Json.NET, System.Text.Json) plus the parser, dispatch, version-policy and Kestrel integration tests, on both `net8.0` and `net10.0`. Building a package project in Release produces its NuGet package in `bin/Release/`. The WebAssembly sample builds without the `wasm-tools` workload; add it for AOT.
 
-## Do you like this?
-
-[![https://www.buymeacoffee.com/Ekati](https://cdn.buymeacoffee.com/buttons/default-blue.png)](https://www.buymeacoffee.com/Ekati)
-
 ##### License
 JSON-RPC.net is licensed under The MIT License (MIT), check the [LICENSE](https://github.com/Astn/JSON-RPC.NET/blob/master/LICENSE) file for details.
 
-##### Getting Started & Documentation
+##### Documentation
 
-Check our [documentation](https://github.com/Astn/JSON-RPC.NET/wiki).
+This README and the package guides are also published as a site at [astn.github.io/JSON-RPC.NET](https://astn.github.io/JSON-RPC.NET/), built from the same files.
 
 ##### Old Project Site
 
