@@ -2,13 +2,13 @@
 
 The four packages (`AustinHarris.JsonRpc`, `AustinHarris.JsonRpc.Newtonsoft`, `AustinHarris.JsonRpc.SystemTextJson`,
 `AustinHarris.JsonRpc.AspNetCore`) share one version number and are released together. This file is the record
-of what changed in each version; the README's [Upgrading from 1.x](README.md#upgrading-from-1x) explains how to
-move a 1.x server, and the package pages on NuGet link here.
+of what changed in each version; [Upgrading from 1.x](docs/upgrading.md) explains how to move a 1.x server, and
+the package pages on NuGet link here.
 
 Versions follow [Semantic Versioning](https://semver.org/) for the public API and the documented wire
 behaviour: a breaking change to either means a new major version.
 
-## 2.0.0 (unreleased)
+## 2.0.0 (in preview: `2.0.0-preview.1`)
 
 ### Added
 

@@ -45,6 +45,10 @@ TYPST_VERSION = "0.14"
 PAGES = [
     ("index.html", "README.md", "JSON-RPC.NET", "Overview", "Guide",
      "A high performance JSON-RPC 2.0 server for .NET: bytes in, bytes out, pluggable serializers, Kestrel hosting."),
+    ("changelog.html", "CHANGELOG.md", "What is new", "What is new", "Guide",
+     "Release notes for every version: what 2.0 adds, changes, removes and fixes, and the 1.x history."),
+    ("upgrading.html", "docs/upgrading.md", "Upgrading from 1.x", "Upgrading from 1.x", "Guide",
+     "What a 1.x server must change to build against 2.0, what clients will see on the wire, and what behaves differently inside the server."),
     ("serializers.html", "docs/serializers.md", "Serializers", "Serializers", "Guide",
      "How the built-in, Json.NET and System.Text.Json serializers differ, and how to configure or write one."),
     ("aspnetcore.html", "AustinHarris.JsonRpc.AspNetCore/README.md", "ASP.NET Core hosting", "ASP.NET Core hosting", "Packages",

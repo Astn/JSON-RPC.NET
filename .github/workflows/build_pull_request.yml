@@ -29,16 +29,8 @@ jobs:
       # Building the solution packs every package project (GeneratePackageOnBuild); `dotnet pack` on the
       # solution would trip NU5026 with GeneratePackageOnBuild, so the packages come from the build.
       - name: Build
-        run: dotnet build AustinHarris.JsonRpc.sln --configuration Release --no-restore --version-suffix ci-${{ github.run_id }}-${{ github.run_number }}
+        run: dotnet build AustinHarris.JsonRpc.sln --configuration Release --no-restore
       - name: Test
         run: dotnet test AustinHarris.JsonRpcTestN --configuration Release --no-build
-      # Publish all four pre-release packages: the core and the three companions (Json.NET, System.Text.Json, ASP.NET Core).
-      # Non-fatal: the build and tests are the pull-request verdict; a rejected key (403) or a fork's missing secret
-      # shows as a warning here and fails loudly in the master workflow instead.
-      - name: publish nuget version change
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        continue-on-error: true
-        run: |
-          for project in Json-Rpc AustinHarris.JsonRpc.Newtonsoft AustinHarris.JsonRpc.SystemTextJson AustinHarris.JsonRpc.AspNetCore; do
-            dotnet nuget push "$project/bin/Release/"*.nupkg --skip-duplicate --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.NugetKey }} # API key for the NuGet feed
-          done
+      # Pull requests do not publish. Packages go out from the master workflow through Trusted Publishing, whose
+      # nuget.org policy is bound to build_publish_master.yml; nothing else can push.

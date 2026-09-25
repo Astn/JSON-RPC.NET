@@ -1,15 +1,17 @@
-# AustinHarris.JsonRpc.SystemTextJson
+# `AustinHarris.JsonRpc.SystemTextJson`
 
-System.Text.Json serializer for [JSON-RPC.Net](https://github.com/Astn/JSON-RPC.NET) 2.0. The core parses the
-JSON-RPC envelope (method / params / id) itself and asks the serializer only to convert values: request
-parameters arrive as the raw UTF-8 bytes of one JSON value and go straight into `JsonSerializer.Deserialize`
-(no transcoding, no copies); results are written with a per-thread cached `Utf8JsonWriter` directly into the
+`AustinHarris.JsonRpc.SystemTextJson` adds `System.Text.Json` serialization to
+[`AustinHarris.JsonRpc`](https://www.nuget.org/packages/AustinHarris.JsonRpc) 2.0.
+Choose it when your application already uses `JsonSerializerOptions` and `System.Text.Json` converters.
+
+Request parameters arrive as the raw UTF-8 bytes of one JSON value and go straight into `JsonSerializer.Deserialize`,
+with no transcoding and no copies. Results are written with a per-thread cached `Utf8JsonWriter` directly into the
 response buffer.
 
 ## Install
 
-```
-dotnet add package AustinHarris.JsonRpc.SystemTextJson
+```sh
+dotnet add package AustinHarris.JsonRpc.SystemTextJson --prerelease
 ```
 
 Targets `netstandard2.0`, `netstandard2.1`, `net8.0` and `net10.0`; depends on System.Text.Json 10.0.3 and the
