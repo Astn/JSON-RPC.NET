@@ -672,7 +672,7 @@ dotnet test AustinHarris.JsonRpcTestN
 
 The test suite runs its protocol cases once per serializer (built-in, Json.NET, System.Text.Json) plus the parser, dispatch, version-policy and Kestrel integration tests, on both `net8.0` and `net10.0`. Building a package project in Release produces its NuGet package in `bin/Release/`. The WebAssembly sample builds without the `wasm-tools` workload; add it for AOT.
 
-`AustinHarris.JsonRpc.Client`, `AustinHarris.JsonRpc.Client.WP7`, `AustinHarris.JsonRpc.AspNet`, `JsonRpcTest` and `TestClient` are 1.x projects that are still in the tree but outside the solution; nothing in 2.0 is built from them.
+`AustinHarris.JsonRpc.Client`, `AustinHarris.JsonRpc.AspNet`, `JsonRpcTest` and `TestClient` are 1.x projects that are still in the tree but outside the solution; nothing in 2.0 is built from them.
 
 ### Charts
 
