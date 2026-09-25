@@ -6,7 +6,7 @@
         <Product>Json-Rpc.Net Core</Product>
         <Description>JSON-RPC.Net is a high performance JSON-RPC 2.0 server for .NET Standard 2.0+ and modern .NET. Bytes in, bytes out, no JSON library dependency: the built-in serializer needs nothing, and Json.NET or System.Text.Json plug in through the companion packages. Host it in ASP.NET Core / Kestrel, a console app, sockets, pipes - anything that can hand you UTF-8 or a string.</Description>
         <VersionPrefix>2.0.0</VersionPrefix>
-        <VersionSuffix>$(VersionSuffix)</VersionSuffix>
+        <VersionSuffix>preview.1</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
         <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Astn/JSON-RPC.NET</RepositoryUrl>

@@ -6,8 +6,8 @@
         <Product>Json-Rpc.Net ASP.NET Core host</Product>
         <Description>ASP.NET Core / Kestrel hosting for JSON-RPC.Net: MapJsonRpc endpoint (PipeReader in, BodyWriter out, no strings), a raw Kestrel ConnectionHandler for JSON-RPC over TCP, and DI registration of services.</Description>
         <VersionPrefix>2.0.0</VersionPrefix>
+        <VersionSuffix>preview.1</VersionSuffix>
         <PackageReleaseNotes>https://github.com/Astn/JSON-RPC.NET/blob/master/CHANGELOG.md</PackageReleaseNotes>
-        <VersionSuffix>$(VersionSuffix)</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
         <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Astn/JSON-RPC.NET</RepositoryUrl>

@@ -6,8 +6,8 @@
         <Product>Json-Rpc.Net Json.NET serializer</Product>
         <Description>Json.NET (Newtonsoft.Json) serializer for JSON-RPC.Net. Lenient parsing and full Json.NET conversion semantics; pass JsonSerializerSettings to control it.</Description>
         <VersionPrefix>2.0.0</VersionPrefix>
+        <VersionSuffix>preview.1</VersionSuffix>
         <PackageReleaseNotes>https://github.com/Astn/JSON-RPC.NET/blob/master/CHANGELOG.md</PackageReleaseNotes>
-        <VersionSuffix>$(VersionSuffix)</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
         <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Astn/JSON-RPC.NET</RepositoryUrl>

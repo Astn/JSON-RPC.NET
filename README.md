@@ -60,8 +60,10 @@ The core uses no reflection emit, so it runs under the WebAssembly interpreter a
 ## Installation
 
 ```
-dotnet add package AustinHarris.JsonRpc
+dotnet add package AustinHarris.JsonRpc --prerelease
 ```
+
+2.0 is published as `2.0.0-preview.1`; without `--prerelease`, NuGet resolves to the last 1.x release.
 
 Add `AustinHarris.JsonRpc.Newtonsoft` or `AustinHarris.JsonRpc.SystemTextJson` if you want that serializer, and `AustinHarris.JsonRpc.AspNetCore` to host in Kestrel.
 
@@ -652,6 +654,7 @@ Most 1.x services run unchanged. Read the first list before you build, and the s
 
 - **Versioning.** The 2.x packages follow [Semantic Versioning](https://semver.org/) for the public API and the wire behaviour documented here: a breaking change to either arrives only in a new major version.
 - **Releases.** The four packages are built from one repository, carry one version number and are released together; use matching versions. There is no release cadence.
+- **Previews.** 2.0 ships as `2.0.0-preview.N` first. A preview is complete and tested, but the public API may still change between previews; the stable 2.0.0 follows once the API has settled.
 - **Tested** means the `net8.0` and `net10.0` test runs on Windows and Linux listed under [Requirements](#requirements). Other runtimes can load the `netstandard` assets and are not tested.
 - **Trimming** is unsupported until the library is annotated and that is validated in CI.
 - **1.x** receives no further releases.
