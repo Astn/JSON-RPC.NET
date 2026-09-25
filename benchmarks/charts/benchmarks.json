@@ -3,6 +3,26 @@
   "machine": "AMD Ryzen 7 7800X3D (8 cores / 16 threads, 4.2 GHz), 64 GB, Windows 11",
   "runtime": ".NET 10, Release, Server GC, built-in serializer",
   "sets": {
+    "headline": {
+      "title": "JSON-RPC.Net 1.2.3 and 2.0 on one machine",
+      "date": "2026-09-25",
+      "source": "README.md, Performance table; branch async-scratch-cache",
+      "harness": "benchmarks/Baseline (1.2.3 from NuGet), then TestServer_Console menu entry t, --sync 3 16 and --async 3 16, one session",
+      "workload": "the five benchmark requests; the string rows are the best batch size of the thread-pool loop, the byte rows a loop on 16 dedicated threads or 16 awaited workers",
+      "conditions": "idle box; one run per row",
+      "policy": "one run per row, all in one session; the day-to-day ranges are the sync, async, legacy and kestrel sets",
+      "groups": [
+        { "heading": "1.2.3, the last 1.x release on NuGet", "rule": false, "series": ["headline-123-string"] },
+        { "heading": "2.0, the same string API and the same loop", "rule": false, "series": ["headline-20-string"] },
+        { "heading": "2.0, the byte entry points", "rule": false, "series": ["headline-20-sync", "headline-20-async"] }
+      ],
+      "series": [
+        { "id": "headline-123-string", "label": "Task<string> Process(string), thread pool", "note": "best batch size, 1,200; Json.NET on every request", "family": "scale", "low": 3080000, "high": 3080000, "status": "single", "published": "3.08 M" },
+        { "id": "headline-20-string", "label": "Task<string> Process(string), thread pool", "note": "best batch size, 36,000; the 1.x overloads, kept for compatibility", "family": "ours", "low": 13300000, "high": 13300000, "status": "single", "published": "13.3 M" },
+        { "id": "headline-20-sync", "label": "Process(bytes), 16 dedicated threads", "note": "the library alone; 0 B per numeric request", "family": "ours", "low": 31700000, "high": 31700000, "status": "single", "published": "31.7 M" },
+        { "id": "headline-20-async", "label": "ProcessAsync(bytes), 16 awaited workers", "note": "ValueTask<T> methods, RpcContextFlow.None; 6 B per request", "family": "ours", "low": 32100000, "high": 32100000, "status": "single", "published": "32.1 M" }
+      ]
+    },
     "sync": {
       "title": "JSON-RPC.Net alone, by worker threads",
       "date": "2026-09-23",

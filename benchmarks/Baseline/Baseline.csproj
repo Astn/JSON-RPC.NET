@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The last 1.x release from NuGet, driven by the same loop as the 2.0 harness's legacy string mode
+       (TestServer_Console, menu entry t): the same five requests, the same batch sizes, Parallel.For from every
+       core through Task<string> Process(string). It exists so the README's 1.x-versus-2.0 figures come from one
+       machine on one day, not from two harnesses. Run it with dotnet run -c Release from this directory -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>disable</Nullable>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <NoWarn>$(NoWarn);NU1701;NU1902;NU1903</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AustinHarris.JsonRpc" Version="1.2.3" />
+  </ItemGroup>
+</Project>

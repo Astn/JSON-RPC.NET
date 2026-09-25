@@ -315,7 +315,7 @@
 
   // ---- snapshot sets
   var snaps = document.getElementById("snapshots");
-  ["sync", "async1", "async16", "legacy", "kestrel", "compare", "inprocess", "wasm"].forEach(function (key) {
+  ["headline", "sync", "async1", "async16", "legacy", "kestrel", "compare", "inprocess", "wasm"].forEach(function (key) {
     var st = DATA.sets[key];
     if (!st) return;
     var d = html("details", {}, snaps);

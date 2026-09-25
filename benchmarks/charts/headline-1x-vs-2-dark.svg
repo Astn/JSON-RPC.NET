@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="420" viewBox="0 0 940 420" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="f09766b21195">
+<title>JSON-RPC.Net 1.2.3 and 2.0 on one machine</title><desc>The same five requests on one machine in one session, 2026-09-25: Ryzen 7 7800X3D, .NET 10, Server GC, idle box. String rows: the best batch size of the thread-pool loop. Byte rows: 16 dedicated threads or 16 awaited workers in a loop. Data revision f09766b21195.</desc>
+<rect width="940" height="420" rx="10" fill="#0d1117" stroke="#30363d"/>
+<text x="24.0" y="32.0" text-anchor="start" font-size="18" fill="#f0f6fc" font-weight="600">JSON-RPC.Net 1.2.3 and 2.0 on one machine</text>
+<text x="24.0" y="54.0" text-anchor="start" font-size="12" fill="#9da7b3">The same five requests on one machine in one session, 2026-09-25: Ryzen 7 7800X3D, .NET 10, Server GC, idle box.</text>
+<text x="24.0" y="70.0" text-anchor="start" font-size="12" fill="#9da7b3">String rows: the best batch size of the thread-pool loop. Byte rows: 16 dedicated threads or 16 awaited workers in a loop.</text>
+<line x1="330.0" y1="96" x2="330.0" y2="378" stroke="#21262d"/>
+<text x="330.0" y="394.0" text-anchor="middle" font-size="11" fill="#9da7b3">0</text>
+<line x1="447.1" y1="96" x2="447.1" y2="378" stroke="#21262d"/>
+<text x="447.1" y="394.0" text-anchor="middle" font-size="11" fill="#9da7b3">10 M</text>
+<line x1="564.3" y1="96" x2="564.3" y2="378" stroke="#21262d"/>
+<text x="564.3" y="394.0" text-anchor="middle" font-size="11" fill="#9da7b3">20 M</text>
+<line x1="681.4" y1="96" x2="681.4" y2="378" stroke="#21262d"/>
+<text x="681.4" y="394.0" text-anchor="middle" font-size="11" fill="#9da7b3">30 M</text>
+<text x="740.0" y="410.0" text-anchor="end" font-size="11" fill="#9da7b3">requests per second, linear scale</text>
+<text x="24.0" y="116.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">1.2.3, the last 1.x release on NuGet</text>
+<text x="316.0" y="152.0" text-anchor="end" font-size="13" fill="#f0f6fc">Task&lt;string&gt; Process(string), thread pool</text>
+<text x="316.0" y="166.0" text-anchor="end" font-size="10" fill="#9da7b3">best batch size, 1,200; Json.NET on every request</text>
+<rect x="330" y="139.0" width="36.1" height="18" rx="3" fill="#767676"/>
+<text x="758.0" y="152.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">3.08 M</text>
+<text x="24.0" y="190.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">2.0, the same string API and the same loop</text>
+<text x="316.0" y="226.0" text-anchor="end" font-size="13" fill="#f0f6fc">Task&lt;string&gt; Process(string), thread pool</text>
+<text x="316.0" y="240.0" text-anchor="end" font-size="10" fill="#9da7b3">best batch size, 36,000; the 1.x overloads, kept for compatibility</text>
+<rect x="330" y="213.0" width="155.8" height="18" rx="3" fill="#009e73"/>
+<text x="758.0" y="226.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">13.3 M</text>
+<text x="758.0" y="240.0" text-anchor="start" font-size="10" fill="#9da7b3">4.3× the first row</text>
+<text x="24.0" y="264.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">2.0, the byte entry points</text>
+<text x="316.0" y="300.0" text-anchor="end" font-size="13" fill="#f0f6fc">Process(bytes), 16 dedicated threads</text>
+<text x="316.0" y="314.0" text-anchor="end" font-size="10" fill="#9da7b3">the library alone; 0 B per numeric request</text>
+<rect x="330" y="287.0" width="371.3" height="18" rx="3" fill="#009e73"/>
+<text x="758.0" y="300.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">31.7 M</text>
+<text x="758.0" y="314.0" text-anchor="start" font-size="10" fill="#9da7b3">10.3× the first row</text>
+<text x="316.0" y="344.0" text-anchor="end" font-size="13" fill="#f0f6fc">ProcessAsync(bytes), 16 awaited workers</text>
+<text x="316.0" y="358.0" text-anchor="end" font-size="10" fill="#9da7b3">ValueTask&lt;T&gt; methods, RpcContextFlow.None; 6 B per request</text>
+<rect x="330" y="331.0" width="376.0" height="18" rx="3" fill="#009e73"/>
+<text x="758.0" y="344.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">32.1 M</text>
+<text x="758.0" y="358.0" text-anchor="start" font-size="10" fill="#9da7b3">10.4× the first row</text>
+</svg>

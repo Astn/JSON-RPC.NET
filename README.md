@@ -4,12 +4,32 @@
 
 JSON-RPC.Net is a [JSON-RPC 2.0](https://www.jsonrpc.org/specification) server for .NET. You give it a request document and it gives you the response document, bytes in and bytes out; the transport is yours. Host it in Kestrel, a console app, sockets, pipes, or a Blazor WebAssembly page.
 
-Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer pluggable. The core depends on no JSON library: Json.NET and System.Text.Json ship as separate packages, and the built-in serializer needs neither. On one core it answers a small request in about 217 ns, with no allocation for numeric parameters. A Kestrel host on an 8-core desktop answers over 14 million requests per second over pipelined TCP. [Benchmarks](#benchmarks) gives the method and the full tables.
+Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer pluggable. The core depends on no JSON library: Json.NET and System.Text.Json ship as separate packages, and the built-in serializer needs neither. On one core it answers a small request in about 217 ns, with no allocation for numeric parameters. The library alone answers over 30 million requests per second on an 8-core desktop, ten times what 1.2.3 does on the same machine, and a Kestrel host over 15 million over pipelined TCP. [Benchmarks](#benchmarks) gives the method and the full tables.
+
+## Performance
+
+2.0 answers the same five requests 4 times faster than 1.2.3 through the 1.x string API, and 10 times faster through the byte entry points its hosts use: 31.7 M requests per second on one 8-core desktop, with no allocation for a numeric request. Same machine, same requests, one session:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="benchmarks/charts/headline-1x-vs-2-dark.svg">
+  <img alt="JSON-RPC.Net 1.2.3 and 2.0 on one machine: 3.08 M requests per second through the 1.2.3 string API, 13.3 M through the same API on 2.0, and 31.7 M and 32.1 M through the 2.0 byte entry points" src="benchmarks/charts/headline-1x-vs-2.svg">
+</picture>
+
+| Path | RPC/s | Against 1.2.3 |
+| --- | ---: | ---: |
+| 1.2.3, `Task<string> Process(string)`, thread pool, best batch size | 3.08 M | |
+| 2.0, the same string API and the same loop | 13.3 M | 4.3× |
+| 2.0, `Process(bytes)`, 16 dedicated threads | 31.7 M | 10.3× |
+| 2.0, `ProcessAsync(bytes)`, 16 awaited workers | 32.1 M | 10.4× |
+
+The difference is the request path: a span tokenizer over the UTF-8 bytes, invokers compiled against the concrete reader and writer, the response written straight into a pooled buffer, and no `Task`, result string or continuation per request, so a numeric request never touches the GC. Over Kestrel TCP the AspNetCore package holds 15.2 M to 15.5 M with 256 requests in flight per connection. [Benchmarks](#benchmarks) has every table with its conditions and day-to-day ranges, the [explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) the exact values, and `benchmarks/Baseline` re-runs the 1.2.3 row from NuGet with the same loop as the 2.0 harness.
+
 
 It is a server only. There are no client proxies and no server-to-client calls. If you need a bidirectional RPC framework, look at [StreamJsonRpc](https://www.nuget.org/packages/StreamJsonRpc); the benchmarks compare the two.
 
 This README and the package guides are also published at [astn.github.io/JSON-RPC.NET](https://astn.github.io/JSON-RPC.NET/). What the library does by default and what it leaves to you is under [Security](#security).
 
+- [Performance](#performance)
 - [Packages](#packages)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -500,6 +520,7 @@ dotnet run -c Release --project TestServer_Console -- --kestrel 3   # through th
 dotnet run -c Release --project TestServer_Console -- --compare 3   # the same calls through StreamJsonRpc and gRPC for .NET, side by side
 dotnet run -c Release --project TestServer_Console -- --sweep 2 benchmarks/charts/sweep.json   # every library and transport at 1, 2, 4, 8, 16 connections; one file per run
 dotnet run -c Release --project TestServer_Console                  # menu: Enter = Process(bytes), a = ProcessAsync(bytes), t = legacy string API, k = Kestrel, x = compare, q = quit
+dotnet run -c Release --project benchmarks/Baseline                 # the last 1.x release (1.2.3 from NuGet) through the same loop as the t entry
 dotnet run --project samples/WasmHost                               # browser: "Run benchmark" on the page
 ```
 
@@ -649,6 +670,8 @@ simdjson was evaluated as a fourth parser and not adopted: through the only main
 The charts, the explorer page and the figures in this file come from one data file, [benchmarks/charts/benchmarks.json](benchmarks/charts/benchmarks.json); how they are rendered and checked is under [Building](#charts).
 
 On 2026-09-25 the `ProcessAsync` path was found capped near 4 M RPC/s at every worker count: every document took one lock on the shared scratch pool, invisible to the single-threaded micro-benchmarks. A one-slot per-thread cache in front of the pool took the inline rows to 22 M to 32 M at 16 workers, against 31.7 M for the synchronous entry point in the same session; the `--scale` gate and the request-path allowlist exist so the next such point is caught before a release.
+
+The Performance section at the top is one session on 2026-09-25: the last 1.x release on NuGet, 1.2.3, driven by the same loop as the `t` entry ([benchmarks/Baseline](benchmarks/Baseline/Program.cs)), reached 3.08 M at its best batch size of 1,200 and fell to 1.5 M at two million, while 2.0 through the same string API peaked at 13.3 M and the byte entry points ran at 31.7 M and 32.1 M in the same session.
 
 The 2026-09-23 performance pass (compiled invokers that read the tokens and write the pooled buffer through direct calls instead of virtual, delegate and interface calls; a tokenizer that keeps its scanner state in locals; a last-session cache; envelope keys matched by length; a flat method table) was measured A/B in one session: the same seven runs of `--sync 2 1` went from 3.2 M to 4.1 M (median 3.6 M) before to 4.0 M to 4.8 M (median 4.4 M) after, about 20 to 25 % more on one thread. The transport rows are bound by the loopback round trips rather than by the library and moved less.
 

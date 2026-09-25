@@ -332,6 +332,53 @@ def interval_chart(st, subtitle, t, revision, name, width=940):
     return "\n".join(out) + "\n"
 
 
+def headline_chart(st, subtitle, t, revision, name, width=940):
+    """Horizontal bars on a linear axis, grouped; every bar carries its figure and its multiple of the first series,
+    which is the reference row. Linear, unlike the other charts, because the point is the size of the difference."""
+    groups = groups_of(st)
+    left, num_w, row_h, group_h = 330, 170, 44, 30
+    top = 70 + 16 * len(subtitle)
+    x0, x1 = left, width - num_w - 30
+    n_rows = sum(len(rows) for _, rows, _ in groups)
+    height = top + row_h * n_rows + sum(group_h if h else 6 for h, _, _ in groups) + 12 * sum(r for _, _, r in groups) + 52
+    xs = Linear(0, nice_max(max(s["high"] for s in st["series"])), x0, x1)
+    base = st["series"][0]["high"]
+    out = card(width, height, st["title"], subtitle, t, revision)
+    y_axis = height - 42
+    for v, _ in xs.ticks():
+        x = xs(v)
+        out.append(f'<line x1="{x:.1f}" y1="{top - 6}" x2="{x:.1f}" y2="{y_axis}" stroke="{t["grid"]}"/>')
+        out.append(text(x, y_axis + 16, fmt_axis(v), t, size=11, fill=t["muted"], anchor="middle"))
+    out.append(text(x1, height - 10, "requests per second, linear scale", t, size=11, fill=t["muted"], anchor="end"))
+    y = top
+    for heading, rows, rule in groups:
+        if rule:
+            y += 6
+            out.append(f'<line x1="24" y1="{y}" x2="{width - 24}" y2="{y}" stroke="{t["edge"]}"/>')
+            y += 6
+        if heading:
+            out.append(text(24, y + 14, heading, t, size=12, weight=600))
+            y += group_h
+        else:
+            y += 6
+        for s in rows:
+            color = FAMILY[s["family"]]
+            note = s.get("note")
+            cy = y + row_h / 2 - (6 if note else 0)
+            out.append(text(left - 14, cy + 4, s["label"], t, anchor="end"))
+            if note:
+                out.append(text(left - 14, cy + 18, note, t, size=10, fill=t["muted"], anchor="end"))
+            out.append(f'<rect x="{x0}" y="{cy - 9:.1f}" width="{xs(s["low"]) - x0:.1f}" height="18" rx="3" fill="{color}"/>')
+            if s["high"] > s["low"]:
+                out.append(f'<rect x="{xs(s["low"]):.1f}" y="{cy - 9:.1f}" width="{xs(s["high"]) - xs(s["low"]):.1f}" height="18" rx="3" fill="{color}" fill-opacity="0.35"/>')
+            out.append(text(x1 + 18, cy + 4, fmt_range(s), t, weight=600))
+            if s is not st["series"][0]:
+                out.append(text(x1 + 18, cy + 18, f"{s['high'] / base:.1f}\u00d7 the first row", t, size=10, fill=t["muted"]))
+            y += row_h
+    out.append("</svg>")
+    return "\n".join(out) + "\n"
+
+
 def scaling_chart(st, subtitle, t, revision, name, width=940):
     """Two aligned panels: aggregate RPC/s as an envelope (opaque low and high lines, capped intervals, no centre
     line) and the reported ns per request per worker as single points. x is log2-spaced: each step doubles."""
@@ -514,6 +561,9 @@ def chart_specs(data):
     n = len(sw["run_files"])
     runs_text = f"{n} runs of {sw['seconds_per_cell']:g} s per point; whiskers span the runs" if n > 1 else "one run per point; no range yet"
     return [
+        ("headline-1x-vs-2", headline_chart, sets["headline"],
+         ["The same five requests on one machine in one session, 2026-09-25: Ryzen 7 7800X3D, .NET 10, Server GC, idle box.",
+          "String rows: the best batch size of the thread-pool loop. Byte rows: 16 dedicated threads or 16 awaited workers in a loop."]),
         ("sync-threads", scaling_chart, sets["sync"],
          ["Byte entry point in a loop, no scheduler, no transport. Ryzen 7 7800X3D, .NET 10, Server GC, two sweeps on an idle box."]),
         ("kestrel-transports", interval_chart, sets["kestrel"],
