@@ -413,9 +413,20 @@ namespace AustinHarris.JsonRpcTestN
         public async Task MethodOwnedCancellation_IsAnOrdinaryError()
         {
             Bind("run", new Func<Task<int>>(async () => { await Task.Yield(); throw new OperationCanceledException("method-owned"); }));
-            var result = await Run(Request("run"));
-            Error(result, -32603);
-            StringAssert.Contains("method-owned", result);
+            Exception seen = null;
+            Handler.GetSessionHandler(_session).SetErrorHandler((request, error) => { seen = error.data as Exception; return error; });
+            try
+            {
+                var result = await Run(Request("run"));
+                Error(result, -32603);
+                StringAssert.Contains("\"data\":null", result, "an unhandled exception is redacted on the wire");
+                Assert.IsInstanceOf<OperationCanceledException>(seen, "but it is an ordinary error, not a cancellation of the processing");
+                Assert.AreEqual("method-owned", seen.Message);
+            }
+            finally
+            {
+                Handler.GetSessionHandler(_session).SetErrorHandler(null);
+            }
         }
 
         [TestCase(false)] [TestCase(true)]

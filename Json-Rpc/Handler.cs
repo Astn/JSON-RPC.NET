@@ -8,7 +8,7 @@ namespace AustinHarris.JsonRpc
     using AustinHarris.JsonRpc.Invocation;
     using AustinHarris.JsonRpc.Jsmn;
     using AustinHarris.JsonRpc.Serialization;
-    using NonBlocking;
+    using System.Collections.Concurrent;
 
     public sealed partial class Handler
     {
@@ -27,6 +27,7 @@ namespace AustinHarris.JsonRpc
         private static readonly ConcurrentDictionary<string, Handler> _sessionHandlersMaster = new ConcurrentDictionary<string, Handler>();
 
         private static readonly string _defaultSessionId = Guid.NewGuid().ToString();
+        private static readonly Handler _unknownSessionHandler = new Handler(null);
         #endregion
 
         #region Constructors
@@ -52,10 +53,27 @@ namespace AustinHarris.JsonRpc
         public static string DefaultSessionId() { return _defaultSessionId; }
 
         /// <summary>
-        /// Gets a specific session
+        /// Gets a specific session, creating it when it does not exist yet. Registration paths (ServiceBinder,
+        /// the Config setters) use this; the request path uses <see cref="TryGetSessionHandler"/>, so a request
+        /// for an unknown session id never creates a session.
         /// </summary>
         /// <param name="sessionId">The sessionId of the handler you want to retrieve.</param>
         public static Handler GetSessionHandler(string sessionId)
+        {
+            if (TryGetSessionHandler(sessionId, out var handler)) return handler;
+            // Add first, publish the version second: a thread that refreshes its snapshot in between copies the
+            // new entry, so no thread can hold a current-looking snapshot that lacks it.
+            handler = _sessionHandlersMaster.GetOrAdd(sessionId, id => new Handler(id));
+            Interlocked.Increment(ref _sessionHandlerMasterVersion);
+            return handler;
+        }
+
+        /// <summary>
+        /// Looks a session up without creating it: this thread's last hit, then its snapshot of the registry, then
+        /// the master registry itself (a registration can land after the snapshot was taken). False for an id that
+        /// is not registered.
+        /// </summary>
+        internal static bool TryGetSessionHandler(string sessionId, out Handler handler)
         {
             if (_sessionHandlerMasterVersion != _sessionHandlerLocalVersion)
             {
@@ -66,17 +84,24 @@ namespace AustinHarris.JsonRpc
             }
             else if (ReferenceEquals(sessionId, _lastSessionId))
             {
-                return _lastSessionHandler;
+                handler = _lastSessionHandler;
+                return true;
             }
-            if (_sessionHandlersLocal.TryGetValue(sessionId, out var local))
+            if (_sessionHandlersLocal.TryGetValue(sessionId, out handler) || _sessionHandlersMaster.TryGetValue(sessionId, out handler))
             {
                 _lastSessionId = sessionId;
-                _lastSessionHandler = local;
-                return local;
+                _lastSessionHandler = handler;
+                return true;
             }
-            Interlocked.Increment(ref _sessionHandlerMasterVersion);
-            return _sessionHandlersMaster.GetOrAdd(sessionId, id => new Handler(id));
+            return false;
         }
+
+        /// <summary>
+        /// Serves requests whose session id is not registered. It has no methods, no hooks and no serializer or
+        /// version policy of its own (the global ones apply), so every call answers -32601, parse errors and
+        /// batches behave as usual, and nothing is allocated or kept per unknown id.
+        /// </summary>
+        internal static Handler UnknownSessionHandler => _unknownSessionHandler;
 
         /// <summary>
         /// gets the default session
@@ -767,7 +792,8 @@ namespace AustinHarris.JsonRpc
                 output.Write(MessageInfix);
                 Utf8Json.WriteString(output, error.message);
                 output.Write(DataInfix);
-                Utf8Json.WriteString(output, Convert.ToString(error.data));
+                if (error.data is Exception && !Config.IncludeExceptionDetails) Utf8Json.WriteNull(output);
+                else Utf8Json.WriteString(output, Convert.ToString(error.data));
             }
             output.Write(ErrorIdInfix);
             WriteIdRaw(output, idRaw);
@@ -797,7 +823,10 @@ namespace AustinHarris.JsonRpc
                     }
                     break;
                 case Exception ex:
-                    serializer.Write(output, ExceptionInfo.ForResponse(ex), typeof(ExceptionInfo));
+                    // With details off nothing about an unhandled exception leaves the process, not even its type
+                    // name or message. Error handlers already ran and saw the exception itself in error.data.
+                    if (Config.IncludeExceptionDetails) serializer.Write(output, ExceptionInfo.From(ex), typeof(ExceptionInfo));
+                    else Utf8Json.WriteNull(output);
                     break;
                 default:
                     serializer.Write(output, data, data.GetType());

@@ -39,6 +39,9 @@ namespace AustinHarris.JsonRpcTestN
             [JsonRpcMethod("echo")]
             public string Echo(string s) => s;
 
+            [JsonRpcMethod("unserializable")]
+            public Unserializable Unserializable() => new Unserializable();
+
             [JsonRpcMethod("accept")]
             public int Accept(object o) => 7;
 
@@ -101,6 +104,12 @@ namespace AustinHarris.JsonRpcTestN
 
             [JsonRpcMethod("dh.whichSession")]
             public string WhichSession() => _name;
+        }
+
+        /// <summary>A result every serializer fails to write: the getter throws.</summary>
+        public class Unserializable
+        {
+            public string Secret => throw new InvalidOperationException("private database /server/secret");
         }
 
         private class TaskReturningService
@@ -261,8 +270,18 @@ namespace AustinHarris.JsonRpcTestN
                 handler.SetPreProcessHandler((request, context) => throw new InvalidOperationException("hook failed"));
                 var response = Parse(Run("{\"method\":\"ping\",\"id\":1}", null, serializer));
                 Assert.AreEqual(-32603, (int)response["error"]["code"]);
-                Assert.AreEqual("hook failed", (string)response["error"]["data"]["Message"]);
+                Assert.AreEqual(JTokenType.Null, response["error"]["data"].Type, "a hook failure is an unhandled exception: redacted like any other");
                 Assert.AreEqual(1, (int)response["id"]);
+                Config.IncludeExceptionDetails = true;
+                try
+                {
+                    response = Parse(Run("{\"method\":\"ping\",\"id\":1}", null, serializer));
+                    Assert.AreEqual("hook failed", (string)response["error"]["data"]["Message"]);
+                }
+                finally
+                {
+                    Config.IncludeExceptionDetails = false;
+                }
             }
             finally
             {
@@ -315,23 +334,45 @@ namespace AustinHarris.JsonRpcTestN
             var serializer = SerializerCatalog.Create(name);
             Assert.IsFalse(Config.IncludeExceptionDetails, "the default is off");
 
-            var response = Parse(Run("{\"method\":\"throws\",\"id\":1}", null, serializer));
-            Assert.AreEqual(-32603, (int)response["error"]["code"]);
-            var data = (JObject)response["error"]["data"];
-            Assert.AreEqual("System.InvalidOperationException", (string)data["ClassName"]);
-            Assert.AreEqual("private database /server/secret", (string)data["Message"]);
-            Assert.AreEqual(JTokenType.Null, data["Source"].Type);
-            Assert.AreEqual(JTokenType.Null, data["StackTraceString"].Type);
-            Assert.AreEqual(0, (int)data["HResult"]);
-            Assert.AreEqual(JTokenType.Null, data["InnerException"].Type);
+            var raw = Run("{\"method\":\"throws\",\"id\":1}", null, serializer);
+            Assert.AreEqual("{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32603,\"message\":\"Internal Error\",\"data\":null},\"id\":1}", raw,
+                "nothing about the exception leaves the process: no type name, no message");
 
-            response = Parse(Run("{\"method\":\"throwsInner\",\"id\":1}", null, serializer));
-            data = (JObject)response["error"]["data"];
-            Assert.AreEqual("System.ArgumentException", (string)data["ClassName"], "a wrapped exception is reported through its inner exception (unchanged legacy behaviour)");
-            Assert.AreEqual("inner message", (string)data["Message"]);
-            Assert.AreEqual(JTokenType.Null, data["StackTraceString"].Type);
-            Assert.AreEqual(JTokenType.Null, data["InnerException"].Type, "the inner chain is not sent");
-            StringAssert.DoesNotContain("innermost message", response.ToString());
+            raw = Run("{\"method\":\"throwsInner\",\"id\":1}", null, serializer);
+            Assert.AreEqual("{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32603,\"message\":\"Internal Error\",\"data\":null},\"id\":1}", raw);
+        }
+
+        [TestCaseSource(nameof(Serializers))]
+        public void ExceptionDetails_ErrorHandlerStillSeesTheException(string name)
+        {
+            var serializer = SerializerCatalog.Create(name);
+            var handler = Handler.GetSessionHandler(Session);
+            Exception seen = null;
+            try
+            {
+                handler.SetErrorHandler((request, error) => { seen = error.data as Exception; return error; });
+                var response = Parse(Run("{\"method\":\"throws\",\"id\":1}", null, serializer));
+                Assert.IsInstanceOf<InvalidOperationException>(seen, "the handler gets the exception itself, redaction happens when the response is written");
+                Assert.AreEqual(JTokenType.Null, response["error"]["data"].Type);
+
+                // a handler that replaces the error with its own data is not redacted: that data is authored
+                handler.SetErrorHandler((request, error) => new JsonRpcException(-32000, "Server error", "ticket 42"));
+                response = Parse(Run("{\"method\":\"throws\",\"id\":1}", null, serializer));
+                Assert.AreEqual("ticket 42", (string)response["error"]["data"]);
+            }
+            finally
+            {
+                handler.SetErrorHandler(null);
+            }
+        }
+
+        [TestCaseSource(nameof(Serializers))]
+        public void ExceptionDetails_ResultSerializationFailure_IsRedactedToo(string name)
+        {
+            var serializer = SerializerCatalog.Create(name);
+            var raw = Run("{\"method\":\"unserializable\",\"id\":1}", null, serializer);
+            Assert.AreEqual("{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32603,\"message\":\"Internal Error\",\"data\":null},\"id\":1}", raw,
+                "an exception thrown while writing the result is an unhandled exception as well");
         }
 
         [TestCaseSource(nameof(Serializers))]

@@ -60,8 +60,8 @@ app.MapJsonRpc("/rpc").RequireAuthorization("api");
 
 `MapJsonRpc` adds no authorization, TLS requirement, rate limit or request deadline by itself; apply those
 policies explicitly. `MaxRequestBytes` limits the HTTP body, but there is no batch-count or response-size limit.
-Keep `Config.IncludeExceptionDetails` off for untrusted clients; the default still sends an unhandled exception's
-CLR type name and message, see [Exception disclosure](https://github.com/Astn/JSON-RPC.NET#exception-disclosure)
+Keep `Config.IncludeExceptionDetails` off for untrusted clients: by default an unhandled exception is answered as
+`-32603` with `data: null`, see [Exception disclosure](https://github.com/Astn/JSON-RPC.NET#exception-disclosure)
 in the main README.
 
 `MapJsonRpc(pattern = "/jsonrpc", options = null)` uses the options from `AddJsonRpc` unless you pass your own,
@@ -87,9 +87,10 @@ per-request data from the context instead.
 declares a `[JsonRpcMethod]`. Private methods count, so the attribute is the whole access list, and an MVC
 controller that carries it becomes a singleton too.
 
-A class deriving from `JsonRpcService` binds itself to the default session in its constructor. Registering it here
-as well is harmless when the effective session is the default. With `SessionId` set, the host binds it to that
-session in addition, so it stays reachable on the default session too.
+The host binds every registered service to its effective session: the session given to `AddJsonRpcService`, else
+`JsonRpcOptions.SessionId`, else the default. A class deriving from `JsonRpcService` also binds itself to the
+default session in its parameterless constructor, so with `SessionId` set it is reachable in both; write
+`: base(false)` in the subclass to leave that to the host.
 
 ## Raw connection (TCP, Unix socket, named pipe)
 
@@ -136,7 +137,7 @@ in the main README.
 |---|---|---|---|
 | `EnableAsyncMethods` | false | HTTP and raw | use `ProcessAsync` for `Task`/`ValueTask` methods, with host cancellation |
 | `SessionId` | default session | HTTP and raw | which session's methods answer |
-| `SessionSelector` | null | HTTP | pick the session per request from the `HttpContext`; it must map to a fixed set of ids, because an unknown id creates a session that persists |
+| `SessionSelector` | null | HTTP | pick the session per request from the `HttpContext`; an id that was never registered answers `-32601` and creates nothing |
 | `Serializer` | session, then `Config.Serializer` | HTTP and raw | serializer for this host |
 | `ContextFactory` | `HttpContext` | HTTP | what `JsonRpcContext.Current()` returns |
 | `MaxRequestBytes` | 4 MB | HTTP body, or one raw document | larger bodies get 413; a larger raw document aborts the connection |

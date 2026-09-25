@@ -53,7 +53,7 @@ All four packages are MIT licensed and ship together with the same version numbe
 
 The "Covers" column is what each target framework admits, not what is tested. CI runs the test suite on `net8.0` and `net10.0`; the WebAssembly sample is built in CI and run by hand. The other runtimes can load the `netstandard` assets but are not part of the test matrix. On .NET Framework, 4.7.2 or later avoids the binding redirects that 4.6.1 to 4.7.1 need for `netstandard2.0` libraries.
 
-Dependencies at 2.0.0: `NonBlocking` 2.1.2 (the lock-free dictionary behind the session registry) and, on `netstandard` only, `System.Memory` 4.6.3; `netstandard2.0` also references `System.Threading.Tasks.Extensions` 4.5.0 for `ValueTask`. The Newtonsoft package depends on Newtonsoft.Json 13.0.4 and the System.Text.Json package on System.Text.Json 10.0.3.
+Dependencies at 2.0.0: none on `net8.0` and `net10.0`; on `netstandard` only, `System.Memory` 4.6.3, and `netstandard2.0` also references `System.Threading.Tasks.Extensions` 4.5.0 for `ValueTask`. The Newtonsoft package depends on Newtonsoft.Json 13.0.4 and the System.Text.Json package on System.Text.Json 10.0.3.
 
 The core uses no reflection emit, so it runs under the WebAssembly interpreter and under WebAssembly AOT (see [samples/WasmHost](samples/WasmHost)). It is not annotated for trimming: services and their `[JsonRpcMethod]` members are found by reflection, so keep those types rooted if you publish trimmed.
 
@@ -124,7 +124,7 @@ That is the whole server. The rest of this page is about exposing methods, putti
 
 ### Classes
 
-Any class works, not only `JsonRpcService` subclasses: bind an instance with `ServiceBinder.BindService(sessionId, instance)`. A `JsonRpcService` subclass binds itself to the default session in its constructor, even when a host later binds the same instance to another session as well.
+Any class works, not only `JsonRpcService` subclasses: bind an instance with `ServiceBinder.BindService(sessionId, instance)`. A `JsonRpcService` subclass binds itself to the default session in its parameterless constructor. Write `: base(false)` for a subclass that something else binds (the AspNetCore host binds every registered service to its effective session) and `: base(sessionId)` to bind to another session.
 
 One instance serves every request on every thread, so a service must be thread-safe. When the AspNetCore package builds a service through DI it is a singleton created once at startup; see [Kestrel HTTP endpoint](#kestrel-http-endpoint).
 
@@ -238,16 +238,16 @@ The core runs inside the browser. [samples/WasmHost](samples/WasmHost) is a Blaz
 
 ### Exception disclosure
 
-By default (`Config.IncludeExceptionDetails = false`), an unhandled exception thrown by a method becomes `-32603 Internal error` and `error.data` carries the exception's fully qualified CLR type name and its `Message`. Source, stack trace, HResult and inner exceptions are omitted. This is limited disclosure, not complete redaction: exception messages must not contain secrets.
-
-Set `Config.IncludeExceptionDetails = true` only for trusted development clients; it adds `Source`, `StackTraceString`, `HResult` and the `InnerException` chain. To suppress the type and message as well, replace internal errors in an error handler. The handler sees the original `Exception` in `data` for this case, so filter on that rather than on the code:
+By default (`Config.IncludeExceptionDetails = false`), an unhandled exception thrown by a method, or thrown while its result is written, becomes `-32603 Internal Error` with `data: null`. Nothing about the exception leaves the process: not its type name, not its message. The redaction happens when the response is written, after the error handler ran, so a handler still sees the original `Exception` in `data` and can decide what the client gets instead:
 
 ```csharp
 Config.SetErrorHandler((request, error) =>
-    error.data is Exception ? new JsonRpcException(-32603, "Internal Error", null) : error);
+    error.data is Exception ex ? new JsonRpcException(-32000, "Server error", Log(ex)) : error);
 ```
 
-A `JsonRpcException` thrown by the application keeps the `data` it was given.
+Set `Config.IncludeExceptionDetails = true` only for trusted development clients: `data` then carries the full `ExceptionInfo` (`ClassName`, `Message`, `Source`, `StackTraceString`, `HResult` and the `InnerException` chain).
+
+A `JsonRpcException` thrown by the application, or returned by an error handler, keeps the `data` it was given; that data is authored, not redacted.
 
 ### Handlers
 
@@ -263,11 +263,11 @@ Config.SetPostProcessHandler((request, response, context) => null);   // return 
 // Another session: other sessions do not inherit the default session's handlers
 Config.SetErrorHandler("client-42", (request, exception) => exception);
 Config.SetParseErrorHandler("client-42", (rawJson, exception) => exception);
-Config.SetBeforeProcessHandler("client-42", (request, context) => null);
-Handler.GetSessionHandler("client-42").SetPostProcessHandler((request, response, context) => null);
+Config.SetPreProcessHandler("client-42", (request, context) => null);
+Config.SetPostProcessHandler("client-42", (request, response, context) => null);
 ```
 
-The overloads without a session id set the **default session's** handler, not a process-wide one. A pre- or post-process handler moves its session onto a slower path, which builds `JsonRequest` and `JsonResponse` objects for the handler to see. Leave them unset unless you need them.
+The overloads without a session id set the **default session's** handler, not a process-wide one; the overloads with a session id create the session when it does not exist yet, and a null handler clears only that session's. A pre- or post-process handler moves its session onto a slower path, which builds `JsonRequest` and `JsonResponse` objects for the handler to see. Leave them unset unless you need them. (`Config.SetBeforeProcessHandler(sessionId, …)`, the 1.x name, still works and is marked obsolete.)
 
 ### Error codes
 
@@ -278,7 +278,7 @@ The errors the library raises itself carry structured `data`, identical for ever
 | `-32601` Method not found | `{"method":"<name as requested>"}` | `MethodNotFoundInfo` |
 | `-32602` Invalid params: count, missing, unknown or repeated named parameter | a sentence, e.g. `"Named parameter 'b' was not present."` | `string` |
 | `-32602` Invalid params: a value the serializer could not convert | `{"reason":"conversion","parameter":"b","index":1,"expectedType":"int32"}` plus `"message"` when `Config.IncludeExceptionDetails` is on; the value sent is never echoed | `ParameterErrorInfo` (with the serializer's exception in `Cause`) |
-| `-32603` Internal error: the method threw, or a parameter's type is one the serializer cannot handle | `{ClassName, Message, ...}`, see [Exception disclosure](#exception-disclosure) | `Exception` |
+| `-32603` Internal error: the method threw, its result could not be written, or a parameter's type is one the serializer cannot handle | `null`, or the full `ExceptionInfo` when `Config.IncludeExceptionDetails` is on, see [Exception disclosure](#exception-disclosure) | `Exception` |
 
 In the second `-32602` row, "could not convert" means the serializer refused the value (`JsonRpcBindException`, `FormatException`, `OverflowException`, `InvalidCastException`, or any `JsonException` from System.Text.Json or Json.NET); what each serializer accepts (say `"7"` for an `int`) is its own decision, see [docs/serializers.md](docs/serializers.md).
 
@@ -363,7 +363,7 @@ string response = await JsonRpcProcessor.Process("client-42", request, context);
 Handler.DestroySession("client-42");
 ```
 
-Sessions are stored in a process-wide registry. Looking up an unknown session id creates a session that remains until `Handler.DestroySession(sessionId)` is called, and each new id makes every thread refresh its copy of the registry on its next lookup. So a session selector must map to a fixed set of ids: validate and bound ids obtained from routes, headers or other untrusted input, never feed arbitrary client values into one, and destroy tenant- or connection-scoped sessions when their lifetime ends.
+Sessions are stored in a process-wide registry. Binding (`ServiceBinder.BindService`, `BindMethod`, `BindInterface`, a `JsonRpcService` constructor), the per-session `Config` setters and `Handler.GetSessionHandler(sessionId)` create a session; it remains until `Handler.DestroySession(sessionId)` is called. A request for a session id that was never registered creates nothing: every call in it answers `-32601` and the default session's methods are not reachable through it, so an id taken from a route or header cannot grow the registry. Each registration or destruction makes every thread refresh its copy of the registry on its next lookup, so register at startup or when a connection or tenant appears, not per request, and destroy tenant- or connection-scoped sessions when their lifetime ends.
 
 Pass an arbitrary context object through to your methods and read it with `Handler.RpcContext()` or `JsonRpcContext.Current().Value` (the AspNetCore package passes the `HttpContext` or `ConnectionContext`):
 
@@ -405,7 +405,7 @@ Settings live on `Config`. They do not all reach every scope:
 | Serializer | `serializer` argument | `Config.SetSerializer(sessionId, …)` | `Config.SetSerializer(…)` / `Config.Serializer` |
 | `jsonrpc` version policy | | `Config.SetVersionPolicy(sessionId, …)` | `Config.VersionPolicy` |
 | Exception details | | | `Config.IncludeExceptionDetails` |
-| Error, parse-error, pre- and post-process handlers | | yes (see [Handlers](#handlers)) | no: the overloads without a session id set the **default session's** handler |
+| Error, parse-error, pre- and post-process handlers | | `Config.Set…Handler(sessionId, …)` (see [Handlers](#handlers)) | no: the overloads without a session id set the **default session's** handler |
 
 Where more than one scope applies, the narrowest one wins. Context and cancellation are supplied per call.
 
@@ -455,12 +455,12 @@ The default keeps tool harnesses that omit the member working while a client spe
 
 What the library does by default:
 
-- **Exception details are off.** An unhandled exception reaches the client as `-32603` with its type name and message only; the message is always sent, so rewrite sensitive messages in an error handler. `Config.IncludeExceptionDetails = true` adds the stack trace, source, HResult and inner exceptions; use it in development only. See [Exception disclosure](#exception-disclosure).
+- **Exception details are off.** An unhandled exception reaches the client as `-32603` with `data: null`: no type name, no message. `Config.IncludeExceptionDetails = true` sends the type, message, stack trace, source, HResult and inner exceptions; use it in development only. See [Exception disclosure](#exception-disclosure).
 - **Rejected values are not echoed.** A `-32602` conversion error names the parameter and the expected type, never the value sent.
 - **Nesting is limited to 64 levels.** A deeper request is `-32700` before any of your code runs.
 - **Request size is limited on the Kestrel host only.** `MaxRequestBytes` defaults to 4 MB: HTTP answers `413`, a raw connection is aborted. The core itself does not limit document length; that is the transport's job. There is no limit on how many requests a batch holds, no response-size limit and no request deadline; a batch runs sequentially, so a 4 MB batch of small requests ties up one request's worth of server time for all of them.
 - **Every `[JsonRpcMethod]` is callable.** Visibility does not matter (private methods are exposed), and `AddJsonRpcServicesFromAssembly` exposes every class in the assembly that carries the attribute.
-- **Sessions are created on lookup and kept.** An unknown session id creates a session that lives until it is destroyed; see [Sessions and context](#sessions-and-context).
+- **Requests do not create sessions.** An unknown session id answers `-32601` and leaves the registry alone; sessions are created by binding and by the per-session `Config` setters, and live until destroyed; see [Sessions and context](#sessions-and-context).
 - **Cancellation is cooperative.** It waits for a running method and cannot undo what the method already did.
 
 What it leaves to you:
@@ -631,7 +631,7 @@ Most 1.x services run unchanged. Read the first list before you build, and the s
 - **Parse errors.** Requests nested deeper than 64 levels are `-32700` (configurable per serializer, see [Nesting depth](#nesting-depth)). Invalid UTF-8 and non-strict JSON (unless the serializer is lenient) are `-32700` as well.
 - **Batches.** The empty-batch error code is the spec's `-32600` (it was `3200`). Batches made only of notifications produce an empty response instead of `[]` with a dangling comma. A batch always answers with a JSON array when it produces at least one response; a one-request batch is no longer unwrapped to a bare response object.
 - **Notifications.** A notification (a request without an `id`) never gets a wire response, whatever its outcome: method not found, binding failure or an exception in the method produce nothing on the wire (the error handler still runs server-side). An invalid request object is not a notification and still gets `-32600` with `"id":null`.
-- **Exceptions.** Stack traces, sources, HResults and inner exceptions are omitted by default, but the exception type and message are still returned; see [Exception disclosure](#exception-disclosure).
+- **Exceptions.** An unhandled exception is `-32603` with `data: null` by default; 1.x sent the exception's type, message and stack trace. `Config.IncludeExceptionDetails = true` sends the full description; an error handler can author something in between. See [Exception disclosure](#exception-disclosure).
 - **Conversion errors.** A parameter value the serializer cannot convert (`"abc"` for an `int`, `"not-a-guid"` for a `Guid`) is `-32602` with `data = {"reason":"conversion","parameter":…,"index":…,"expectedType":…}`; it was `-32603` with the exception. An exception of the same type thrown inside the method is still `-32603`. A type the built-in serializer cannot handle at all stays `-32603` (now a `NotSupportedException`).
 - **Method not found.** `-32601`'s `data` is `{"method":"<name>"}` instead of the fixed sentence, and a method-not-found error for a notification now reaches the error handler (the wire still gets nothing).
 - **Named parameters.** They are checked against the method's parameter list: a supplied name that matches no parameter, or a name supplied twice, is `-32602` (it used to be ignored, so `optional(int a = 9)` called with `{"typo":4}` returned 9). Defaults fill only the names that are absent.
@@ -644,11 +644,19 @@ Most 1.x services run unchanged. Read the first list before you build, and the s
 - **Binding.** `ServiceBinder.BindMethod(sessionId, name, delegate)` registers any delegate; it refuses a name that is already registered, unlike `Handler.RegisterFuction`, which keeps replacing silently.
 - **Pre-process handlers.** A pre-process handler may replace `JsonRequest.Method`, `Params` or `Id`; the replaced request is what gets dispatched (as in 1.x). Assign a new `Params` value rather than editing the serializer's object model in place: a request the handler leaves untouched is dispatched straight from the request bytes.
 - **Context.** `JsonRpcContext.Current()` / `Handler.RpcContext()` and `JsonRpcContext.SetException` are per invocation: a method that synchronously processes another request through `JsonRpcProcessor` gets its own context and exception state back afterwards.
+- **Sessions.** A request for a session id that was never registered no longer creates the session; it answers `-32601`. Bind services or call `Handler.GetSessionHandler(sessionId)` before serving a session. `Config.SetBeforeProcessHandler(sessionId, …)` is now `Config.SetPreProcessHandler(sessionId, …)` (the old name still compiles, with an obsolete warning), and `Config.SetPostProcessHandler(sessionId, …)` exists.
+- **`JsonRpcService`.** The AspNetCore host binds a subclass to the configured session even when that is the default session; a subclass can pass `base(false)` to skip binding itself.
 - **`Handler.Handle(JsonRequest)`** still works; it round-trips the request through the serializer and the boxed path.
 
 ## Versioning and support
 
-The four 2.x packages are built from one repository and released together at one version number (2.0.0 at this writing); use matching versions. The targets that are tested are the ones listed under [Requirements](#requirements). Breaking changes are listed under [Upgrading from 1.x](#upgrading-from-1x) and in each package's release notes on NuGet. Questions and bugs go to [GitHub issues](https://github.com/Astn/JSON-RPC.NET/issues).
+- **Versioning.** The 2.x packages follow [Semantic Versioning](https://semver.org/) for the public API and the wire behaviour documented here: a breaking change to either arrives only in a new major version.
+- **Releases.** The four packages are built from one repository, carry one version number and are released together; use matching versions. There is no release cadence.
+- **Tested** means the `net8.0` and `net10.0` test runs on Windows and Linux listed under [Requirements](#requirements). Other runtimes can load the `netstandard` assets and are not tested.
+- **Trimming** is unsupported until the library is annotated and that is validated in CI.
+- **1.x** receives no further releases.
+- **Changes** are recorded per version in [CHANGELOG.md](CHANGELOG.md); the NuGet release notes link there.
+- **Vulnerabilities** are reported privately, see [SECURITY.md](SECURITY.md). Questions and bugs go to [GitHub issues](https://github.com/Astn/JSON-RPC.NET/issues).
 
 ## Building
 

@@ -84,7 +84,7 @@ namespace AustinHarris.JsonRpc
             try
             {
                 token.ThrowIfCancellationRequested();
-                var handler = Handler.GetSessionHandler(sessionId);
+                if (!Handler.TryGetSessionHandler(sessionId, out var handler)) handler = Handler.UnknownSessionHandler;
                 serializer = serializer ?? handler.Serializer ?? Config.Serializer;
                 scratch.DocumentLength = document.Length;
                 var reader = scratch.GetReader(serializer);

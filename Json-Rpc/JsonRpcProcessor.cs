@@ -164,7 +164,7 @@ namespace AustinHarris.JsonRpc
 
         private static void ProcessCore(string sessionId, ReadOnlyMemory<byte> document, IBufferWriter<byte> destination, object context, JsonRpcSerializer serializer, Scratch scratch, bool destinationIsScratch = false)
         {
-            var handler = Handler.GetSessionHandler(sessionId);
+            if (!Handler.TryGetSessionHandler(sessionId, out var handler)) handler = Handler.UnknownSessionHandler;
             serializer = serializer ?? handler.Serializer ?? Config.Serializer;
 
             // Always render into the rewindable scratch buffer, then hand the bytes to the caller's writer.

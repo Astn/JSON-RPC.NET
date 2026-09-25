@@ -154,11 +154,25 @@ namespace AustinHarris.JsonRpcTestN
             var s = SerializerCatalog.Create(name);
             var response = Run("{\"method\":\"ed.parses\",\"params\":[\"abc\"],\"id\":1}", s);
             Assert.AreEqual(-32603, (int)response["error"]["code"], "a FormatException thrown by the method is not a binding failure");
-            Assert.AreEqual("System.FormatException", (string)response["error"]["data"]["ClassName"]);
+            Assert.AreEqual(JTokenType.Null, response["error"]["data"].Type, "with details off an unhandled exception is data:null");
 
             response = Run("{\"method\":\"ed.throwsFormat\",\"id\":1}", s);
             Assert.AreEqual(-32603, (int)response["error"]["code"]);
-            Assert.AreEqual("from the method", (string)response["error"]["data"]["Message"]);
+            Assert.AreEqual(JTokenType.Null, response["error"]["data"].Type);
+            StringAssert.DoesNotContain("from the method", response.ToString());
+            StringAssert.DoesNotContain("FormatException", response.ToString());
+
+            try
+            {
+                Config.IncludeExceptionDetails = true;
+                response = Run("{\"method\":\"ed.throwsFormat\",\"id\":1}", s);
+                Assert.AreEqual("System.FormatException", (string)response["error"]["data"]["ClassName"]);
+                Assert.AreEqual("from the method", (string)response["error"]["data"]["Message"]);
+            }
+            finally
+            {
+                Config.IncludeExceptionDetails = false;
+            }
         }
 
         [TestCaseSource(nameof(Serializers))]
@@ -271,9 +285,12 @@ namespace AustinHarris.JsonRpcTestN
             try
             {
                 ServiceBinder.BindMethod(session, "takesDelegate", new Func<Action, int>(a => 1));
+                Exception seen = null;
+                Config.SetErrorHandler(session, (request, error) => { seen = error.data as Exception; return error; });
                 var response = JObject.Parse(JsonRpcProcessor.ProcessSync(session, "{\"method\":\"takesDelegate\",\"params\":[{}],\"id\":1}", null, SerializerCatalog.Create("jsmn")));
                 Assert.AreEqual(-32603, (int)response["error"]["code"], response.ToString());
-                Assert.AreEqual("System.NotSupportedException", (string)response["error"]["data"]["ClassName"]);
+                Assert.AreEqual(JTokenType.Null, response["error"]["data"].Type, "redacted on the wire");
+                Assert.IsInstanceOf<NotSupportedException>(seen, "the handler sees why");
             }
             finally
             {
