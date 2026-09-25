@@ -46,6 +46,7 @@ behaviour: a breaking change to either means a new major version.
 
 - The `JsonSerializerSettings` overloads of `JsonRpcProcessor.Process*` (pass a serializer instead; the Newtonsoft package has settings-based helpers).
 - Json.NET attributes on `JsonRequest`, `JsonResponse` and `JsonRpcException`.
+- The 1.x projects that 2.0 did not build: `AustinHarris.JsonRpc.Client`, `AustinHarris.JsonRpc.AspNet`, the Windows Phone 7 client, `JsonRpcTest` and `TestClient`. They were .NET Framework 4.0 `packages.config` projects outside the solution, referencing packages with open advisories; their source is in the git history before 2.0.
 
 ### Fixed
 
