@@ -1,6 +1,8 @@
 using System;
 using AustinHarris.JsonRpc.Serialization;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace AustinHarris.JsonRpc.AspNetCore
 {
@@ -27,6 +29,26 @@ namespace AustinHarris.JsonRpc.AspNetCore
         /// Defaults to the <see cref="HttpContext"/> itself for HTTP and the connection context for raw connections.
         /// </summary>
         public Func<HttpContext, object> ContextFactory { get; set; }
+
+        /// <summary>
+        /// Finds the <see cref="IServiceProvider"/> that scoped and transient services (see
+        /// <c>AddJsonRpcService&lt;T&gt;(ServiceLifetime)</c>) are resolved from, given the RPC context of the request
+        /// (what <see cref="JsonRpcContext.Current"/> returns). Without one, the host handles an <see cref="HttpContext"/>
+        /// (its <c>RequestServices</c>) and a raw <see cref="ConnectionContext"/> (the scope the connection handler opens
+        /// per document, published as <see cref="IServiceProvidersFeature"/>). Required when <see cref="ContextFactory"/>
+        /// produces anything else and a non-singleton service is registered: the host refuses to start, and
+        /// <c>MapJsonRpc(pattern, options)</c> refuses to map, otherwise. A selector that returns null falls through to
+        /// the built-in one; when no provider is found the call fails with <c>-32603</c>. The root provider is never used.
+        /// </summary>
+        public Func<object, IServiceProvider> ServiceProviderSelector { get; set; }
+
+        /// <summary>The built-in selection: the HTTP request's services, or the per-document scope of a raw connection.</summary>
+        internal static IServiceProvider DefaultServiceProviderSelector(object context)
+        {
+            if (context is HttpContext http) return http.RequestServices;
+            if (context is ConnectionContext connection) return connection.Features.Get<IServiceProvidersFeature>()?.RequestServices;
+            return null;
+        }
 
         /// <summary>Largest request body accepted, in bytes. Larger bodies get 413. Default 4 MB.</summary>
         public long MaxRequestBytes { get; set; } = 4 * 1024 * 1024;

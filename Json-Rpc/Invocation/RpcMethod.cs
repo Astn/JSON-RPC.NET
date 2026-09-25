@@ -122,6 +122,63 @@ namespace AustinHarris.JsonRpc.Invocation
         }
 
         /// <summary>
+        /// Builds the invokers for an instance method whose receiver is produced per invocation. Right before the
+        /// method body runs, <paramref name="resolve"/> is called once with the RPC context of the request being
+        /// served (what <see cref="Handler.RpcContext"/> returns) and must answer with an instance of
+        /// <paramref name="serviceType"/>. This is the seam for container-managed lifetimes: the resolver can look
+        /// the request's scope up through the context and return a scoped or transient service. Nothing is cached
+        /// or disposed here. A static method keeps a null receiver and never resolves. A null result or another
+        /// type is an <see cref="InvalidOperationException"/> naming the service type, answered as <c>-32603</c>.
+        /// </summary>
+        public static RpcMethod FromMethod(string name, MethodInfo method, Type serviceType, Func<object, object> resolve, string[] parameterNames = null, RpcContextFlow contextFlow = RpcContextFlow.None)
+        {
+            if (method == null) throw new ArgumentNullException(nameof(method));
+            if (serviceType == null) throw new ArgumentNullException(nameof(serviceType));
+            if (resolve == null) throw new ArgumentNullException(nameof(resolve));
+            if (serviceType.ContainsGenericParameters)
+                throw new ArgumentException("JSON-RPC method '" + name + "': the service type '" + serviceType + "' is not a closed type.", nameof(serviceType));
+            if (!method.DeclaringType.IsAssignableFrom(serviceType))
+                throw new ArgumentException("JSON-RPC method '" + name + "' is declared by '" + method.DeclaringType + "', which '" + serviceType + "' is not.", nameof(serviceType));
+            if (method.IsStatic) return FromMethod(name, method, null, parameterNames, contextFlow);
+            RejectAsyncReturnType(name, method);
+            var ps = method.GetParameters();
+            // (TService)ResolveReceiver(resolve, name): evaluated once per invocation. The arguments are read into
+            // locals first, so a request the serializer refuses (-32602) never resolves a service.
+            var receiver = Expression.Call(ResolveReceiverGeneric.MakeGenericMethod(serviceType), Expression.Constant(resolve), Expression.Constant(name));
+            return Build(name, ps, method.ReturnType, parameterNames, args => CallAfterArguments(receiver, method, args), contextFlow: contextFlow);
+        }
+
+        private static Expression CallAfterArguments(Expression receiver, MethodInfo method, Expression[] args)
+        {
+            var locals = new List<ParameterExpression>();
+            var body = new List<Expression>();
+            var passed = new Expression[args.Length];
+            for (int i = 0; i < args.Length; i++)
+            {
+                // a variable (ref JsonRpcException, the cancellation token) is passed through as it is
+                if (args[i] is ParameterExpression) { passed[i] = args[i]; continue; }
+                var local = Expression.Variable(args[i].Type, "arg" + i);
+                locals.Add(local);
+                body.Add(Expression.Assign(local, args[i]));
+                passed[i] = local;
+            }
+            body.Add(Expression.Call(receiver, method, passed));
+            return locals.Count == 0 ? body[0] : Expression.Block(locals, body);
+        }
+
+        private static readonly MethodInfo ResolveReceiverGeneric = typeof(RpcMethod).GetMethod(nameof(ResolveReceiver), BindingFlags.NonPublic | BindingFlags.Static);
+
+        /// <summary>The per-invocation receiver of a factory-bound method: the resolver gets the ambient RPC context and must answer with a <typeparamref name="T"/>.</summary>
+        private static T ResolveReceiver<T>(Func<object, object> resolve, string name)
+        {
+            var instance = resolve(Handler.RpcContext());
+            if (instance is T typed) return typed;
+            throw new InvalidOperationException(instance == null
+                ? "JSON-RPC method '" + name + "': the service resolver returned null instead of an instance of '" + typeof(T) + "'."
+                : "JSON-RPC method '" + name + "': the service resolver returned a '" + instance.GetType() + "', not an instance of '" + typeof(T) + "'.");
+        }
+
+        /// <summary>
         /// Builds the invokers for an interface contract method dispatched to its implementation on <paramref name="target"/>.
         /// The contract supplies the parameter list, names, defaults and return type; the call is compiled against the
         /// implementation method with the receiver typed as the exact implementation type.

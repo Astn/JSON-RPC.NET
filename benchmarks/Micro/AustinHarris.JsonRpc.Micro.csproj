@@ -19,6 +19,8 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.15.4" />
+    <!-- LifetimeBenchmarks only: a real container scope around a document, as the AspNetCore host creates it -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,6 +2,8 @@ using System;
 using System.Threading.Tasks;
 using AustinHarris.JsonRpc.Serialization;
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AustinHarris.JsonRpc.AspNetCore
 {
@@ -35,26 +37,42 @@ namespace AustinHarris.JsonRpc.AspNetCore
                                 return;
                             }
                             reply.Clear();
-                            var pending = JsonRpcProcessor.ProcessAsync(session, document, reply, connection, _options.Serializer, token);
-                            if (!pending.IsCompleted && wrote)
+                            // The document's service scope, when a scoped or transient service is bound: published for
+                            // the duration of the document and disposed asynchronously after its last response is
+                            // written, which is after the running operation has been awaited on every path below.
+                            var scope = _scopes == null ? default : _scopes.CreateAsyncScope();
+                            if (_scopes != null) connection.Features.Set<IServiceProvidersFeature>(new ServiceProvidersFeature { RequestServices = scope.ServiceProvider });
+                            try
                             {
-                                bool closed = false;
-                                try
+                                var pending = JsonRpcProcessor.ProcessAsync(session, document, reply, connection, _options.Serializer, token);
+                                if (!pending.IsCompleted && wrote)
                                 {
-                                    var flush = await output.FlushAsync(token).ConfigureAwait(false);
-                                    closed = flush.IsCompleted || flush.IsCanceled;
-                                    wrote = false;
+                                    bool closed = false;
+                                    try
+                                    {
+                                        var flush = await output.FlushAsync(token).ConfigureAwait(false);
+                                        closed = flush.IsCompleted || flush.IsCanceled;
+                                        wrote = false;
+                                    }
+                                    finally
+                                    {
+                                        // Even a failed flush cannot release the input or reply while invocation runs.
+                                        await pending.ConfigureAwait(false);
+                                    }
+                                    if (closed) return;
                                 }
-                                finally
-                                {
-                                    // Even a failed flush cannot release the input or reply while invocation runs.
-                                    await pending.ConfigureAwait(false);
-                                }
-                                if (closed) return;
+                                else await pending.ConfigureAwait(false);
+                                token.ThrowIfCancellationRequested();
+                                if (reply.WrittenCount != 0) { reply.CopyTo(output); wrote = true; }
                             }
-                            else await pending.ConfigureAwait(false);
-                            token.ThrowIfCancellationRequested();
-                            if (reply.WrittenCount != 0) { reply.CopyTo(output); wrote = true; }
+                            finally
+                            {
+                                if (_scopes != null)
+                                {
+                                    connection.Features.Set<IServiceProvidersFeature>(null);
+                                    await scope.DisposeAsync().ConfigureAwait(false);
+                                }
+                            }
                         }
                         if (wrote)
                         {
