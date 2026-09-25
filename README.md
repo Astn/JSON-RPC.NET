@@ -1,6 +1,6 @@
 # JSON-RPC.Net
 
-![Build Master](https://github.com/Astn/JSON-RPC.NET/workflows/Build%20Master/badge.svg) ![NuGet](https://img.shields.io/nuget/v/AustinHarris.JsonRpc)
+![Build Master](https://github.com/Astn/JSON-RPC.NET/workflows/Build%20Master/badge.svg) ![NuGet](https://img.shields.io/nuget/v/AustinHarris.JsonRpc) ![NuGet preview](https://img.shields.io/nuget/vpre/AustinHarris.JsonRpc?label=preview)
 
 JSON-RPC.Net is a [JSON-RPC 2.0](https://www.jsonrpc.org/specification) server for .NET. You give it a request document and it gives you the response document, bytes in and bytes out; the transport is yours. Host it in Kestrel, a console app, sockets, pipes, or a Blazor WebAssembly page.
 
