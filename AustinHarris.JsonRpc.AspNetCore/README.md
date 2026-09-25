@@ -75,16 +75,16 @@ app.MapJsonRpc("/legacy", new JsonRpcOptions { SessionId = "legacy-clients", Ser
 ## Services and lifetime
 
 `AddJsonRpcService<T>()` registers `T` as a singleton unless `T` is already registered. When the host starts,
-each registered service is resolved once from the root container and bound; that one instance then serves every
-HTTP request and every raw connection, concurrently. So `T` and its dependencies must be thread-safe, and `T`
-cannot take scoped dependencies such as an EF Core `DbContext`: with scope validation on, the host fails at
-startup; with it off, the dependency leaks. For per-request services, resolve them inside the method from
-`((HttpContext)Handler.RpcContext()).RequestServices` on HTTP; a raw connection's context is the
-`ConnectionContext`, which has no request scope. Do not inject request-scoped state into a service; read
-per-request data from the context instead.
+it resolves each registered service once from the root container and binds it. That one instance then serves
+every HTTP request and every raw connection concurrently. So `T` and its dependencies must be thread-safe.
+`T` cannot take scoped dependencies such as an EF Core `DbContext`. With scope validation on, the host fails
+at startup. With it off, the dependency leaks. On HTTP, resolve per-request services inside the method from
+`((HttpContext)Handler.RpcContext()).RequestServices`. A raw connection's context is the
+`ConnectionContext`, which has no request scope. Do not inject request-scoped state into a service.
+Read per-request data from the context instead.
 
 `AddJsonRpcServicesFromAssembly(assembly)` does the same for every non-abstract class in the assembly that
-declares a `[JsonRpcMethod]`. Private methods count, so the attribute is the whole access list, and an MVC
+declares a `[JsonRpcMethod]`. Private methods count, so the attribute is the whole access list. An MVC
 controller that carries it becomes a singleton too.
 
 The host binds every registered service to its effective session: the session given to `AddJsonRpcService`, else
@@ -123,13 +123,13 @@ invoked.
 
 - **HTTP:** the call is cancelled when the client disconnects (`HttpContext.RequestAborted`). Notifications are
   awaited and still answer `204`. The body reader stays leased until the invocation finishes.
-- **Raw connections:** documents are processed one at a time, in order, so 256 pipelined requests on one
-  connection are 256 sequential invocations, not 256 concurrent suspensions; concurrency comes from connections.
+- **Raw connections:** documents are processed one at a time, in order. On one connection, 256 pipelined requests
+  are 256 sequential invocations, not 256 concurrent suspensions. Concurrency comes from connections.
   Replies already finished are flushed before the connection waits on a slow method. When the connection closes,
-  the running method is waited for and its response discarded.
-- **Cost:** every document then goes through `ProcessAsync`. With methods that complete inline the TCP row measures
-  about 7 % below the synchronous mode (15.4 M against 16.5 M); a method that really suspends pays its own async state plus the
-  library's completion state (about 560 B) and a continuation per request. The main README's Kestrel table has
+  the handler waits for the running method to finish and discards its response.
+- **Cost:** every document then goes through `ProcessAsync`. With methods that complete inline, the TCP row measures
+  about 7 % below the synchronous mode (15.4 M against 16.5 M). A method that suspends pays for its own async state,
+  the library's completion state (about 560 B) and a continuation per request. The main README's Kestrel table has
   both rows, measured with `TestServer_Console --kestrel 3 async`.
 
 A method receives the token by declaring a `[JsonRpcCancellation] CancellationToken` parameter; see
