@@ -4,7 +4,7 @@
         <Company>Austin Harris</Company>
         <Authors>Austin Harris</Authors>
         <Product>Json-Rpc.Net Core</Product>
-        <Description>JSON-RPC.Net is a high performance JSON-RPC 2.0 server for .NET Standard 2.0+ and modern .NET. Bytes in, bytes out, no dependencies; plug in Json.NET or System.Text.Json with the companion packages. Host it in ASP.NET Core / Kestrel, a console app, sockets, pipes - anything that can hand you UTF-8 or a string.</Description>
+        <Description>JSON-RPC.Net is a high performance JSON-RPC 2.0 server for .NET Standard 2.0+ and modern .NET. Bytes in, bytes out, no JSON library dependency: the built-in serializer needs nothing, and Json.NET or System.Text.Json plug in through the companion packages. Host it in ASP.NET Core / Kestrel, a console app, sockets, pipes - anything that can hand you UTF-8 or a string.</Description>
         <VersionPrefix>2.0.0</VersionPrefix>
         <VersionSuffix>$(VersionSuffix)</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
@@ -14,31 +14,7 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageTags>json-rpc;jsonrpc;json;rpc;server;netstandard;kestrel;pipelines;system.text.json;json.net;fast</PackageTags>
-        <PackageReleaseNotes>
-            2.0.0
-            - ServiceBinder.BindInterface registers interface trees atomically, with contract naming, filtering, defaults and ownership-aware disposal.
-            - ProcessAsync awaits Task and ValueTask methods with typed result writing, sequential batches and cooperative cancellation.
-            - Ambient context does not flow across awaits by default (RpcContextFlow.None); RpcContextFlow.Flow opts a method in. JsonRpcCancellation injects the processor token.
-            - Kestrel EnableAsyncMethods enables asynchronous HTTP and ordered raw-connection processing.
-            - The core no longer depends on Json.NET. Serializers are pluggable (AustinHarris.JsonRpc.Serialization.JsonRpcSerializer);
-              the built-in jsmn serializer is the default, Json.NET and System.Text.Json ship as companion packages.
-            - Byte-first pipeline: ReadOnlySequence/ReadOnlyMemory in, IBufferWriter out (System.IO.Pipelines / Kestrel friendly);
-              string overloads remain. Parameters bind straight from the request bytes through compiled invokers.
-            - Breaking: JsonSerializerSettings overloads moved to the Json.NET package (pass a serializer instead);
-              JsonRequest/JsonResponse/JsonRpcException no longer carry Json.NET attributes; SMD type descriptors are plain dictionaries.
-            - Batch fixes: a trailing notification no longer leaves a dangling comma; an all-notification batch returns nothing.
-            - The request id is available inside a method (Handler.RpcRequestId / JsonRpcContext.CurrentRequestId, kind and raw bytes), read on demand at no cost to methods that do not ask.
-            - A parameter value the serializer cannot convert is -32602 with structured data naming the parameter (it was -32603);
-              -32601 names the requested method in its data; async void methods are rejected at registration.
-            - ServiceBinder.BindMethod registers any delegate as a method without attributes or a service class.
-
-            1.3.0
-            - Targets netstandard2.0, netstandard2.1, net8.0 and net10.0 (drops EOL netcoreapp3.1; netstandard2.0 still covers it)
-            - Newtonsoft.Json 13.0.4 (fixes GHSA-5crp-9r3c-p9vr in 12.0.3)
-            - Lock-free session handler registry via NonBlocking.ConcurrentDictionary
-            - Packaging moved fully to the SDK-style csproj: MIT license expression, README in package, repository metadata
-            - Closes out the .NET Standard work from PR #90 / issue #89 - @astn https://github.com/astn
-        </PackageReleaseNotes>
+        <PackageReleaseNotes>https://github.com/Astn/JSON-RPC.NET/blob/master/CHANGELOG.md</PackageReleaseNotes>
         <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net10.0</TargetFrameworks>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -46,10 +22,8 @@
 
     <ItemGroup>
         <None Include="..\README.md" Pack="true" PackagePath="\" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="NonBlocking" Version="2.1.2" />
+        <InternalsVisibleTo Include="AustinHarris.JsonRpcTestN" />
+        <InternalsVisibleTo Include="AustinHarris.JsonRpc.Micro" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'netstandard2.1'">

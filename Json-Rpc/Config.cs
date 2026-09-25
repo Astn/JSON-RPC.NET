@@ -86,39 +86,57 @@ namespace AustinHarris.JsonRpc
         }
 
         /// <summary>
-        /// Sets the the PreProcessing Handler on the default session.
+        /// Sets the pre-process handler of the default session only; other sessions do not inherit it.
         /// </summary>
-        /// <param name="handler"></param>
+        /// <param name="handler">The handler, or null to clear it.</param>
         public static void SetPreProcessHandler(PreProcessHandler handler)
         {
             Handler.DefaultHandler.SetPreProcessHandler(handler);
         }
 
         /// <summary>
-        /// Sets the the PostProcessing Handler on the default session.
+        /// Sets the post-process handler of the default session only; other sessions do not inherit it.
         /// </summary>
-        /// <param name="handler"></param>
+        /// <param name="handler">The handler, or null to clear it.</param>
         public static void SetPostProcessHandler(PostProcessHandler handler)
         {
             Handler.DefaultHandler.SetPostProcessHandler(handler);
         }
 
         /// <summary>
-        /// Sets the PreProcessing Handler on a specific session
+        /// Sets the pre-process handler of one session. Null clears that session's handler; no other session is affected.
         /// </summary>
-        /// <param name="sessionId"></param>
-        /// <param name="handler"></param>
-        public static void SetBeforeProcessHandler(string sessionId, PreProcessHandler handler)
+        /// <param name="sessionId">The session; it is created when it does not exist yet.</param>
+        /// <param name="handler">The handler, or null to clear it.</param>
+        public static void SetPreProcessHandler(string sessionId, PreProcessHandler handler)
         {
             Handler.GetSessionHandler(sessionId).SetPreProcessHandler(handler);
+        }
+
+        /// <summary>
+        /// Sets the post-process handler of one session. Null clears that session's handler; no other session is affected.
+        /// </summary>
+        /// <param name="sessionId">The session; it is created when it does not exist yet.</param>
+        /// <param name="handler">The handler, or null to clear it.</param>
+        public static void SetPostProcessHandler(string sessionId, PostProcessHandler handler)
+        {
+            Handler.GetSessionHandler(sessionId).SetPostProcessHandler(handler);
+        }
+
+        /// <summary>The former name of <see cref="SetPreProcessHandler(string, PreProcessHandler)"/>.</summary>
+        [Obsolete("Use SetPreProcessHandler(sessionId, handler).")]
+        public static void SetBeforeProcessHandler(string sessionId, PreProcessHandler handler)
+        {
+            SetPreProcessHandler(sessionId, handler);
         }
 
         /// <summary>
         /// For exceptions thrown after the routed method has been called.
         /// Allows you to specify an error handler that will be invoked prior to returning the JsonResponse to the client.
         /// You are able to modify the error that is returned inside the provided handler.
+        /// Applies to the default session only; other sessions do not inherit it.
         /// </summary>
-        /// <param name="handler"></param>
+        /// <param name="handler">The handler, or null to clear it.</param>
         public static void SetErrorHandler(Func<JsonRequest, JsonRpcException, JsonRpcException> handler)
         {
             Handler.DefaultHandler.SetErrorHandler(handler);
@@ -140,8 +158,9 @@ namespace AustinHarris.JsonRpc
         /// For exceptions thrown during parsing and prior to a routed method being called.
         /// Allows you to specify an error handler that will be invoked prior to returning the JsonResponse to the client.
         /// You are able to modify the error that is returned inside the provided handler.
+        /// Applies to the default session only; other sessions do not inherit it.
         /// </summary>
-        /// <param name="handler"></param>
+        /// <param name="handler">The handler, or null to clear it.</param>
         public static void SetParseErrorHandler(Func<string,JsonRpcException,JsonRpcException> handler)
         {
             Handler.DefaultHandler.SetParseErrorHandler(handler);

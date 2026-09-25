@@ -194,7 +194,7 @@ namespace AustinHarris.JsonRpcTestN
 
         // ------------------------------------------------------------------ DI binding honours JsonRpcOptions.SessionId
 
-        /// <summary>A JsonRpcService subclass built by DI: its base constructor binds it to the default session.</summary>
+        /// <summary>A JsonRpcService subclass built by DI: its base constructor binds it to the default session, and the host binds it to the configured one as well.</summary>
         public class TenantAutoService : JsonRpcService
         {
             [JsonRpcMethod("tenant.ping")]
@@ -242,6 +242,46 @@ namespace AustinHarris.JsonRpcTestN
                 // the plain service is not exposed in the default session
                 var defaultResponse = await PostAsync(@"{""jsonrpc"":""2.0"",""method"":""tenant.echo"",""params"":[""t""],""id"":3}");
                 StringAssert.Contains("-32601", await defaultResponse.Content.ReadAsStringAsync());
+            }
+            finally
+            {
+                await app.StopAsync();
+                await app.DisposeAsync();
+                Handler.DestroySession(session);
+            }
+        }
+
+        /// <summary>A JsonRpcService subclass that does not bind itself: the host is its only binder.</summary>
+        public class TenantUnboundService : JsonRpcService
+        {
+            public TenantUnboundService() : base(false) { }
+
+            [JsonRpcMethod("tenant.unbound")]
+            public int Unbound() => 9;
+        }
+
+        [Test]
+        public async Task Http_JsonRpcServiceSubclass_WithoutAutoBind_IsBoundOnlyToTheConfiguredSession()
+        {
+            const string session = "aspnetcore-tenant-unbound";
+            var builder = WebApplication.CreateBuilder();
+            builder.Logging.ClearProviders();
+            builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Loopback, 0));
+            builder.Services.AddJsonRpc(o => o.SessionId = session);
+            builder.Services.AddJsonRpcService<TenantUnboundService>();
+
+            var app = builder.Build();
+            app.MapJsonRpc("/rpc");
+            await app.StartAsync();
+            try
+            {
+                var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>().Addresses.First();
+                using var http = new HttpClient { BaseAddress = new Uri(address) };
+                var response = await http.PostAsync("/rpc", new StringContent(@"{""jsonrpc"":""2.0"",""method"":""tenant.unbound"",""id"":1}", Encoding.UTF8, "application/json"));
+                Assert.AreEqual("{\"jsonrpc\":\"2.0\",\"result\":9,\"id\":1}", await response.Content.ReadAsStringAsync());
+
+                Assert.IsTrue(Handler.GetSessionHandler(session).MetaData.Services.ContainsKey("tenant.unbound"));
+                Assert.IsFalse(Handler.DefaultHandler.MetaData.Services.ContainsKey("tenant.unbound"), "base(false) keeps it off the default session");
             }
             finally
             {

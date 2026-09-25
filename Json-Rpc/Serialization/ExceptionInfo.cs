@@ -43,10 +43,14 @@ namespace AustinHarris.JsonRpc.Serialization
             };
         }
 
-        /// <summary>The description sent to a client in <c>error.data</c>, governed by <see cref="Config.IncludeExceptionDetails"/>.</summary>
+        /// <summary>
+        /// The description sent to a client in <c>error.data</c>: the full description when
+        /// <see cref="Config.IncludeExceptionDetails"/> is true, otherwise null, because an unhandled exception is
+        /// then answered with <c>data: null</c>.
+        /// </summary>
         public static ExceptionInfo ForResponse(Exception ex)
         {
-            return From(ex, Config.IncludeExceptionDetails);
+            return Config.IncludeExceptionDetails ? From(ex, true) : null;
         }
     }
 }

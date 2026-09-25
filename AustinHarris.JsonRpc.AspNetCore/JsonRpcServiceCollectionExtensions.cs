@@ -88,17 +88,14 @@ namespace AustinHarris.JsonRpc.AspNetCore
 
             public Task StartAsync(CancellationToken cancellationToken)
             {
-                string defaultSession = Handler.DefaultSessionId();
                 foreach (var r in _registrations)
                 {
                     var instance = _provider.GetRequiredService(r.Type);
                     // The effective session: the registration's own, then JsonRpcOptions.SessionId, then the default.
-                    var session = r.SessionId ?? _options.SessionId ?? defaultSession;
-                    // A JsonRpcService subclass already bound itself in its constructor, to the default session
-                    // (parameterless base constructor). Bind it here whenever the effective session is a different
-                    // one, otherwise the configured session would answer -32601 for it; rebinding the same
-                    // instance to the same session is harmless (the method table entry is replaced).
-                    if (instance is JsonRpcService && session == defaultSession) continue;
+                    var session = r.SessionId ?? _options.SessionId ?? Handler.DefaultSessionId();
+                    // Always bind, whatever the type: attribute binding replaces entries by name, so binding a
+                    // JsonRpcService subclass that already bound itself to the default session is harmless, and a
+                    // subclass constructed with base(false) is bound nowhere else.
                     ServiceBinder.BindService(session, instance);
                 }
                 return Task.CompletedTask;
