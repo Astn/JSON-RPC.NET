@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="940" height="484" viewBox="0 0 940 484" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="f09766b21195">
-<title>JSON-RPC.Net vs StreamJsonRpc vs gRPC for .NET, 16 connections</title><desc>Same five calls, same Kestrel, 16 connections or channels with 256 requests in flight each, two 3 s runs. Every request carries &quot;jsonrpc&quot;:&quot;2.0&quot; (StreamJsonRpc requires it). Intervals span the runs; a dot is a single value. Data revision f09766b21195.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="484" viewBox="0 0 940 484" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="eacac12e8d55">
+<title>JSON-RPC.Net vs StreamJsonRpc vs gRPC for .NET, 16 connections</title><desc>Same five calls, same Kestrel, 16 connections or channels with 256 requests in flight each, two 3 s runs. Every request carries &quot;jsonrpc&quot;:&quot;2.0&quot; (StreamJsonRpc requires it). Intervals span the runs; a dot is a single value. Data revision eacac12e8d55.</desc>
 <rect width="940" height="484" rx="10" fill="#0d1117" stroke="#30363d"/>
 <text x="24.0" y="32.0" text-anchor="start" font-size="18" fill="#f0f6fc" font-weight="600">JSON-RPC.Net vs StreamJsonRpc vs gRPC for .NET, 16 connections</text>
 <text x="24.0" y="54.0" text-anchor="start" font-size="12" fill="#9da7b3">Same five calls, same Kestrel, 16 connections or channels with 256 requests in flight each, two 3 s runs.</text>

@@ -567,7 +567,7 @@ def chart_specs(data):
         ("sync-threads", scaling_chart, sets["sync"],
          ["Byte entry point in a loop, no scheduler, no transport. Ryzen 7 7800X3D, .NET 10, Server GC, two sweeps on an idle box."]),
         ("kestrel-transports", interval_chart, sets["kestrel"],
-         ["AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, 16 clients on the server's 8 cores, two 3 s runs.",
+         ["AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, 16 clients on the server's 8 cores; three 3 s runs, two for the async rows.",
           "HTTP clients await one POST at a time; TCP keeps 256 requests in flight per connection."]),
         ("compare-streamjsonrpc", interval_chart, sets["compare"],
          ["Same five calls, same Kestrel, 16 connections or channels with 256 requests in flight each, two 3 s runs.",

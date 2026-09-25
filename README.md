@@ -4,7 +4,7 @@
 
 JSON-RPC.Net is a [JSON-RPC 2.0](https://www.jsonrpc.org/specification) server for .NET. You give it a request document and it gives you the response document, bytes in and bytes out; the transport is yours. Host it in Kestrel, a console app, sockets, pipes, or a Blazor WebAssembly page.
 
-Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer pluggable. The core depends on no JSON library: Json.NET and System.Text.Json ship as separate packages, and the built-in serializer needs neither. On one core it answers a small request in about 217 ns, with no allocation for numeric parameters. The library alone answers over 30 million requests per second on an 8-core desktop, ten times what 1.2.3 does on the same machine. Over pipelined TCP, a Kestrel host answers over 15 million requests per second. [Benchmarks](#benchmarks) gives the method and the full tables.
+Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer pluggable. The core depends on no JSON library: Json.NET and System.Text.Json ship as separate packages, and the built-in serializer needs neither. On one core it answers a small request in about 214 ns, with no allocation for numeric parameters. The library alone answers over 30 million requests per second on an 8-core desktop, ten times what 1.2.3 does on the same machine. Over pipelined TCP, a Kestrel host answers 14.3 M to 16.5 M requests per second. [Benchmarks](#benchmarks) gives the method and the full tables.
 
 ## Performance
 
@@ -22,7 +22,7 @@ Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer
 | 2.0, `Process(bytes)`, 16 dedicated threads | 31.7 M | 10.3× |
 | 2.0, `ProcessAsync(bytes)`, 16 awaited workers | 32.1 M | 10.4× |
 
-The request path uses a span tokenizer over the UTF-8 bytes and invokers compiled against the concrete reader and writer. It writes the response straight into a pooled buffer, with no `Task`, result string or continuation per request. A numeric request never touches the GC. Over Kestrel TCP, the AspNetCore package holds 15.2 M to 15.5 M with 256 requests in flight per connection. [Benchmarks](#benchmarks) has the full tables, conditions and day-to-day ranges. The [explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) has the exact values. `benchmarks/Baseline` re-runs the 1.2.3 row from NuGet with the same loop as the 2.0 harness.
+The request path uses a span tokenizer over the UTF-8 bytes and invokers compiled against the concrete reader and writer. It writes the response straight into a pooled buffer, with no `Task`, result string or continuation per request. A numeric request never touches the GC. Over Kestrel TCP, the AspNetCore package holds 14.3 M to 16.5 M with 256 requests in flight per connection. [Benchmarks](#benchmarks) has the full tables, conditions and day-to-day ranges. The [explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) has the exact values. `benchmarks/Baseline` re-runs the 1.2.3 row from NuGet with the same loop as the 2.0 harness.
 
 
 It is a server only. There are no client proxies and no server-to-client calls. If you need a bidirectional RPC framework, look at [StreamJsonRpc](https://www.nuget.org/packages/StreamJsonRpc); the benchmarks compare the two.
@@ -498,17 +498,17 @@ The `jsonrpc` member policy (`Lenient` by default) is a compatibility setting, n
 
 | What | API and mode | RPC/s | Details |
 | --- | --- | ---: | --- |
-| Library alone, 16 threads | `Process(bytes)`, dedicated threads | 30.6 M to 35.8 M | [Sync](#sync-the-library-alone) |
+| Library alone, 16 threads | `Process(bytes)`, dedicated threads | 31.7 M to 36.4 M | [Sync](#sync-the-library-alone) |
 | Library alone, 16 workers | `ProcessAsync(bytes)`, awaited workers, methods that complete inline | 22.2 M to 32.1 M | [Async](#async-processasync-awaited-workers); the spread is across registrations, not runs |
 | Library alone, 16 workers, one real suspension per request | `ProcessAsync(bytes)`, `yieldsOnce` | 8.96 M | |
-| Kestrel TCP, 256 pipelined | `EnableAsyncMethods = false` | 15.2 M to 15.5 M | [Kestrel](#kestrel-through-the-aspnetcore-package) |
-| Kestrel TCP, 256 pipelined | `EnableAsyncMethods = true`, methods that complete inline | 15.4 M | |
-| Kestrel TCP, 256 pipelined | `EnableAsyncMethods = true`, methods that suspend once | 1.29 M | |
-| Kestrel HTTP, batch of 100 per POST | `EnableAsyncMethods = false` | 12.7 M to 13.7 M | |
-| Kestrel HTTP, one request per POST | `EnableAsyncMethods = false` | 128 k to 168 k | HTTP/1.1 round trips dominate |
-| Legacy string API, thread pool | `Task<string> Process(string)`, batches of 36,000 | 12.0 M | [Legacy](#legacy-string-api-scheduled-synchronous-execution); the 1.x overloads, not the byte path |
+| Kestrel TCP, 256 pipelined | `EnableAsyncMethods = false` | 14.3 M to 16.5 M | [Kestrel](#kestrel-through-the-aspnetcore-package) |
+| Kestrel TCP, 256 pipelined | `EnableAsyncMethods = true`, methods that complete inline | 15.0 M to 15.4 M | |
+| Kestrel TCP, 256 pipelined | `EnableAsyncMethods = true`, methods that suspend once | 1.25 M to 1.29 M | |
+| Kestrel HTTP, batch of 100 per POST | `EnableAsyncMethods = false` | 12.8 M to 14.5 M | |
+| Kestrel HTTP, one request per POST | `EnableAsyncMethods = false` | 123 k to 182 k | HTTP/1.1 round trips dominate |
+| Legacy string API, thread pool | `Task<string> Process(string)`, batches of 6,000 | 12.4 M to 13.3 M | [Legacy](#legacy-string-api-scheduled-synchronous-execution); the 1.x overloads, not the byte path |
 
-All numbers below are from an AMD Ryzen 7 7800X3D (8 cores / 16 threads, 4.2 GHz), 64 GB, Windows 11, .NET 10, Release, Server GC, with the built-in serializer. They were measured 2026-09-23, except the `ProcessAsync` rows and the `EnableAsyncMethods = true` rows, which were measured 2026-09-25 on the same idle machine with one 3 s run per row. Where a row gives two figures, they show the spread over that day's runs on an otherwise idle machine. The WSL virtual machine takes 15 to 25 % of the box when idle and was shut down for the Kestrel and comparison runs. A single benchmark thread on this machine varies with whatever else lands on its core's SMT sibling, so the 1-thread rows are from runs on an idle core.
+All numbers below are from an AMD Ryzen 7 7800X3D (8 cores / 16 threads, 4.2 GHz), 64 GB, Windows 11, .NET 10, Release, Server GC, with the built-in serializer, measured 2026-09-25 on an idle machine. The exceptions are the StreamJsonRpc and gRPC comparison, the connection sweep and the WebAssembly rows, which carry their own dates. Where a row gives two figures, they are the low and high over that day's runs: three runs for the Sync, Legacy and default-mode Kestrel rows, two for the `EnableAsyncMethods = true` rows. A single figure is one 3 s run. The WSL virtual machine takes 15 to 25 % of the box when idle and was shut down for the comparison runs. A single benchmark thread on this machine varies with whatever else lands on its core's SMT sibling, so the 1-thread rows are from runs on an idle core.
 
 `TestServer_Console` is the benchmark harness. It binds one service with five small methods (`add`, `addInt`, `NullableFloatToNullableFloat`, `Test2`, `StringMe`), drives the same five requests through the server, checks every response is a `result` rather than an error, and ends each mode with a bar chart of RPC/s. For one-request timings with an allocation column, the numbers to check before merging a change to the dispatch path, see [benchmarks/Micro](benchmarks/Micro/README.md).
 
@@ -537,11 +537,11 @@ The three modes measure different things and are named for the entry point they 
 
 | Threads | RPC/s | ns per request per thread | Allocations per request |
 | ---: | ---: | ---: | --- |
-| 1 | 4.5 M to 4.6 M | 217 | 0 bytes for numeric shapes, one string for `StringMe` |
-| 2 | 7.6 M to 9.5 M | 222 | |
-| 4 | 16.4 M to 17.4 M | 230 | |
-| 8 | 25.1 M to 26.8 M | 298 | |
-| 16 | 30.6 M to 35.8 M | 446 | |
+| 1 | 4.6 M to 5.0 M | 214 | 0 bytes for numeric shapes, one string for `StringMe` |
+| 2 | 8.5 M to 9.1 M | 235 | |
+| 4 | 16.6 M to 17.1 M | 234 | |
+| 8 | 22.8 M to 27.7 M | 292 | |
+| 16 | 31.7 M to 36.4 M | 439 | |
 
 Per-thread cost rises with thread count because the 16 threads share 8 physical cores.
 
@@ -579,12 +579,12 @@ The `t` menu entry submits batches through the 1.x `Task<string> Process(string)
 
 | Batch size | RPC/s |
 | ---: | ---: |
-| 50 | 1.5 M |
-| 300 | 7.8 M |
-| 6,000 | 10.9 M |
-| 36,000 | 12.0 M |
-| 252,000 | 7.6 M |
-| 2,016,000 | 7.2 M |
+| 50 | 1.6 M to 2.0 M |
+| 300 | 8.0 M to 9.2 M |
+| 6,000 | 12.4 M to 13.3 M |
+| 36,000 | 11.6 M to 13.3 M |
+| 252,000 | 7.5 M to 7.8 M |
+| 2,016,000 | 7.5 M to 8.0 M |
 
 This mode is slower than the byte modes because it measures the cost of the .NET thread pool and a `Task`, a string and a continuation per request as much as the library itself. The AspNetCore host does not use that string path or allocate a result string. It awaits transport reads and flushes without a thread per connection, as the next table shows.
 
@@ -599,12 +599,12 @@ This mode is slower than the byte modes because it measures the cost of the .NET
 
 | Transport | RPC/s | Note |
 | --- | ---: | --- |
-| in-process, 16 threads | 30.8 M to 31.3 M | |
-| HTTP, 1 request per POST | 128 k to 168 k | 95 to 125 µs per round trip per client depending on the run; HTTP/1.1 request-response is the cost, not the server |
-| HTTP, batch of 100 per POST | 12.7 M to 13.7 M | |
-| TCP, 256 pipelined | 15.2 M to 15.5 M | ring-buffer clients, one thread each, streaming framer |
-| TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that complete inline | 15.4 M | One run on 2026-09-25. In the same session, `--kestrel 3` gave 16.5 M for the `false` row |
-| TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that suspend once | 1.29 M | five `async Task<T>` methods awaiting `Task.Yield()` |
+| in-process, 16 threads | 33.8 M to 37.1 M | |
+| HTTP, 1 request per POST | 123 k to 182 k | 88 to 130 µs per round trip per client depending on the run; HTTP/1.1 request-response is the cost, not the server |
+| HTTP, batch of 100 per POST | 12.8 M to 14.5 M | |
+| TCP, 256 pipelined | 14.3 M to 16.5 M | ring-buffer clients, one thread each, streaming framer |
+| TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that complete inline | 15.0 M to 15.4 M | `--kestrel 3 async`, two runs; inside the spread of the `false` row |
+| TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that suspend once | 1.25 M to 1.29 M | five `async Task<T>` methods awaiting `Task.Yield()` |
 
 The TCP client keeps 256 requests in flight per connection and refills from a precomputed ring of request bytes with one `Send` per refill. On the server, `JsonFramer` feeds the same `Process` call the HTTP endpoint makes. With `EnableAsyncMethods = true`, the connection handler processes each connection's documents one at a time, in order. So 256 pipelined requests are 256 sequential invocations, and a method that suspends pays that cost per request. Concurrency comes from the 16 connections.
 

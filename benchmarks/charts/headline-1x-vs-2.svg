@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="940" height="420" viewBox="0 0 940 420" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="f09766b21195">
-<title>JSON-RPC.Net 1.2.3 and 2.0 on one machine</title><desc>The same five requests on one machine in one session, 2026-09-25: Ryzen 7 7800X3D, .NET 10, Server GC, idle box. String rows: the best batch size of the thread-pool loop. Byte rows: 16 dedicated threads or 16 awaited workers in a loop. Data revision f09766b21195.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="420" viewBox="0 0 940 420" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="eacac12e8d55">
+<title>JSON-RPC.Net 1.2.3 and 2.0 on one machine</title><desc>The same five requests on one machine in one session, 2026-09-25: Ryzen 7 7800X3D, .NET 10, Server GC, idle box. String rows: the best batch size of the thread-pool loop. Byte rows: 16 dedicated threads or 16 awaited workers in a loop. Data revision eacac12e8d55.</desc>
 <rect width="940" height="420" rx="10" fill="#ffffff" stroke="#d1d5db"/>
 <text x="24.0" y="32.0" text-anchor="start" font-size="18" fill="#1f2328" font-weight="600">JSON-RPC.Net 1.2.3 and 2.0 on one machine</text>
 <text x="24.0" y="54.0" text-anchor="start" font-size="12" fill="#57606a">The same five requests on one machine in one session, 2026-09-25: Ryzen 7 7800X3D, .NET 10, Server GC, idle box.</text>

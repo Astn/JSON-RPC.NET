@@ -91,9 +91,9 @@ What the numbers say:
   batch of 100 over bytes reaches 210,000 RPC/s) and the `[JSInvokable]` rows 3 to 4×, while the typed
   `[JSExport]` add, which had almost no interpreted code to begin with, stays at 0.3 µs. Under AOT the interop
   costs about 1 µs of the 7 (compare the byte path with the .NET loop); the rest is the server itself in
-  WebAssembly. On the .NET 10 JIT the top-level README's one-thread run measures about 217 ns per request for
+  WebAssembly. On the .NET 10 JIT the top-level README's one-thread run measures about 214 ns per request for
   a similar five-request mix, a different harness and workload, so AOT WebAssembly is roughly 30× off native
-  and the interpreter roughly 240×.
+  and the interpreter roughly 250×.
 
 How to get the most out of it, in order of payoff:
 

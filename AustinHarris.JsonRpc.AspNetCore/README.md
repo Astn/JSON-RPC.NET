@@ -128,7 +128,7 @@ invoked.
   Replies already finished are flushed before the connection waits on a slow method. When the connection closes,
   the handler waits for the running method to finish and discards its response.
 - **Cost:** every document then goes through `ProcessAsync`. With methods that complete inline, the TCP row measures
-  about 7 % below the synchronous mode (15.4 M against 16.5 M). A method that suspends pays for its own async state,
+  15.0 M to 15.4 M against 14.3 M to 16.5 M for the synchronous mode, inside its day-to-day spread. A method that suspends pays for its own async state,
   the library's completion state (about 560 B) and a continuation per request. The main README's Kestrel table has
   both rows, measured with `TestServer_Console --kestrel 3 async`.
 
