@@ -1,14 +1,17 @@
-# AustinHarris.JsonRpc.AspNetCore
+# `AustinHarris.JsonRpc.AspNetCore`
 
-Hosts [JSON-RPC.Net](https://github.com/Astn/JSON-RPC.NET) in ASP.NET Core. The core processes requests as
-UTF-8 bytes, so the HTTP endpoint reads the body with `PipeReader` and writes straight into
-`Response.BodyWriter`; nothing is turned into a string on the way through. A `ConnectionHandler` does the
-same for JSON-RPC over a raw Kestrel connection (TCP, Unix socket, named pipe).
+`AustinHarris.JsonRpc.AspNetCore` hosts
+[`AustinHarris.JsonRpc`](https://www.nuget.org/packages/AustinHarris.JsonRpc) 2.0 in ASP.NET Core
+and registers services through dependency injection.
+Choose it for an HTTP endpoint or raw Kestrel connections over TCP, Unix sockets or named pipes.
+
+The HTTP endpoint reads with `PipeReader` and writes to `Response.BodyWriter`
+without converting the document to a string.
 
 ## Install
 
-```
-dotnet add package AustinHarris.JsonRpc.AspNetCore
+```sh
+dotnet add package AustinHarris.JsonRpc.AspNetCore --prerelease
 ```
 
 Targets `net8.0` and `net10.0`; depends on the `AustinHarris.JsonRpc` core package and the ASP.NET Core shared
@@ -74,18 +77,48 @@ app.MapJsonRpc("/legacy", new JsonRpcOptions { SessionId = "legacy-clients", Ser
 
 ## Services and lifetime
 
-`AddJsonRpcService<T>()` registers `T` as a singleton unless `T` is already registered. When the host starts,
-it resolves each registered service once from the root container and binds it. That one instance then serves
-every HTTP request and every raw connection concurrently. So `T` and its dependencies must be thread-safe.
-`T` cannot take scoped dependencies such as an EF Core `DbContext`. With scope validation on, the host fails
-at startup. With it off, the dependency leaks. On HTTP, resolve per-request services inside the method from
-`((HttpContext)Handler.RpcContext()).RequestServices`. A raw connection's context is the
-`ConnectionContext`, which has no request scope. Do not inject request-scoped state into a service.
-Read per-request data from the context instead.
+`AddJsonRpcService<T>()` registers `T` as a singleton, or reuses an existing singleton registration of `T`. When
+the host starts, each singleton service is resolved once from the root container and bound; that one instance then
+serves every HTTP request and every raw connection, concurrently. So `T` and its dependencies must be thread-safe,
+and `T` cannot take scoped dependencies such as an EF Core `DbContext`: with scope validation on (the default in
+Development), the host fails at startup; with it off, the dependency leaks. A singleton that needs per-request
+services uses `IDbContextFactory<T>`, or resolves them from `((HttpContext)Handler.RpcContext()).RequestServices`
+captured before its first `await` (the ambient context is per thread, see the main README).
+
+`AddJsonRpcService<T>(ServiceLifetime.Scoped)` and `ServiceLifetime.Transient` bind the type instead of an
+instance. Nothing is resolved at startup; right before each call the service is resolved from the request's
+`IServiceProvider`, so a `DbContext` or any other scoped dependency goes in the constructor as usual:
+
+- **HTTP:** the provider is `HttpContext.RequestServices`, the request scope ASP.NET Core already owns.
+- **Raw connections:** the connection handler opens one scope per document from `IServiceScopeFactory`, publishes
+  it on the connection as `IServiceProvidersFeature`, and disposes it once the document's response is written,
+  before it is flushed. The scope never spans documents, so a connection cannot accumulate state. The cost is one
+  scope per document, paid only when a scoped or transient service is bound to the handler's session.
+- Every call of a batch shares the document's scope; a transient service is still created per call.
+- Static `[JsonRpcMethod]` methods never resolve anything.
+- There is no parameter injection: a method takes its dependencies through the service's constructor, or reads
+  the context (`JsonRpcContext.Current().Value`) before its first `await`.
+
+The lifetime you pass must match any registration of `T` already in the container: a mismatch throws from
+`AddJsonRpcService`, or at startup when the conflicting registration is added later. A class deriving from
+`JsonRpcService` binds itself in its constructor and is accepted as a singleton only. The host does not probe
+services at startup; the container's own `ValidateOnBuild` and `ValidateScopes` catch a scoped dependency inside a
+singleton.
+
+When `ContextFactory` replaces the `HttpContext` as the RPC context, also set `ServiceProviderSelector` so the host
+can find the request's provider from your context. With a scoped or transient service registered and no selector,
+the host refuses to start (options from `AddJsonRpc`) or `MapJsonRpc(pattern, options)` refuses to map. A selector
+that returns null falls through to the built-in one; when no provider is found the call fails with `-32603` and the
+error handler sees an `InvalidOperationException` naming the service. The root provider is never used.
+
+```csharp
+builder.Services.AddScoped<OrdersContext>();                                   // an EF Core DbContext
+builder.Services.AddJsonRpcService<OrdersService>(ServiceLifetime.Scoped);    // takes OrdersContext in its constructor
+```
 
 `AddJsonRpcServicesFromAssembly(assembly)` does the same for every non-abstract class in the assembly that
-declares a `[JsonRpcMethod]`. Private methods count, so the attribute is the whole access list. An MVC
-controller that carries it becomes a singleton too.
+declares a `[JsonRpcMethod]`, as singletons unless you pass a `ServiceLifetime`. Private methods count, so the
+attribute is the whole access list, and an MVC controller that carries it is registered too.
 
 The host binds every registered service to its effective session: the session given to `AddJsonRpcService`, else
 `JsonRpcOptions.SessionId`, else the default. A class deriving from `JsonRpcService` also binds itself to the
@@ -145,6 +178,7 @@ in the main README.
 | `SessionSelector` | null | HTTP | pick the session per request from the `HttpContext`; an id that was never registered answers `-32601` and creates nothing |
 | `Serializer` | session, then `Config.Serializer` | HTTP and raw | serializer for this host |
 | `ContextFactory` | `HttpContext` | HTTP | what `JsonRpcContext.Current()` returns |
+| `ServiceProviderSelector` | `HttpContext.RequestServices`, or the raw document scope | HTTP and raw | where scoped and transient services are resolved from, given the RPC context; required with `ContextFactory` when such a service is registered |
 | `MaxRequestBytes` | 4 MB | HTTP body, or one raw document | larger bodies get 413; a larger raw document aborts the connection |
 | `ResponseContentType` | `application/json` | HTTP | |
 | `NoContentForNotifications` | true | HTTP | 204 for notifications, otherwise 200 with an empty body |

@@ -4,24 +4,32 @@
         <Company>Austin Harris</Company>
         <Authors>Austin Harris</Authors>
         <Product>Json-Rpc.Net Core</Product>
-        <Description>JSON-RPC.Net is a high performance JSON-RPC 2.0 server for .NET Standard 2.0+ and modern .NET. Bytes in, bytes out, no JSON library dependency: the built-in serializer needs nothing, and Json.NET or System.Text.Json plug in through the companion packages. Host it in ASP.NET Core / Kestrel, a console app, sockets, pipes - anything that can hand you UTF-8 or a string.</Description>
+        <Description>High-throughput JSON-RPC 2.0 server library for .NET Standard 2.0 through .NET 10: UTF-8 bytes in and out, no JSON library dependency, with Json.NET, System.Text.Json and ASP.NET Core hosting as companion packages.</Description>
         <VersionPrefix>2.0.0</VersionPrefix>
-        <VersionSuffix>$(VersionSuffix)</VersionSuffix>
+        <VersionSuffix>preview.1</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
-        <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>
+        <PackageProjectUrl>https://astn.github.io/JSON-RPC.NET/</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Astn/JSON-RPC.NET</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageTags>json-rpc;jsonrpc;json;rpc;server;netstandard;kestrel;pipelines;system.text.json;json.net;fast</PackageTags>
-        <PackageReleaseNotes>https://github.com/Astn/JSON-RPC.NET/blob/master/CHANGELOG.md</PackageReleaseNotes>
+        <PackageTags>json-rpc;jsonrpc;json;rpc;server;netstandard;netstandard2.0;netstandard2.1;net8.0;net10.0;kestrel;pipelines;system.text.json;json.net;fast</PackageTags>
+        <PackageReleaseNotes>2.0.0-preview.1: the request pipeline rebuilt around UTF-8 bytes, the JSON serializer pluggable, Task and ValueTask methods supported again, about ten times the throughput of 1.2.3 on the same machine. What is new: https://astn.github.io/JSON-RPC.NET/changelog.html. Upgrading from 1.x: https://astn.github.io/JSON-RPC.NET/upgrading.html</PackageReleaseNotes>
         <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net10.0</TargetFrameworks>
         <LangVersion>latest</LangVersion>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <PackageIcon>icon.png</PackageIcon>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="..\README.md" Pack="true" PackagePath="\" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
+        <None Include="..\icon.png" Pack="true" PackagePath="\" />
         <InternalsVisibleTo Include="AustinHarris.JsonRpcTestN" />
         <InternalsVisibleTo Include="AustinHarris.JsonRpc.Micro" />
     </ItemGroup>

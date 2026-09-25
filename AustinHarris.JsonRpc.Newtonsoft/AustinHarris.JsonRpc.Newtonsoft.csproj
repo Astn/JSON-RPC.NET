@@ -4,26 +4,34 @@
         <Company>Austin Harris</Company>
         <Authors>Austin Harris</Authors>
         <Product>Json-Rpc.Net Json.NET serializer</Product>
-        <Description>Json.NET (Newtonsoft.Json) serializer for JSON-RPC.Net. Lenient parsing and full Json.NET conversion semantics; pass JsonSerializerSettings to control it.</Description>
+        <Description>Json.NET serializer for AustinHarris.JsonRpc. Uses JsonSerializerSettings for converters, contract resolvers and lenient JSON input.</Description>
         <VersionPrefix>2.0.0</VersionPrefix>
-        <PackageReleaseNotes>https://github.com/Astn/JSON-RPC.NET/blob/master/CHANGELOG.md</PackageReleaseNotes>
-        <VersionSuffix>$(VersionSuffix)</VersionSuffix>
+        <VersionSuffix>preview.1</VersionSuffix>
+        <PackageReleaseNotes>2.0.0-preview.1, released with the core package. What is new: https://astn.github.io/JSON-RPC.NET/changelog.html. Upgrading from 1.x: https://astn.github.io/JSON-RPC.NET/upgrading.html</PackageReleaseNotes>
         <Copyright>Austin Harris</Copyright>
-        <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>
+        <PackageProjectUrl>https://astn.github.io/JSON-RPC.NET/newtonsoft.html</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Astn/JSON-RPC.NET</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageTags>json-rpc;jsonrpc;json;rpc;server;json.net;newtonsoft</PackageTags>
+        <PackageTags>json-rpc;jsonrpc;json;rpc;server;json.net;newtonsoft;serializer;netstandard2.0;netstandard2.1;net8.0;net10.0</PackageTags>
         <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net10.0</TargetFrameworks>
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <PackageIcon>icon.png</PackageIcon>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <RootNamespace>AustinHarris.JsonRpc.Newtonsoft</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
         <None Include="README.md" Pack="true" PackagePath="\" />
+        <None Include="..\icon.png" Pack="true" PackagePath="\" />
     </ItemGroup>
 
     <ItemGroup>

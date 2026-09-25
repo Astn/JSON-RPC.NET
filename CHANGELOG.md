@@ -2,13 +2,13 @@
 
 The four packages (`AustinHarris.JsonRpc`, `AustinHarris.JsonRpc.Newtonsoft`, `AustinHarris.JsonRpc.SystemTextJson`,
 `AustinHarris.JsonRpc.AspNetCore`) share one version number and are released together. This file is the record
-of what changed in each version; the README's [Upgrading from 1.x](README.md#upgrading-from-1x) explains how to
-move a 1.x server, and the package pages on NuGet link here.
+of what changed in each version; [Upgrading from 1.x](docs/upgrading.md) explains how to move a 1.x server, and
+the package pages on NuGet link here.
 
 Versions follow [Semantic Versioning](https://semver.org/) for the public API and the documented wire
 behaviour: a breaking change to either means a new major version.
 
-## 2.0.0 (unreleased)
+## 2.0.0 (in preview: `2.0.0-preview.1`)
 
 ### Added
 
@@ -21,6 +21,8 @@ behaviour: a breaking change to either means a new major version.
 - `AustinHarris.JsonRpc.AspNetCore`: `MapJsonRpc` endpoint (`PipeReader` in, `BodyWriter` out), a raw Kestrel `ConnectionHandler`, DI registration (`AddJsonRpcService<T>`, `AddJsonRpcServicesFromAssembly`), `EnableAsyncMethods` for asynchronous HTTP and ordered raw-connection processing.
 - The request id is available inside a method (`Handler.RpcRequestId`, `JsonRpcContext.CurrentRequestId`, kind and raw bytes), read on demand at no cost to methods that do not ask.
 - `Config.SetPreProcessHandler(sessionId, …)` and `Config.SetPostProcessHandler(sessionId, …)`, symmetric with the default-session setters. `Config.SetBeforeProcessHandler(sessionId, …)` remains as an obsolete alias.
+- `ServiceBinder.BindService(sessionId, serviceType, resolve)` binds a type whose instance is resolved per call from the RPC context: the seam for container lifetimes, with no container dependency in the core.
+- `AddJsonRpcService<T>(ServiceLifetime, sessionId)` and the matching `AddJsonRpcServicesFromAssembly` overload: scoped and transient services are resolved per call from `HttpContext.RequestServices`, or from a scope the raw connection handler opens per document and publishes as `IServiceProvidersFeature`; a batch shares one scope. `JsonRpcOptions.ServiceProviderSelector` locates the provider from a custom context. A lifetime that conflicts with the container's registration, a non-singleton `JsonRpcService` subclass, and a `ContextFactory` without a selector are refused at registration or startup.
 - `protected JsonRpcService(bool autoBind)`: a subclass constructed with `base(false)` binds itself nowhere, for services that a host or an explicit `BindService` call binds.
 - `SECURITY.md` (private vulnerability reporting) and this changelog.
 - `TestServer_Console --scale` is the release gate for the `ProcessAsync` path. It measures the inline rows at 1, 2 and N workers in three paired runs, takes the medians and fails when N/1 is below the threshold. `--kestrel [seconds] async` runs the host with `EnableAsyncMethods = true`. The README adds `--async` rows for `ProcessAsync` at 1 and 16 workers. The 1.x string overloads' thread-pool benchmark is now the `t` menu entry and no longer the default.

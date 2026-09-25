@@ -163,4 +163,4 @@ constructor, throws `NotSupportedException` from `Read` (it was `JsonRpcBindExce
 on the wire.
 
 For the complete list of protocol, error, batching, async, context and metadata changes, see
-[Upgrading from 1.x](../README.md#upgrading-from-1x) in the main README.
+[Upgrading from 1.x](upgrading.md).
