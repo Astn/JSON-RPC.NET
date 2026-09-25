@@ -86,10 +86,40 @@ namespace AustinHarris.JsonRpc
             BindService(sessionID, new T());
         }
 
+        /// <summary>
+        /// Registers every <c>[JsonRpcMethod]</c> of <paramref name="instance"/>'s type on session <paramref name="sessionID"/>,
+        /// invoking them on that one instance from every thread; it must be thread-safe.
+        /// </summary>
         public static void BindService(string sessionID, Object instance)
         {
-            var item = instance.GetType();
+            if (sessionID == null) throw new ArgumentNullException(nameof(sessionID));
+            if (instance == null) throw new ArgumentNullException(nameof(instance));
+            Bind(sessionID, instance.GetType(), instance, null);
+        }
 
+        /// <summary>
+        /// Registers every <c>[JsonRpcMethod]</c> of <paramref name="serviceType"/> on session <paramref name="sessionID"/>
+        /// without an instance. Right before each call, <paramref name="resolve"/> is handed the RPC context of the
+        /// request (what <see cref="Handler.RpcContext"/> returns) and returns the instance to invoke; it runs once per
+        /// invocation, on the invoking thread. This is how a container's scoped and transient lifetimes reach a method:
+        /// the resolver looks the request's scope up through the context and asks it for the service. The binder never
+        /// constructs, caches or disposes anything itself, and the core takes no dependency on any container. Static
+        /// methods never resolve. A resolver that returns null or another type fails the call with <c>-32603</c> (an
+        /// <see cref="InvalidOperationException"/> naming the service type, visible to the error handler).
+        /// </summary>
+        public static void BindService(string sessionID, Type serviceType, Func<object, object> resolve)
+        {
+            if (sessionID == null) throw new ArgumentNullException(nameof(sessionID));
+            if (serviceType == null) throw new ArgumentNullException(nameof(serviceType));
+            if (resolve == null) throw new ArgumentNullException(nameof(resolve));
+            if (serviceType.ContainsGenericParameters)
+                throw new ArgumentException("A closed type is required: '" + serviceType + "'.", nameof(serviceType));
+            Bind(sessionID, serviceType, null, resolve);
+        }
+
+        /// <summary>Attribute discovery shared by the instance and the resolver overloads; exactly one of <paramref name="instance"/> and <paramref name="resolve"/> is set.</summary>
+        private static void Bind(string sessionID, Type item, object instance, Func<object, object> resolve)
+        {
             var methods = item.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
                 .Where(m => m.GetCustomAttributes(typeof(JsonRpcMethodAttribute), false).Length > 0);
             foreach (var meth in methods)
@@ -130,16 +160,22 @@ namespace AustinHarris.JsonRpc
                 foreach (JsonRpcMethodAttribute handlerAttribute in atdata)
                 {
                     var methodName = string.IsNullOrEmpty(handlerAttribute.JsonMethodName) ? meth.Name : handlerAttribute.JsonMethodName;
-                    var rpc = RpcMethod.FromMethod(methodName, meth, meth.IsStatic ? null : instance, jsonNames, handlerAttribute.ContextFlow);
+                    var rpc = resolve != null && !meth.IsStatic
+                        ? RpcMethod.FromMethod(methodName, meth, item, resolve, jsonNames, handlerAttribute.ContextFlow)
+                        : RpcMethod.FromMethod(methodName, meth, meth.IsStatic ? null : instance, jsonNames, handlerAttribute.ContextFlow);
                     Delegate legacy = null;
-                    try
+                    if (instance != null || meth.IsStatic)
                     {
-                        legacy = Delegate.CreateDelegate(System.Linq.Expressions.Expression.GetDelegateType(paras.Values.ToArray()), meth.IsStatic ? null : instance, meth);
+                        try
+                        {
+                            legacy = Delegate.CreateDelegate(System.Linq.Expressions.Expression.GetDelegateType(paras.Values.ToArray()), meth.IsStatic ? null : instance, meth);
+                        }
+                        catch (ArgumentException)
+                        {
+                            // e.g. ref parameters: no Func<> shape exists; the compiled invoker still works
+                        }
                     }
-                    catch (ArgumentException)
-                    {
-                        // e.g. ref parameters: no Func<> shape exists; the compiled invoker still works
-                    }
+                    // a resolver-bound method has no instance to close a legacy delegate over; invocation uses rpc
                     var handlerSession = Handler.GetSessionHandler(sessionID);
                     handlerSession.MetaData.AddService(methodName, paras, defaultValues, legacy, rpc);
                 }
