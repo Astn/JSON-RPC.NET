@@ -41,9 +41,10 @@ reach .NET here, and reports calls per second, microseconds per call, and RPCs p
 | JSON-RPC, batch of 100 per call | the three interop flavours with a 100-request batch document per call |
 | JSON-RPC in a .NET loop | `ProcessMany` runs the string request N times inside .NET: the cost of the server itself in this runtime, no interop |
 
-Measured on an 8-core desktop in Chrome 152 with .NET 10, 20,000 RPCs per row, once under the interpreter
-(`dotnet run`, no AOT) and once AOT-compiled (`dotnet publish -c Release` with the `wasm-tools` workload; the
-better of two runs per row). These are illustrative observations from one machine, not confidence intervals:
+Measured on 2026-09-23 on an 8-core desktop in Chrome 152 with .NET 10, 20,000 RPCs per row.
+The interpreter column is one run per row (`dotnet run`, no AOT). The AOT column is the better of two runs
+per row (`dotnet publish -c Release` with the `wasm-tools` workload).
+These are illustrative observations from one machine, not confidence intervals:
 the better of two runs favours the faster observation, and a future update should report a median and range
 over a fixed number of runs.
 
