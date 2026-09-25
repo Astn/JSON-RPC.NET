@@ -250,8 +250,10 @@ namespace AustinHarris.JsonRpcTestN
             }
             finally
             {
+#pragma warning disable CS0618
                 Handler.DefaultHandler.UnRegisterFunction("sc.bound");
                 Handler.GetSessionHandler(Session).UnRegisterFunction("sc.unbound");
+#pragma warning restore CS0618
             }
         }
     }

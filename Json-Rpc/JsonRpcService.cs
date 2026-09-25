@@ -21,10 +21,10 @@ namespace AustinHarris.JsonRpc
             if (autoBind) ServiceBinder.BindService(Handler.DefaultSessionId(), this);
         }
 
-        /// <summary>Binds this instance to session <paramref name="sessionID"/>, creating it when needed.</summary>
-        protected JsonRpcService(string sessionID)
+        /// <summary>Binds this instance to session <paramref name="sessionId"/>, creating it when needed.</summary>
+        protected JsonRpcService(string sessionId)
         {
-            ServiceBinder.BindService(sessionID, this);
+            ServiceBinder.BindService(sessionId, this);
         }
     }
 }

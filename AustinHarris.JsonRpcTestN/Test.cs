@@ -95,7 +95,9 @@ namespace AustinHarris.JsonRpcTestN
                 Tuple.Create ("sooper", typeof(string)),
                 Tuple.Create ("returns", typeof(string))
             }.ToDictionary(x => x.Item1, x => x.Item2);
+#pragma warning disable CS0618
             h.RegisterFuction("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
+#pragma warning restore CS0618
 
             string request = @"{""method"":""workie"",""params"":{""sooper"":""good""},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
@@ -1612,7 +1614,9 @@ namespace AustinHarris.JsonRpcTestN
                 Tuple.Create ("sooper", typeof(string)),
                 Tuple.Create ("returns", typeof(string))
             }.ToDictionary(x => x.Item1, x => x.Item2);
+#pragma warning disable CS0618
             h.RegisterFuction("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(),new Func<string, string>(x => "workie ... " + x));
+#pragma warning restore CS0618
 
             string request = @"{""method"":""workie"",""params"":{""sooper"":""good""},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";
@@ -1852,7 +1856,9 @@ namespace AustinHarris.JsonRpcTestN
                 Tuple.Create ("sooper", typeof(string)),
                 Tuple.Create ("returns", typeof(string))
             }.ToDictionary(x => x.Item1, x => x.Item2);
+#pragma warning disable CS0618
             h.RegisterFuction("workie", metadata, new System.Collections.Generic.Dictionary<string, object>(), new Func<string, string>(x => "workie ... " + x));
+#pragma warning restore CS0618
 
             string request = @"{""method"":""workie"",""params"":{""sooper"":""good""},""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":\"workie ... good\",\"id\":1}";

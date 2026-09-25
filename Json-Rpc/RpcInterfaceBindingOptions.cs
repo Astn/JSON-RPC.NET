@@ -45,17 +45,17 @@ namespace AustinHarris.JsonRpc
 
         internal RpcInterfaceMethod(MethodInfo method, string[] path, string leaf, string defaultName)
         {
-            Method = method;
+            MethodInfo = method;
             Interface = method.DeclaringType;
             _path = (string[])path.Clone();
             Leaf = leaf;
             DefaultName = defaultName;
         }
 
-        /// <summary>The interface method declaration, including its parameter metadata and attributes.</summary>
-        public MethodInfo Method { get; }
+        /// <summary>The MethodInfo for the interface declaration, including its parameter metadata and attributes.</summary>
+        public MethodInfo MethodInfo { get; }
 
-        /// <summary>The closed interface declaring <see cref="Method"/>.</summary>
+        /// <summary>The closed interface declaring <see cref="MethodInfo"/>.</summary>
         public Type Interface { get; }
 
         /// <summary>A copy of the CLR property names from the root; empty for root methods.</summary>

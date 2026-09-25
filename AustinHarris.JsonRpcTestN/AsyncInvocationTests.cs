@@ -140,7 +140,9 @@ namespace AustinHarris.JsonRpcTestN
             var method = new Func<Task<int>>(() => Task.FromResult(7));
             var handler = Handler.GetSessionHandler(_session);
             if (surface == 0) handler.MetaData.Services["run"] = new SMDService("POST", "JSON-RPC-2.0", types, new Dictionary<string, object>(), method);
+#pragma warning disable CS0618
             else if (surface == 1) handler.RegisterFuction("run", types, null, method);
+#pragma warning restore CS0618
             else _ = new AutoAsyncService(_session);
             Assert.AreEqual(7, (int)JObject.Parse(await Run(Request("run")))["result"]);
             Assert.AreEqual(typeof(int), handler.MetaData.Services["run"].Method.ResultType);
@@ -172,13 +174,15 @@ namespace AustinHarris.JsonRpcTestN
             var types = new Dictionary<string, Type> { ["returns"] = typeof(void) };
             TestDelegate registration = surface switch
             {
-                0 => () => RpcMethod.FromMethod("invalid", typeof(InvalidService).GetMethod("Invalid"), new InvalidService()),
+                0 => () => RpcMethod.FromMethodInfo("invalid", typeof(InvalidService).GetMethod("Invalid"), new InvalidService()),
                 1 => () => RpcMethod.FromDelegate("invalid", invalid),
                 2 => () => ServiceBinder.BindService(_session, new InvalidService()),
                 3 => () => Bind("invalid", invalid),
                 4 => () => new InvalidAutoService(_session),
                 5 => () => new SMDService("POST", "JSON-RPC-2.0", types, new Dictionary<string, object>(), invalid),
+#pragma warning disable CS0618
                 _ => () => Handler.GetSessionHandler(_session).RegisterFuction("invalid", types, null, invalid)
+#pragma warning restore CS0618
             };
             StringAssert.Contains("async void", Assert.Throws<NotSupportedException>(registration).Message);
         }

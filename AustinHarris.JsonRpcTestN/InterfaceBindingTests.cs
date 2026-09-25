@@ -261,7 +261,7 @@ namespace AustinHarris.JsonRpcTestN
             var seen = new List<RpcInterfaceMethod>();
             using var binding = ServiceBinder.BindInterface<IAliases>(Session, new Aliases(), new RpcInterfaceBindingOptions
             {
-                Include = method => { seen.Add(method); return method.Method.IsDefined(typeof(ExportAttribute), false); }
+                Include = method => { seen.Add(method); return method.MethodInfo.IsDefined(typeof(ExportAttribute), false); }
             });
             Assert.AreEqual(3, seen.Count);
             CollectionAssert.AreEquivalent(new[] { "ALIAS", "OtherAlias" }, binding.Methods);

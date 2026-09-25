@@ -100,10 +100,10 @@ namespace AustinHarris.JsonRpc.Invocation
             };
         }
 
-        /// <summary>Compatibility overload preserving the original registration signature.</summary>
-        public static RpcMethod FromMethod(string name, MethodInfo method, object target, string[] parameterNames)
+        /// <summary>Compatibility overload preserving the original MethodInfo registration signature.</summary>
+        public static RpcMethod FromMethodInfo(string name, MethodInfo method, object target, string[] parameterNames)
         {
-            return FromMethod(name, method, target, parameterNames, RpcContextFlow.None);
+            return FromMethodInfo(name, method, target, parameterNames, RpcContextFlow.None);
         }
 
         /// <summary>Compatibility overload preserving the original delegate registration signature.</summary>
@@ -112,8 +112,8 @@ namespace AustinHarris.JsonRpc.Invocation
             return FromDelegate(name, implementation, parameterNames, defaults, RpcContextFlow.None);
         }
 
-        /// <summary>Builds the invokers for an instance (or static) method; <paramref name="parameterNames"/> are the JSON names (null = CLR names).</summary>
-        public static RpcMethod FromMethod(string name, MethodInfo method, object target, string[] parameterNames = null, RpcContextFlow contextFlow = RpcContextFlow.None)
+        /// <summary>Builds the invokers from a MethodInfo for an instance (or static) implementation; <paramref name="parameterNames"/> are the JSON names (null = CLR names).</summary>
+        public static RpcMethod FromMethodInfo(string name, MethodInfo method, object target, string[] parameterNames = null, RpcContextFlow contextFlow = RpcContextFlow.None)
         {
             RejectAsyncReturnType(name, method);
             var ps = method.GetParameters();
@@ -122,15 +122,15 @@ namespace AustinHarris.JsonRpc.Invocation
         }
 
         /// <summary>
-        /// Builds the invokers for an instance method whose receiver is produced per invocation. Right before the
-        /// method body runs, <paramref name="resolve"/> is called once with the RPC context of the request being
+        /// Builds the invokers from a MethodInfo for an instance implementation whose receiver is produced per invocation. Right before the
+        /// implementation body runs, <paramref name="resolve"/> is called once with the RPC context of the request being
         /// served (what <see cref="Handler.RpcContext"/> returns) and must answer with an instance of
         /// <paramref name="serviceType"/>. This is the seam for container-managed lifetimes: the resolver can look
         /// the request's scope up through the context and return a scoped or transient service. Nothing is cached
-        /// or disposed here. A static method keeps a null receiver and never resolves. A null result or another
+        /// or disposed here. A static implementation keeps a null receiver and never resolves. A null result or another
         /// type is an <see cref="InvalidOperationException"/> naming the service type, answered as <c>-32603</c>.
         /// </summary>
-        public static RpcMethod FromMethod(string name, MethodInfo method, Type serviceType, Func<object, object> resolve, string[] parameterNames = null, RpcContextFlow contextFlow = RpcContextFlow.None)
+        public static RpcMethod FromMethodInfo(string name, MethodInfo method, Type serviceType, Func<object, object> resolve, string[] parameterNames = null, RpcContextFlow contextFlow = RpcContextFlow.None)
         {
             if (method == null) throw new ArgumentNullException(nameof(method));
             if (serviceType == null) throw new ArgumentNullException(nameof(serviceType));
@@ -139,7 +139,7 @@ namespace AustinHarris.JsonRpc.Invocation
                 throw new ArgumentException("JSON-RPC method '" + name + "': the service type '" + serviceType + "' is not a closed type.", nameof(serviceType));
             if (!method.DeclaringType.IsAssignableFrom(serviceType))
                 throw new ArgumentException("JSON-RPC method '" + name + "' is declared by '" + method.DeclaringType + "', which '" + serviceType + "' is not.", nameof(serviceType));
-            if (method.IsStatic) return FromMethod(name, method, null, parameterNames, contextFlow);
+            if (method.IsStatic) return FromMethodInfo(name, method, null, parameterNames, contextFlow);
             RejectAsyncReturnType(name, method);
             var ps = method.GetParameters();
             // (TService)ResolveReceiver(resolve, name): evaluated once per invocation. The arguments are read into

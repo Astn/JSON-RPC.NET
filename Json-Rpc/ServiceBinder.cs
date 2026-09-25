@@ -15,9 +15,9 @@ namespace AustinHarris.JsonRpc
         }
 
         /// <summary>Compatibility overload preserving the original session registration signature.</summary>
-        public static void BindMethod(string sessionID, string name, Delegate implementation, string[] parameterNames, IDictionary<string, object> defaults)
+        public static void BindMethod(string sessionId, string name, Delegate implementation, string[] parameterNames, IDictionary<string, object> defaults)
         {
-            BindMethod(sessionID, name, implementation, parameterNames, defaults, RpcContextFlow.None);
+            BindMethod(sessionId, name, implementation, parameterNames, defaults, RpcContextFlow.None);
         }
 
         /// <summary>Registers <paramref name="implementation"/> as method <paramref name="name"/> on the default session. See the session overload.</summary>
@@ -28,7 +28,7 @@ namespace AustinHarris.JsonRpc
 
         /// <summary>
         /// Registers any delegate (a lambda, a method group, a closed instance method) as JSON-RPC method
-        /// <paramref name="name"/> on session <paramref name="sessionID"/>, without attributes or a service class.
+        /// <paramref name="name"/> on session <paramref name="sessionId"/>, without attributes or a service class.
         /// Parameters bind by the delegate's signature: positional params by order, named params by
         /// <paramref name="parameterNames"/> when given (null entries keep the lambda's own name), else by the
         /// lambda's parameter names, else <c>arg1</c>, <c>arg2</c>... for a delegate whose names are not recoverable.
@@ -37,17 +37,17 @@ namespace AustinHarris.JsonRpc
         /// Task and ValueTask delegates require ProcessAsync; async void is rejected.
         /// <paramref name="contextFlow"/> controls ambient context across awaits.
         /// </summary>
-        public static void BindMethod(string sessionID, string name, Delegate implementation, string[] parameterNames = null, IDictionary<string, object> defaults = null, RpcContextFlow contextFlow = RpcContextFlow.None)
+        public static void BindMethod(string sessionId, string name, Delegate implementation, string[] parameterNames = null, IDictionary<string, object> defaults = null, RpcContextFlow contextFlow = RpcContextFlow.None)
         {
-            if (sessionID == null) throw new ArgumentNullException(nameof(sessionID));
+            if (sessionId == null) throw new ArgumentNullException(nameof(sessionId));
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A JSON-RPC method name is required.", nameof(name));
             if (implementation == null) throw new ArgumentNullException(nameof(implementation));
 
             var rpc = RpcMethod.FromDelegate(name, implementation, parameterNames, defaults, contextFlow);
-            var handler = Handler.GetSessionHandler(sessionID);
+            var handler = Handler.GetSessionHandler(sessionId);
             if (handler.MetaData.Services.ContainsKey(name))
             {
-                throw new ArgumentException("JSON-RPC method '" + name + "' is already registered on session '" + sessionID + "'; unbind it first.", nameof(name));
+                throw new ArgumentException("JSON-RPC method '" + name + "' is already registered on session '" + sessionId + "'; unbind it first.", nameof(name));
             }
 
             var paras = new Dictionary<string, Type>();
@@ -65,10 +65,10 @@ namespace AustinHarris.JsonRpc
             handler.MetaData.AddService(name, paras, defaultValues, implementation, rpc);
         }
 
-        /// <summary>Removes method <paramref name="name"/> from session <paramref name="sessionID"/>; false when it was not registered.</summary>
-        public static bool UnbindMethod(string sessionID, string name)
+        /// <summary>Removes method <paramref name="name"/> from session <paramref name="sessionId"/>; false when it was not registered.</summary>
+        public static bool UnbindMethod(string sessionId, string name)
         {
-            return Handler.GetSessionHandler(sessionID).MetaData.RemoveService(name);
+            return Handler.GetSessionHandler(sessionId).MetaData.RemoveService(name);
         }
 
         /// <summary>Removes method <paramref name="name"/> from the default session; false when it was not registered.</summary>
@@ -81,24 +81,24 @@ namespace AustinHarris.JsonRpc
         {
             BindService<T>(Handler.DefaultSessionId());
         }
-        public static void BindService<T>(string sessionID) where T : new()
+        public static void BindService<T>(string sessionId) where T : new()
         {
-            BindService(sessionID, new T());
+            BindService(sessionId, new T());
         }
 
         /// <summary>
-        /// Registers every <c>[JsonRpcMethod]</c> of <paramref name="instance"/>'s type on session <paramref name="sessionID"/>,
+        /// Registers every <c>[JsonRpcMethod]</c> of <paramref name="instance"/>'s type on session <paramref name="sessionId"/>,
         /// invoking them on that one instance from every thread; it must be thread-safe.
         /// </summary>
-        public static void BindService(string sessionID, Object instance)
+        public static void BindService(string sessionId, Object instance)
         {
-            if (sessionID == null) throw new ArgumentNullException(nameof(sessionID));
+            if (sessionId == null) throw new ArgumentNullException(nameof(sessionId));
             if (instance == null) throw new ArgumentNullException(nameof(instance));
-            Bind(sessionID, instance.GetType(), instance, null);
+            Bind(sessionId, instance.GetType(), instance, null);
         }
 
         /// <summary>
-        /// Registers every <c>[JsonRpcMethod]</c> of <paramref name="serviceType"/> on session <paramref name="sessionID"/>
+        /// Registers every <c>[JsonRpcMethod]</c> of <paramref name="serviceType"/> on session <paramref name="sessionId"/>
         /// without an instance. Right before each call, <paramref name="resolve"/> is handed the RPC context of the
         /// request (what <see cref="Handler.RpcContext"/> returns) and returns the instance to invoke; it runs once per
         /// invocation, on the invoking thread. This is how a container's scoped and transient lifetimes reach a method:
@@ -107,18 +107,18 @@ namespace AustinHarris.JsonRpc
         /// methods never resolve. A resolver that returns null or another type fails the call with <c>-32603</c> (an
         /// <see cref="InvalidOperationException"/> naming the service type, visible to the error handler).
         /// </summary>
-        public static void BindService(string sessionID, Type serviceType, Func<object, object> resolve)
+        public static void BindService(string sessionId, Type serviceType, Func<object, object> resolve)
         {
-            if (sessionID == null) throw new ArgumentNullException(nameof(sessionID));
+            if (sessionId == null) throw new ArgumentNullException(nameof(sessionId));
             if (serviceType == null) throw new ArgumentNullException(nameof(serviceType));
             if (resolve == null) throw new ArgumentNullException(nameof(resolve));
             if (serviceType.ContainsGenericParameters)
                 throw new ArgumentException("A closed type is required: '" + serviceType + "'.", nameof(serviceType));
-            Bind(sessionID, serviceType, null, resolve);
+            Bind(sessionId, serviceType, null, resolve);
         }
 
         /// <summary>Attribute discovery shared by the instance and the resolver overloads; exactly one of <paramref name="instance"/> and <paramref name="resolve"/> is set.</summary>
-        private static void Bind(string sessionID, Type item, object instance, Func<object, object> resolve)
+        private static void Bind(string sessionId, Type item, object instance, Func<object, object> resolve)
         {
             var methods = item.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
                 .Where(m => m.GetCustomAttributes(typeof(JsonRpcMethodAttribute), false).Length > 0);
@@ -161,8 +161,8 @@ namespace AustinHarris.JsonRpc
                 {
                     var methodName = string.IsNullOrEmpty(handlerAttribute.JsonMethodName) ? meth.Name : handlerAttribute.JsonMethodName;
                     var rpc = resolve != null && !meth.IsStatic
-                        ? RpcMethod.FromMethod(methodName, meth, item, resolve, jsonNames, handlerAttribute.ContextFlow)
-                        : RpcMethod.FromMethod(methodName, meth, meth.IsStatic ? null : instance, jsonNames, handlerAttribute.ContextFlow);
+                        ? RpcMethod.FromMethodInfo(methodName, meth, item, resolve, jsonNames, handlerAttribute.ContextFlow)
+                        : RpcMethod.FromMethodInfo(methodName, meth, meth.IsStatic ? null : instance, jsonNames, handlerAttribute.ContextFlow);
                     Delegate legacy = null;
                     if (instance != null || meth.IsStatic)
                     {
@@ -176,7 +176,7 @@ namespace AustinHarris.JsonRpc
                         }
                     }
                     // a resolver-bound method has no instance to close a legacy delegate over; invocation uses rpc
-                    var handlerSession = Handler.GetSessionHandler(sessionID);
+                    var handlerSession = Handler.GetSessionHandler(sessionId);
                     handlerSession.MetaData.AddService(methodName, paras, defaultValues, legacy, rpc);
                 }
             }

@@ -93,7 +93,9 @@ namespace AustinHarris.JsonRpcTestN
             try
             {
                 var h = Handler.GetSessionHandler(sessionId);
+#pragma warning disable CS0618
                 h.RegisterFuction("echo", new System.Collections.Generic.Dictionary<string, Type> { { "s", typeof(string) }, { "returns", typeof(string) } }, null, new Func<string, string>(s => s));
+#pragma warning restore CS0618
                 h.Serializer = new NewtonsoftJsonRpcSerializer(new JsonSerializerSettings { Converters = { new ShoutingStringConverter() } });
                 // four arguments on purpose: ProcessSync(sessionId, json, null) binds to the (jsonRpc, context, serializer) overload
                 var result = JsonRpcProcessor.ProcessSync(sessionId, "{\"method\":\"echo\",\"params\":[\"abc\"],\"id\":1}", null, null);
