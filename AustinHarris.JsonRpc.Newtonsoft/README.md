@@ -1,14 +1,16 @@
-# AustinHarris.JsonRpc.Newtonsoft
+# `AustinHarris.JsonRpc.Newtonsoft`
 
-Json.NET (Newtonsoft.Json) serializer for [JSON-RPC.Net](https://github.com/Astn/JSON-RPC.NET) 2.0.
+`AustinHarris.JsonRpc.Newtonsoft` adds Json.NET serialization to
+[`AustinHarris.JsonRpc`](https://www.nuget.org/packages/AustinHarris.JsonRpc) 2.0.
+Choose it when your models rely on Json.NET converters, contract resolvers or `[JsonProperty]`,
+or when clients send non-strict JSON.
 
-The core package (`AustinHarris.JsonRpc`) parses the JSON-RPC envelope itself and ships a built-in serializer for
-parameters and results that needs no JSON library. Install this package when you want Json.NET to do the value
-conversions: its converters, contract resolvers, `[JsonProperty]` attributes, date/float handling, and its
-tolerance for non-strict JSON.
+Configure parameter and result conversion with `JsonSerializerSettings`.
 
-```
-dotnet add package AustinHarris.JsonRpc.Newtonsoft
+## Install
+
+```sh
+dotnet add package AustinHarris.JsonRpc.Newtonsoft --prerelease
 ```
 
 Targets `netstandard2.0`, `netstandard2.1`, `net8.0` and `net10.0`; depends on Newtonsoft.Json 13.0.4 and the

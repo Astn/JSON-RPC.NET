@@ -4,7 +4,7 @@
         <Company>Austin Harris</Company>
         <Authors>Austin Harris</Authors>
         <Product>Json-Rpc.Net Core</Product>
-        <Description>JSON-RPC.Net is a high performance JSON-RPC 2.0 server for .NET Standard 2.0+ and modern .NET. Bytes in, bytes out, no JSON library dependency: the built-in serializer needs nothing, and Json.NET or System.Text.Json plug in through the companion packages. Host it in ASP.NET Core / Kestrel, a console app, sockets, pipes - anything that can hand you UTF-8 or a string.</Description>
+        <Description>High-throughput JSON-RPC 2.0 server library for .NET Standard 2.0 through .NET 10: UTF-8 bytes in and out, no JSON library dependency, with Json.NET, System.Text.Json and ASP.NET Core hosting as companion packages.</Description>
         <VersionPrefix>2.0.0</VersionPrefix>
         <VersionSuffix>preview.1</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
@@ -28,7 +28,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="..\README.md" Pack="true" PackagePath="\" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
         <None Include="..\icon.png" Pack="true" PackagePath="\" />
         <InternalsVisibleTo Include="AustinHarris.JsonRpcTestN" />
         <InternalsVisibleTo Include="AustinHarris.JsonRpc.Micro" />

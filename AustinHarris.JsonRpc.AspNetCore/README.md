@@ -1,14 +1,17 @@
-# AustinHarris.JsonRpc.AspNetCore
+# `AustinHarris.JsonRpc.AspNetCore`
 
-Hosts [JSON-RPC.Net](https://github.com/Astn/JSON-RPC.NET) in ASP.NET Core. The core processes requests as
-UTF-8 bytes, so the HTTP endpoint reads the body with `PipeReader` and writes straight into
-`Response.BodyWriter`; nothing is turned into a string on the way through. A `ConnectionHandler` does the
-same for JSON-RPC over a raw Kestrel connection (TCP, Unix socket, named pipe).
+`AustinHarris.JsonRpc.AspNetCore` hosts
+[`AustinHarris.JsonRpc`](https://www.nuget.org/packages/AustinHarris.JsonRpc) 2.0 in ASP.NET Core
+and registers services through dependency injection.
+Choose it for an HTTP endpoint or raw Kestrel connections over TCP, Unix sockets or named pipes.
+
+The HTTP endpoint reads with `PipeReader` and writes to `Response.BodyWriter`
+without converting the document to a string.
 
 ## Install
 
-```
-dotnet add package AustinHarris.JsonRpc.AspNetCore
+```sh
+dotnet add package AustinHarris.JsonRpc.AspNetCore --prerelease
 ```
 
 Targets `net8.0` and `net10.0`; depends on the `AustinHarris.JsonRpc` core package and the ASP.NET Core shared

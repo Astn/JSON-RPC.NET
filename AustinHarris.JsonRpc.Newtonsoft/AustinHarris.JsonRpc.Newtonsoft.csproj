@@ -4,7 +4,7 @@
         <Company>Austin Harris</Company>
         <Authors>Austin Harris</Authors>
         <Product>Json-Rpc.Net Json.NET serializer</Product>
-        <Description>Json.NET (Newtonsoft.Json) serializer for JSON-RPC.Net. Lenient parsing and full Json.NET conversion semantics; pass JsonSerializerSettings to control it.</Description>
+        <Description>Json.NET serializer for AustinHarris.JsonRpc. Uses JsonSerializerSettings for converters, contract resolvers and lenient JSON input.</Description>
         <VersionPrefix>2.0.0</VersionPrefix>
         <VersionSuffix>preview.1</VersionSuffix>
         <PackageReleaseNotes>2.0.0-preview.1, released with the core package. What is new: https://astn.github.io/JSON-RPC.NET/changelog.html. Upgrading from 1.x: https://astn.github.io/JSON-RPC.NET/upgrading.html</PackageReleaseNotes>
