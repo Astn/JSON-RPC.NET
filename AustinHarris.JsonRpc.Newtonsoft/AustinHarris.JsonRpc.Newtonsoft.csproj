@@ -9,7 +9,7 @@
         <VersionSuffix>preview.1</VersionSuffix>
         <PackageReleaseNotes>https://github.com/Astn/JSON-RPC.NET/blob/master/CHANGELOG.md</PackageReleaseNotes>
         <Copyright>Austin Harris</Copyright>
-        <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>
+        <PackageProjectUrl>https://astn.github.io/JSON-RPC.NET/newtonsoft.html</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Astn/JSON-RPC.NET</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

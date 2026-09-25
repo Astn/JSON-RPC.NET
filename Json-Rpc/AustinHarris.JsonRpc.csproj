@@ -8,7 +8,7 @@
         <VersionPrefix>2.0.0</VersionPrefix>
         <VersionSuffix>preview.1</VersionSuffix>
         <Copyright>Austin Harris</Copyright>
-        <PackageProjectUrl>https://github.com/Astn/JSON-RPC.NET</PackageProjectUrl>
+        <PackageProjectUrl>https://astn.github.io/JSON-RPC.NET/</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Astn/JSON-RPC.NET</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
