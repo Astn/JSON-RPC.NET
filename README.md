@@ -91,7 +91,39 @@ Add `AustinHarris.JsonRpc.Newtonsoft` or `AustinHarris.JsonRpc.SystemTextJson` i
 
 ### 1. Declare a service
 
-Derive from `JsonRpcService` and mark the methods you want to expose with `[JsonRpcMethod]`. Constructing the service registers it, so you only need to keep the instance alive.
+Save this as `server.cs`. It is a .NET 10 file-based app: one C# file with no project file. The `#:sdk` and `#:package` directives select the web SDK and package. `ServiceBinder.BindMethod` registers the lambdas; Kestrel serves them at `/rpc`.
+
+```csharp
+#:sdk Microsoft.NET.Sdk.Web
+#:package AustinHarris.JsonRpc.AspNetCore@2.0.0-preview.1
+
+using AustinHarris.JsonRpc;
+using AustinHarris.JsonRpc.AspNetCore;
+
+ServiceBinder.BindMethod("add", (double l, double r) => l + r);
+ServiceBinder.BindMethod("greet", (string who) => "hello " + who);
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddJsonRpc();
+
+var app = builder.Build();
+app.MapJsonRpc("/rpc");
+app.Run();
+```
+
+Run `dotnet run server.cs`. Kestrel prints the URL it listens on. To use the address below, run `dotnet run server.cs -- --urls http://127.0.0.1:5077`, then send this request from another terminal:
+
+```bash
+curl -s -X POST http://127.0.0.1:5077/rpc -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}'
+```
+
+```json
+{"jsonrpc":"2.0","result":3.0,"id":1}
+```
+
+On .NET 8, the same code works in `Program.cs` in an ordinary ASP.NET Core project: install the package with `dotnet add package AustinHarris.JsonRpc.AspNetCore --prerelease` and drop the two `#:` lines.
+
+For methods grouped in a class, create `CalculatorService.cs`. Derive from `JsonRpcService` and mark the methods you want to expose with `[JsonRpcMethod]`. Constructing the service registers it, so you only need to keep the instance alive.
 
 ```csharp
 using AustinHarris.JsonRpc;
@@ -111,7 +143,9 @@ public class CalculatorService : JsonRpcService
 
 Methods can be `private`; parameters may be positional (`"params":[1,2]`) or named (`"params":{"l":1,"r":2}`). Optional parameters with default values are honoured, and a parameter's JSON name can be overridden with `[JsonRpcParam("name")]`.
 
-Every method lives in a *session*, a named set of methods. Everything above goes into the default session (`Handler.DefaultSessionId()`), which is all most applications need. Overloads that take a `sessionId` let one process serve separate method sets; see [Sessions and context](#sessions-and-context).
+Every method lives in a *session*, a named set of methods. Both examples register methods in the default session (`Handler.DefaultSessionId()`), which is all most applications need. Lambdas and classes can be mixed in one session, but method names must be unique: `BindMethod` throws for a name that is already registered, and a class bound afterwards replaces an earlier registration of the same name. Both examples register `add`, so keep one of them. Overloads that take a `sessionId` let one process serve separate method sets; see [Sessions and context](#sessions-and-context).
+
+The next step drives `CalculatorService` in process, without a transport.
 
 ### 2. Process requests
 
@@ -124,23 +158,22 @@ using AustinHarris.JsonRpc;
 var service = new CalculatorService();   // binds itself to the default session; keep a reference
 
 // Strings, asynchronous invocation.
-string response = await JsonRpcProcessor.ProcessAsync("{\"jsonrpc\":\"2.0\",\"method\":\"add\",\"params\":[1,2],\"id\":1}");
+string response = await JsonRpcProcessor.ProcessAsync("""{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}""");
 // {"jsonrpc":"2.0","result":3.0,"id":1}
 
 // Strings, synchronous, on the calling thread. Named parameters.
-string sync = JsonRpcProcessor.ProcessSync("{\"method\":\"multiply\",\"params\":{\"l\":6,\"r\":7},\"id\":2}");
+string sync = JsonRpcProcessor.ProcessSync("""{"method":"multiply","params":{"l":6,"r":7},"id":2}""");
 // {"jsonrpc":"2.0","result":42,"id":2}
 
 // Bytes: the native path. The string overloads transcode into it.
-byte[] request = Encoding.UTF8.GetBytes("{\"method\":\"add\",\"params\":[2,3],\"id\":3}");
 var output = new ArrayBufferWriter<byte>();
-JsonRpcProcessor.Process(Handler.DefaultSessionId(), request.AsSpan(), output);
+JsonRpcProcessor.Process(Handler.DefaultSessionId(), """{"method":"add","params":[2,3],"id":3}"""u8, output);
 Console.WriteLine(Encoding.UTF8.GetString(output.WrittenSpan));   // nothing is written for a notification
 ```
 
-Batches (`[{...},{...}]`) and notifications (requests without an `id`) are handled per the spec: a batch answers with an array, a notification produces nothing. The byte overloads take `ReadOnlySpan<byte>`, `ReadOnlyMemory<byte>` or `ReadOnlySequence<byte>`; pass a `byte[]` as `AsSpan()`, because on C# 12 a bare array is ambiguous between the memory and span overloads.
+Batches (`[{...},{...}]`) and notifications (requests without an `id`) are handled per the spec: a batch answers with an array, a notification produces nothing. The byte overloads take `ReadOnlySpan<byte>`, `ReadOnlyMemory<byte>` or `ReadOnlySequence<byte>`. A `"""..."""u8` literal is a `ReadOnlySpan<byte>` (C# 11 and later). A bare `byte[]` selects the span overload on C# 14 and later; on C# 12 and 13 it is ambiguous between the memory and span overloads, so pass it as `AsSpan()` there.
 
-That is the whole server. The rest of this page is about exposing methods, putting a transport in front, and what happens when things go wrong.
+That is the whole in-process server. The rest of this page is about exposing methods, putting a transport in front, and what happens when things go wrong.
 
 ## Defining methods
 
