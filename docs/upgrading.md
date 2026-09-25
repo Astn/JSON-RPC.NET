@@ -4,6 +4,7 @@ Most 1.x services run unchanged. Read the first list before you build, and the s
 
 ## Changes that break the build
 
+- `InProcessClient` (obsolete since 1.x); call `JsonRpcProcessor.Process` directly.
 - **Session parameter.** The session parameter is spelled `sessionId` everywhere; a named argument `sessionID:` must be updated.
 - **MethodInfo names.** `RpcMethod.FromMethod` is `FromMethodInfo` and `RpcInterfaceMethod.Method` is `MethodInfo` (both were new in the 2.0 preview).
 - **Serializer.** `JsonRpcProcessor.Process(…, JsonSerializerSettings)` is gone from the core. Use `Config.SetSerializer(new NewtonsoftJsonRpcSerializer(settings))` from the Newtonsoft package, or the helper overloads there that take the settings.
