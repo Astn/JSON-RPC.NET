@@ -640,7 +640,7 @@ namespace AustinHarris.JsonRpcTestN
             Assert.Throws<ArgumentNullException>(() => ServiceBinder.BindService(_session, (object)null));
             Assert.Throws<ArgumentException>(() => ServiceBinder.BindService(_session, typeof(List<>), c => null));
             var method = typeof(TaggedService).GetMethod(nameof(TaggedService.Tag));
-            var ex = Assert.Throws<ArgumentException>(() => AustinHarris.JsonRpc.Invocation.RpcMethod.FromMethod("fb.tag", method, typeof(string), c => null));
+            var ex = Assert.Throws<ArgumentException>(() => AustinHarris.JsonRpc.Invocation.RpcMethod.FromMethodInfo("fb.tag", method, typeof(string), c => null));
             StringAssert.Contains(typeof(TaggedService).FullName, ex.Message);
         }
     }

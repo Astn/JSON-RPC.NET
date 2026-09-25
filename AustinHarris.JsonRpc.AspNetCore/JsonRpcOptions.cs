@@ -16,8 +16,9 @@ namespace AustinHarris.JsonRpc.AspNetCore
         public string SessionId { get; set; }
 
         /// <summary>
-        /// Picks the session per HTTP request (for example from a route value or a header). When set it takes
-        /// precedence over <see cref="SessionId"/>. Not used by the raw connection handler.
+        /// Selects the JSON-RPC session id for this HTTP request, for example from a route value or a header;
+        /// selection is independent of ASP.NET Core session state unless the callback explicitly uses it.
+        /// When set it takes precedence over <see cref="SessionId"/>. Not used by the raw connection handler.
         /// </summary>
         public Func<HttpContext, string> SessionSelector { get; set; }
 

@@ -4,6 +4,8 @@ Most 1.x services run unchanged. Read the first list before you build, and the s
 
 ## Changes that break the build
 
+- **Session parameter.** The session parameter is spelled `sessionId` everywhere; a named argument `sessionID:` must be updated.
+- **MethodInfo names.** `RpcMethod.FromMethod` is `FromMethodInfo` and `RpcInterfaceMethod.Method` is `MethodInfo` (both were new in the 2.0 preview).
 - **Serializer.** `JsonRpcProcessor.Process(…, JsonSerializerSettings)` is gone from the core. Use `Config.SetSerializer(new NewtonsoftJsonRpcSerializer(settings))` from the Newtonsoft package, or the helper overloads there that take the settings.
 - **Overloads.** The default-session string overloads that take a serializer take it first: `Process(serializer, json, context)` and `ProcessSync(serializer, json, context)`. `ProcessSync(sessionId, json, context, serializer)` makes `context` required, so `ProcessSync(json, null)` still means the default session. `Process` and `ProcessAsync` do not: `Process(json, null)` no longer compiles (it is ambiguous with the `JsonRpcStateAsync` overload), and `ProcessAsync(json, null)` binds to the session overload with `json` as the session id and a null document, which throws `ArgumentNullException`. Write `Process(json)`, `Process(json, context: null)` or `ProcessAsync(json, context: null)`.
 - **DTOs.** `JsonRequest`, `JsonResponse` and `JsonRpcException` are plain DTOs without Json.NET attributes. `JsonRequest.Params` is the active serializer's object model, so cast to `JObject`/`JArray` only when the Json.NET serializer is active.

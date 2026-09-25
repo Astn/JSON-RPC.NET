@@ -89,6 +89,8 @@ Both examples use the default session (`Handler.DefaultSessionId()`).
 Lambdas and classes can be mixed in one session when their method names differ; both examples register `add`, so keep one of them.
 The next step drives `CalculatorService` in process, without a transport.
 
+A method is a callable identified by the `method` member of a request; its implementation is a delegate, a `[JsonRpcMethod]` member of a class, or a member of a bound interface.
+
 ### Process requests
 
 Put this code in `Program.cs` in a console project targeting `net8.0` or `net10.0`.

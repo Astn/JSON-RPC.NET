@@ -177,6 +177,8 @@ That is the whole in-process server. The rest of this page is about exposing met
 
 ## Defining methods
 
+A *method* is a callable identified by the `method` member of a request; its implementation is a delegate, a `[JsonRpcMethod]` member of a class, or a member of a bound interface. `ServiceBinder` never asks for a `MethodInfo`; the same word names the -32601 "Method not found" error.
+
 ### Classes
 
 Any class works, not only `JsonRpcService` subclasses: bind an instance with `ServiceBinder.BindService(sessionId, instance)`. A `JsonRpcService` subclass binds itself to the default session in its parameterless constructor. Write `: base(false)` for a subclass that something else binds (the AspNetCore host binds every registered service to its effective session) and `: base(sessionId)` to bind to another session.
@@ -185,7 +187,7 @@ An instance bound with `BindService(sessionId, instance)` serves every request o
 
 ### Delegates
 
-A method does not need a class at all. Any delegate becomes a method with `ServiceBinder.BindMethod`; a lambda keeps its parameter names for named params:
+Bind a delegate as a JSON-RPC method with `ServiceBinder.BindMethod`; a lambda keeps its parameter names for named params:
 
 ```csharp
 ServiceBinder.BindMethod("add", (double l, double r) => l + r);
@@ -212,7 +214,7 @@ binding.Dispose(); // unbinds this tree, leaving later replacements alone
 
 using var characterOnly = ServiceBinder.BindInterface<IWorld>(sessionId, world,
     new RpcInterfaceBindingOptions { Include = m => m.Path.Length == 1 });
-// Include can also inspect m.Method for the host's own interface attributes.
+// Include can also inspect m.MethodInfo for the host's own interface attributes.
 ```
 
 Each interface-typed property becomes a name segment, so `IWorld.Character.MoveAndRotate` is exposed as `Character.MoveAndRotate`. The whole tree is walked and compiled when you call `BindInterface`, so a request pays nothing for it.
@@ -231,7 +233,7 @@ Naming, through `RpcInterfaceBindingOptions`:
 | `Prefix` | `""` | prepended to every generated name |
 | `Separator` | `"."` | joins property segments and the method name |
 | `Casing` | `Preserve` | `CamelCase` lower-cases the first letter of each generated segment (invariant culture) |
-| `Include` | all | a predicate over `RpcInterfaceMethod` (`Path`, `Method`, `Interface`, `Leaf`, `DefaultName`) |
+| `Include` | all | a predicate over `RpcInterfaceMethod` (`Path`, `MethodInfo`, `Interface`, `Leaf`, `DefaultName`) |
 | `NameRule` | none | returns the complete wire name, replacing the rules above |
 
 An explicit `[JsonRpcMethod("alias")]` on an interface method is used as written. `Task` and `ValueTask` members are served by `ProcessAsync`; `[JsonRpcMethod(ContextFlow = RpcContextFlow.Flow)]` on the interface member opts into context flow across awaits (see [Asynchronous methods and cancellation](#asynchronous-methods-and-cancellation)).
@@ -412,7 +414,7 @@ The client gets a ticket immediately and polls, or the transport pushes a notifi
 
 ## Sessions and context
 
-Sessions let you host independent sets of services (for example one per connected client or tenant):
+A *session* is a named set of JSON-RPC methods with its own configuration, stored in a process-wide registry until explicitly destroyed; it has no connection lifetime of its own and no relationship to ASP.NET Core session state. Sessions let you host independent sets of methods, for example one per connected client or tenant:
 
 ```csharp
 ServiceBinder.BindService("client-42", new CalculatorService());   // any object with [JsonRpcMethod] members

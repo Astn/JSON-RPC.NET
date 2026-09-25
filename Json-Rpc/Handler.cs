@@ -10,6 +10,7 @@ namespace AustinHarris.JsonRpc
     using AustinHarris.JsonRpc.Serialization;
     using System.Collections.Concurrent;
 
+    /// <summary>Dispatches requests for one session: a named set of JSON-RPC methods and configuration whose lifetime is managed explicitly.</summary>
     public sealed partial class Handler
     {
         #region Members
@@ -112,7 +113,7 @@ namespace AustinHarris.JsonRpc
         }
 
         /// <summary>
-        /// Removes and clears the Handler with the specific sessionID from the registry of Handlers
+        /// Removes and clears the Handler with the specific sessionId from the registry of Handlers
         /// </summary>
         public static void DestroySession(string sessionId)
         {
@@ -135,7 +136,7 @@ namespace AustinHarris.JsonRpc
         public static Handler DefaultHandler { get { return GetSessionHandler(_defaultSessionId); } }
 
         /// <summary>
-        /// The sessionID of this Handler
+        /// The sessionId of this Handler
         /// </summary>
         public string SessionId { get; private set; }
 
@@ -260,9 +261,9 @@ namespace AustinHarris.JsonRpc
         /// <summary>
         /// Allows you to register all the functions on a Pojo Type that have been attributed as [JsonRpcMethod] to the specified sessionId
         /// </summary>
-        public static void RegisterInstance(string sessionID, object instance)
+        public static void RegisterInstance(string sessionId, object instance)
         {
-            ServiceBinder.BindService(sessionID, instance);
+            ServiceBinder.BindService(sessionId, instance);
         }
 
         /// <summary>
@@ -273,11 +274,13 @@ namespace AustinHarris.JsonRpc
         /// <param name="parameterNameTypeMapping">The parameter names and types that will be positionally bound to the function; the last entry is the return type</param>
         /// <param name="parameterNameDefaultValueMapping">Optional default values for parameters</param>
         /// <param name="implementation">A reference to the Function</param>
+        [Obsolete("Use ServiceBinder.BindMethod; unlike RegisterFuction it throws when the name is already registered instead of replacing it.")]
         public void RegisterFuction(string methodName, Dictionary<string, Type> parameterNameTypeMapping, Dictionary<string, object> parameterNameDefaultValueMapping, Delegate implementation)
         {
             MetaData.AddService(methodName, parameterNameTypeMapping, parameterNameDefaultValueMapping ?? new Dictionary<string, object>(), implementation);
         }
 
+        [Obsolete("Use ServiceBinder.UnbindMethod.")]
         public void UnRegisterFunction(string methodName)
         {
             MetaData.RemoveService(methodName);

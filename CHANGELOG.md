@@ -29,6 +29,9 @@ behaviour: a breaking change to either means a new major version.
 
 ### Changed
 
+- `RpcMethod.FromMethod` is `RpcMethod.FromMethodInfo`; `RpcInterfaceMethod.Method` is `RpcInterfaceMethod.MethodInfo`. A `MethodInfo` is always spelled out; "method" means the JSON-RPC method.
+- The session parameter is spelled `sessionId` on every overload (`BindService`, `Handler.RegisterInstance` and the `JsonRpcService` constructor used `sessionID`).
+- `Handler.RegisterFuction` and `UnRegisterFunction` are obsolete; use `ServiceBinder.BindMethod` and `UnbindMethod` (which throw on a duplicate name instead of replacing it).
 - The core no longer depends on Json.NET.
 - `ProcessAsync` no longer serializes the process on one lock per document. Each thread now caches one async scratch (input copy, reader, staged output) in front of the shared pool, which handles only misses and overflow. At 16 workers, the inline rows went from about 4 M to 22.2 M to 32.1 M RPC/s across the registrations, and the row with a real suspension from 3.9 M to 8.96 M (one run per row, 2026-09-25). The library retains one scratch per thread that has run `ProcessAsync` plus 64 shared, with buffers at most 64 KiB each.
 - The request path looks sessions up without creating them. A request for a session id that was never registered answers `-32601` for every call and leaves the registry untouched; sessions are created by binding and by the per-session `Config` setters. Registration adds the session before publishing the registry version, so a thread that misses its snapshot consults the master registry and cannot answer `-32601` for a session that exists.

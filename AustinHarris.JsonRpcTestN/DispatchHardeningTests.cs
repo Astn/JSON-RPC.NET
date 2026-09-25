@@ -154,7 +154,9 @@ namespace AustinHarris.JsonRpcTestN
         public void DestroySessions()
         {
             Handler.DestroySession(Session);
+#pragma warning disable CS0618
             Handler.DefaultHandler.UnRegisterFunction("dh.whichSession");
+#pragma warning restore CS0618
         }
 
         private static string Run(string json, object context = null, JsonRpcSerializer serializer = null, string session = Session)
