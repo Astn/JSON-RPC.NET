@@ -26,6 +26,10 @@ namespace AustinHarris.JsonRpc
 
         // Only the async dispatcher uses this scope. The thread frame is restored before returning
         // an incomplete operation; a flowing frame is owned by that operation until terminal cleanup.
+        // A None scope is always disposed on the thread that created it. A Flow scope may be disposed on the
+        // thread that completed the method (HandleBoxedAsync awaits with a live scope), so Dispose never
+        // writes the captured thread frame back: restoring the ambient value brings back the frame the
+        // current thread had before the flowing one arrived, whichever thread that is.
         private readonly struct AsyncScope : IDisposable
         {
             internal readonly InvocationState Frame;
@@ -59,13 +63,11 @@ namespace AustinHarris.JsonRpc
 
             public void Dispose()
             {
-                if (FlowFrame == null)
-                {
-                    Frame.Context = _context; Frame.Exception = _exception; Frame.Reader = _reader;
-                }
                 if (AsyncAmbient.Current.Value != _parent) AsyncAmbient.Current.Value = _parent;
+                if (FlowFrame != null) return;
+                Frame.Context = _context; Frame.Exception = _exception; Frame.Reader = _reader;
                 // A None scope may have created the reusable thread frame; keep it when there was no parent.
-                if (_thread != null || FlowFrame != null) __state = _thread;
+                if (_thread != null) __state = _thread;
             }
         }
 

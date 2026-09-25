@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using AustinHarris.JsonRpc;
 using Hardware.Info;
 
@@ -12,9 +12,11 @@ namespace TestServer_Console
 
         static void Main(string[] args)
         {
-            // When stdout is a pipe (CI, `dotnet run | tee`) there is no console buffer to clear or reposition.
             services = new object[] { new CalculatorService() };
-            // `dotnet run -- --async [seconds] [workers]` exercises real asynchronous invocation.
+            // Before any mode runs: the awaited-worker modes (--async, --scale) start their workers on the pool.
+            System.Threading.ThreadPool.SetMinThreads(Environment.ProcessorCount * 3, Environment.ProcessorCount * 3);
+
+            // `dotnet run -- --async [seconds] [workers]` drives ProcessAsync from awaited workers (the Async table).
             if (args.Length > 0 && args[0] == "--async")
             {
                 double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 3;
@@ -23,13 +25,24 @@ namespace TestServer_Console
                 return;
             }
 
+            // `dotnet run -- --scale [seconds] [workers] [threshold]` is the release gate for the ProcessAsync path:
+            // the inline rows at 1, 2 and N workers, three paired runs, medians; exit code 1 when N/1 is below the threshold.
+            if (args.Length > 0 && args[0] == "--scale")
+            {
+                double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 3;
+                int workers = args.Length > 2 && int.TryParse(args[2], out var t) ? t : 16;
+                double threshold = args.Length > 3 && double.TryParse(args[3], out var r) ? r : 4.0;
+                bool pass = AsyncBenchmark.ScaleAsync(Console.WriteLine, seconds, workers, threshold).GetAwaiter().GetResult();
+                Environment.ExitCode = pass ? 0 : 1;
+                return;
+            }
+
             var interactive = !Console.IsOutputRedirected;
             if (interactive) Console.Clear();
             IHardwareInfo hardwareInfo = new HardwareInfo();
             hardwareInfo.RefreshAll();
             HardwarePrinter.PrintHardware(hardwareInfo);
-            System.Threading.ThreadPool.SetMinThreads(Environment.ProcessorCount * 3, Environment.ProcessorCount * 3);
-            Console.WriteLine("Setting task pool size to {0}", Environment.ProcessorCount * 4);
+            Console.WriteLine("Thread pool minimum set to {0}", Environment.ProcessorCount * 3);
 
             // `dotnet run -- --sync [seconds] [threads]` runs the direct synchronous benchmark and exits (CI / scripted runs).
             if (args.Length > 0 && args[0] == "--sync")
@@ -40,11 +53,13 @@ namespace TestServer_Console
                 return;
             }
 
-            // `dotnet run -- --kestrel [seconds]` hosts the AspNetCore package in-process and drives it over HTTP and TCP.
+            // `dotnet run -- --kestrel [seconds] [async]` hosts the AspNetCore package in-process and drives it over HTTP and TCP;
+            // `async` turns EnableAsyncMethods on and adds a TCP row with yielding methods.
             if (args.Length > 0 && args[0] == "--kestrel")
             {
                 double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 3;
-                KestrelBenchmark.RunAsync(Console.WriteLine, seconds).GetAwaiter().GetResult();
+                bool asyncMethods = args.Length > 2 && args[2] == "async";
+                KestrelBenchmark.RunAsync(Console.WriteLine, seconds, asyncMethods: asyncMethods).GetAwaiter().GetResult();
                 return;
             }
 
@@ -67,13 +82,18 @@ namespace TestServer_Console
             PrintOptions();
             for (string line = Console.ReadLine(); line != null && line != "q"; line = Console.ReadLine())
             {
-                if (!interactive && string.IsNullOrWhiteSpace(line))
-                {
-                    BenchmarkRunner.Benchmark(Console.WriteLine);
-                }
-                else if (line.StartsWith("s", StringComparison.CurrentCultureIgnoreCase))
+                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("s", StringComparison.CurrentCultureIgnoreCase))
                 {
                     BenchmarkRunner.BenchmarkSync(Console.WriteLine);
+                }
+                else if (line.StartsWith("a", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    AsyncBenchmark.RunAsync(Console.WriteLine, 3, 1).GetAwaiter().GetResult();
+                    AsyncBenchmark.RunAsync(Console.WriteLine, 3, Environment.ProcessorCount).GetAwaiter().GetResult();
+                }
+                else if (line.StartsWith("t", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    LegacyStringBenchmark(interactive, hardwareInfo);
                 }
                 else if (line.StartsWith("k", StringComparison.CurrentCultureIgnoreCase))
                 {
@@ -83,37 +103,45 @@ namespace TestServer_Console
                 {
                     CompareBenchmark.RunAsync(Console.WriteLine).GetAwaiter().GetResult();
                 }
-                else if (string.IsNullOrWhiteSpace(line))
-                {
-                    Console.CursorVisible = false;
-                    HardwarePrinter.PrintHardware(hardwareInfo);
-                    var pos = Console.CursorTop;
-                    BenchmarkRunner.Benchmark((update) =>
-                    {
-                        // Clear the console from pos to current position first
-                        var currentline = Console.CursorTop;
-                        var fullLine = new string(' ', Console.WindowWidth);
-                        Console.SetCursorPosition(0, pos);
-                        for (int i = 0; i < currentline-pos; i++)
-                        {
-                            Console.WriteLine( fullLine);
-                        }
-                        
-                        Console.SetCursorPosition(0, pos);
-                        Console.WriteLine(update);
-                    });
-                    Console.CursorVisible = true;
-                }
                 else if (line.StartsWith("c", StringComparison.CurrentCultureIgnoreCase))
                     ConsoleInput();
                 PrintOptions();
             }
         }
 
+        /// <summary>The 1.x string overloads through the thread pool, with live progress when there is a console to reposition.</summary>
+        private static void LegacyStringBenchmark(bool interactive, IHardwareInfo hardwareInfo)
+        {
+            if (!interactive)
+            {
+                BenchmarkRunner.Benchmark(Console.WriteLine);
+                return;
+            }
+            Console.CursorVisible = false;
+            HardwarePrinter.PrintHardware(hardwareInfo);
+            var pos = Console.CursorTop;
+            BenchmarkRunner.Benchmark((update) =>
+            {
+                // Clear the console from pos to current position first
+                var currentline = Console.CursorTop;
+                var fullLine = new string(' ', Console.WindowWidth);
+                Console.SetCursorPosition(0, pos);
+                for (int i = 0; i < currentline - pos; i++)
+                {
+                    Console.WriteLine(fullLine);
+                }
+
+                Console.SetCursorPosition(0, pos);
+                Console.WriteLine(update);
+            });
+            Console.CursorVisible = true;
+        }
+
         private static void PrintOptions()
         {
-            Console.WriteLine("Hit Enter to run the Task-based benchmark");
-            Console.WriteLine("'s' to run the direct synchronous benchmark (bytes in, bytes out)");
+            Console.WriteLine("Hit Enter (or 's') for Process(bytes), dedicated threads: the library alone, the Sync table (--sync)");
+            Console.WriteLine("'a' for ProcessAsync(bytes), awaited workers, at 1 and " + Environment.ProcessorCount + " workers: the Async table (--async)");
+            Console.WriteLine("'t' for Legacy Process(string), scheduled synchronous work: the 1.x string overloads through the thread pool, not the byte path");
             Console.WriteLine("'k' to run the Kestrel benchmark (AspNetCore package over HTTP and TCP)");
             Console.WriteLine("'x' to compare against StreamJsonRpc and gRPC for .NET (same calls, same Kestrel)");
             Console.WriteLine("'c' to start reading console input");
@@ -127,9 +155,5 @@ namespace TestServer_Console
                 JsonRpcProcessor.Process(line).ContinueWith(response => Console.WriteLine( response.Result ));
             }
         }
-
-
     }
-
-    
 }

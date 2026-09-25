@@ -42,3 +42,41 @@ jobs:
           for project in Json-Rpc AustinHarris.JsonRpc.Newtonsoft AustinHarris.JsonRpc.SystemTextJson AustinHarris.JsonRpc.AspNetCore; do
             dotnet nuget push "$project/bin/Release/"*.nupkg --skip-duplicate --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.NugetKey }} # API key for the NuGet feed
           done
+
+  # Every lock and Interlocked on the request-path files must be listed with a reason (a process-wide lock on the
+  # per-document path once capped ProcessAsync at 4 M RPC/s on every core count). A review aid, not the measurement.
+  request-path-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Synchronization on the request path is allowlisted
+        run: python3 .github/scripts/check_request_path_sync.py
+
+  # The measurement: ProcessAsync must scale from 1 to 4 workers. A process-wide serialization point holds the ratio
+  # near 1.3 on any core count. Diagnostic on the shared runner (its core count and isolation are not promised, so
+  # this job is not required and continues on error); the release gate is `--scale 3 16 4.0` on the reference machine.
+  scaling:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          dotnet-version: 10.0.x
+      - name: Build the harness
+        run: dotnet build TestServer_Console --configuration Release
+      - name: ProcessAsync scales from 1 to 4 workers (4/1 at least 2.0)
+        run: |
+          set +e
+          dotnet run -c Release --no-build --project TestServer_Console -- --scale 3 4 2.0 | tee scale.txt
+          status=${PIPESTATUS[0]}
+          {
+            echo "## ProcessAsync scaling (diagnostic, not required)"
+            echo
+            grep -E '^\|' scale.txt
+            echo
+            [ "$status" -eq 0 ] && echo "pass: 4/1 at least 2.0" || echo "**flag: 4/1 below 2.0 on this runner; reproduce with --scale 3 16 4.0 on the reference machine before reading it as a regression**"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
