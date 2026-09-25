@@ -424,6 +424,30 @@ Handler.DestroySession("client-42");
 
 Sessions are stored in a process-wide registry. Binding (`ServiceBinder.BindService`, `BindMethod`, `BindInterface`, a `JsonRpcService` constructor), the per-session `Config` setters and `Handler.GetSessionHandler(sessionId)` create a session; it remains until `Handler.DestroySession(sessionId)` is called. A request for a session id that was never registered creates nothing: every call in it answers `-32601` and the default session's methods are not reachable through it, so an id taken from a route or header cannot grow the registry. Each registration or destruction makes every thread refresh its copy of the registry on its next lookup, so register at startup or when a connection or tenant appears, not per request, and destroy tenant- or connection-scoped sessions when their lifetime ends.
 
+### What sessions are for
+
+A session is an independent method table with its own serializer, `jsonrpc` version policy and handlers, chosen per request by its id. That covers:
+
+- **API versions.** Bind `v1` and `v2` as two sessions with different method names or parameter contracts and serve both at once.
+- **Tenants.** Bind the same class once per tenant, each session over its own instance, and give some tenants methods the others do not have.
+- **Connections.** Bind a session when a client connects and destroy it when the client disconnects, so its methods live exactly as long as the connection.
+- **Capability sets.** Offer a small public session and a larger administrative one instead of a mode flag inside every method.
+- **Migration and experiments.** Route selected clients to a session bound to a new implementation of the same method names while the rest keep the established one.
+- **Wire compatibility.** Set the serializer, version policy and error handlers per session for clients with different expectations.
+- **Several surfaces in one process.** An embedded host runs independent method sets side by side, even over one transport: the Kestrel HTTP endpoint picks the session per request through `JsonRpcOptions.SessionSelector`.
+
+### Rough edges
+
+- **Authorisation.** A session id is routing, not a permission. When it selects tenant data or privileged methods, the host decides which id a caller may name; the library guarantees only that an unknown id reaches nothing.
+- **Lifetime.** A session stays in the registry until `Handler.DestroySession(sessionId)`. Connection- and tenant-scoped sessions need cleanup the host can rely on, such as a disconnect callback.
+- **Registration cost.** Each registration or destruction makes every thread refresh its view of the registry on its next lookup, so a session per request is the wrong shape; a session per connection or tenant is fine.
+- **Shared instances.** `BindService(sessionId, instance)` hands the same object to every concurrent call, so it must be thread-safe and must not keep request state in fields. `BindService(sessionId, typeof(T), resolve)` and `AddJsonRpcService<T>(ServiceLifetime.Scoped)` give each call its own instance; see [Classes](#classes).
+- **The default session.** A `JsonRpcService` subclass built with the parameterless constructor binds to the default session, and a handler setter on `Config` without a session id changes the default session's handler.
+- **Compatibility.** Two versions can expose different signatures, but an old result shape or old semantics still needs its own implementation or an adapter.
+- **Configuration scope.** A session is not a whole server: exception disclosure is process-wide and the serializer can also be chosen per call; the scopes are listed under [Configuration](#configuration).
+
+### Context
+
 Pass an arbitrary context object through to your methods and read it with `Handler.RpcContext()` or `JsonRpcContext.Current().Value` (the AspNetCore package passes the `HttpContext` or `ConnectionContext`):
 
 ```csharp
