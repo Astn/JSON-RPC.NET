@@ -25,10 +25,12 @@ behaviour: a breaking change to either means a new major version.
 - `AddJsonRpcService<T>(ServiceLifetime, sessionId)` and the matching `AddJsonRpcServicesFromAssembly` overload: scoped and transient services are resolved per call from `HttpContext.RequestServices`, or from a scope the raw connection handler opens per document and publishes as `IServiceProvidersFeature`; a batch shares one scope. `JsonRpcOptions.ServiceProviderSelector` locates the provider from a custom context. A lifetime that conflicts with the container's registration, a non-singleton `JsonRpcService` subclass, and a `ContextFactory` without a selector are refused at registration or startup.
 - `protected JsonRpcService(bool autoBind)`: a subclass constructed with `base(false)` binds itself nowhere, for services that a host or an explicit `BindService` call binds.
 - `SECURITY.md` (private vulnerability reporting) and this changelog.
+- `TestServer_Console --scale` is the release gate for the `ProcessAsync` path. It measures the inline rows at 1, 2 and N workers in three paired runs, takes the medians and fails when N/1 is below the threshold. `--kestrel [seconds] async` runs the host with `EnableAsyncMethods = true`. The README adds `--async` rows for `ProcessAsync` at 1 and 16 workers. The 1.x string overloads' thread-pool benchmark is now the `t` menu entry and no longer the default.
 
 ### Changed
 
 - The core no longer depends on Json.NET.
+- `ProcessAsync` no longer serializes the process on one lock per document. Each thread now caches one async scratch (input copy, reader, staged output) in front of the shared pool, which handles only misses and overflow. At 16 workers, the inline rows went from about 4 M to 22.2 M to 32.1 M RPC/s across the registrations, and the row with a real suspension from 3.9 M to 8.96 M (one run per row, 2026-09-25). The library retains one scratch per thread that has run `ProcessAsync` plus 64 shared, with buffers at most 64 KiB each.
 - The request path looks sessions up without creating them. A request for a session id that was never registered answers `-32601` for every call and leaves the registry untouched; sessions are created by binding and by the per-session `Config` setters. Registration adds the session before publishing the registry version, so a thread that misses its snapshot consults the master registry and cannot answer `-32601` for a session that exists.
 - The AspNetCore host binds every registered service, `JsonRpcService` subclasses included, to its effective session (the registration's session, then `JsonRpcOptions.SessionId`, then the default). It no longer skips a subclass on the default session.
 - The core package's description says "no JSON library dependency" instead of "no dependencies". The session registry uses the framework's `ConcurrentDictionary`; the `NonBlocking` package reference is gone, so the core has no dependencies on `net8.0` and `net10.0` (measured with `SessionRegistryBenchmarks`: unknown-id lookups and register/destroy cycles got faster, stable lookups and dispatch are unchanged).
@@ -49,6 +51,7 @@ behaviour: a breaking change to either means a new major version.
 
 - A trailing notification in a batch no longer leaves a dangling comma.
 - `async void` methods are rejected at registration.
+- A method registered with `RpcContextFlow.Flow` that suspends under a pre- or post-processing hook and completes on another thread no longer gives the completing thread the starting thread's frame. Previously, the two threads then shared one frame, so `RpcContext`, `RpcRequestId` and `RpcSetException` on either could read or clear the other's state during concurrent dispatch. The new cross-thread `ProcessAsync` test found this bug. The frame is now restored through the ambient value alone.
 
 ### Security
 

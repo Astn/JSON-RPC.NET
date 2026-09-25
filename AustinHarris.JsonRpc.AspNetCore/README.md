@@ -156,9 +156,15 @@ invoked.
 
 - **HTTP:** the call is cancelled when the client disconnects (`HttpContext.RequestAborted`). Notifications are
   awaited and still answer `204`. The body reader stays leased until the invocation finishes.
-- **Raw connections:** documents are processed one at a time, in order. Replies already finished are flushed
-  before the connection waits on a slow method. When the connection closes, the running method is waited for and
-  its response discarded.
+- **Raw connections:** documents are processed one at a time, in order. On one connection, 256 pipelined requests
+  are 256 sequential invocations, not 256 concurrent suspensions. Concurrency comes from connections.
+  Replies already finished are flushed before the connection waits on a slow method. When the connection closes,
+  the handler waits for the running method to finish and discards its response.
+- **Cost:** every document then goes through `ProcessAsync`. With methods that complete inline, the TCP row measured
+  15.0 M to 15.4 M against 14.3 M to 16.5 M for the synchronous mode on the same day, inside its spread. A method that
+  suspends pays for its own async state, the library's completion state and a continuation per request; the main README's
+  Async table measured 559 B per request for the yielding None row in process at one worker, including the service's own
+  allocations. The main README's Kestrel table has both rows, measured with `TestServer_Console --kestrel 3 async`.
 
 A method receives the token by declaring a `[JsonRpcCancellation] CancellationToken` parameter; see
 [Asynchronous methods and cancellation](https://github.com/Astn/JSON-RPC.NET#asynchronous-methods-and-cancellation)

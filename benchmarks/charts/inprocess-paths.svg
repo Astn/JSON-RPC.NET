@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="940" height="280" viewBox="0 0 940 280" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="a4f53e6a848f">
-<title>In-process paths: different execution boundaries</title><desc>No network. A direct call, a Pipe pair and a typed proxy cross different boundaries, so these rows are not a like-for-like comparison with each other or with the transport rows. Two 3 s runs; intervals span them. Data revision a4f53e6a848f.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="280" viewBox="0 0 940 280" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="eacac12e8d55">
+<title>In-process paths: different execution boundaries</title><desc>No network. A direct call, a Pipe pair and a typed proxy cross different boundaries, so these rows are not a like-for-like comparison with each other or with the transport rows. Two 3 s runs; intervals span them. Data revision eacac12e8d55.</desc>
 <rect width="940" height="280" rx="10" fill="#ffffff" stroke="#d1d5db"/>
 <text x="24.0" y="32.0" text-anchor="start" font-size="18" fill="#1f2328" font-weight="600">In-process paths: different execution boundaries</text>
 <text x="24.0" y="54.0" text-anchor="start" font-size="12" fill="#57606a">No network. A direct call, a Pipe pair and a typed proxy cross different boundaries, so these rows are not a</text>

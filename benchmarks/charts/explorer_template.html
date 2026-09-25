@@ -315,7 +315,7 @@
 
   // ---- snapshot sets
   var snaps = document.getElementById("snapshots");
-  ["sync", "kestrel", "compare", "inprocess", "wasm"].forEach(function (key) {
+  ["headline", "sync", "async1", "async16", "legacy", "kestrel", "compare", "inprocess", "wasm"].forEach(function (key) {
     var st = DATA.sets[key];
     if (!st) return;
     var d = html("details", {}, snaps);
@@ -324,11 +324,11 @@
     var t = html("table", {}, d);
     var h = html("tr", {}, html("thead", {}, t));
     var b = html("tbody", {}, t);
-    if (key === "sync") {
-      ["threads", "published", "low", "high", "ns per request"].forEach(function (c) { html("th", { scope: "col" }, h, c); });
+    if (st.x) {
+      [st.x.name, "published", "low", "high", "ns per request"].forEach(function (c) { html("th", { scope: "col" }, h, c); });
       st.series[0].points.forEach(function (p, i) {
         var r = html("tr", {}, b);
-        html("td", {}, r, st.x.values[i]); html("td", {}, r, p.published); html("td", {}, r, exact(p.low)); html("td", {}, r, exact(p.high)); html("td", {}, r, p.ns);
+        html("td", {}, r, st.x.values[i]); html("td", {}, r, p.published); html("td", {}, r, exact(p.low)); html("td", {}, r, exact(p.high)); html("td", {}, r, p.ns == null ? "" : p.ns);
       });
     } else if (key === "wasm") {
       ["path"].concat(st.modes.map(function (m) { return m.label + " (" + m.policy + ")"; })).forEach(function (c) { html("th", { scope: "col" }, h, c); });

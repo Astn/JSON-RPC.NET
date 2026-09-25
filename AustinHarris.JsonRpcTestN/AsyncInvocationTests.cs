@@ -24,6 +24,12 @@ namespace AustinHarris.JsonRpcTestN
         [TearDown] public void TearDown() => Handler.DestroySession(_session);
         private void Bind(string name, Delegate method, RpcContextFlow flow = RpcContextFlow.Flow) => ServiceBinder.BindMethod(_session, name, method, contextFlow: flow);
         private Task<string> Run(string json, JsonRpcSerializer serializer = null, object context = null, CancellationToken token = default) => JsonRpcProcessor.ProcessAsync(_session, json, context, serializer, token);
+        private string Sync(string json, object context = null)
+        {
+            var output = new ArrayBufferWriter<byte>();
+            JsonRpcProcessor.Process(_session, Encoding.UTF8.GetBytes(json).AsSpan(), output, context);
+            return Encoding.UTF8.GetString(output.WrittenSpan);
+        }
         private static TaskCompletionSource<int> Gate() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         private static string Request(string method, string parameters = null, string id = "1") => "{\"method\":\"" + method + "\"" + (parameters == null ? "" : ",\"params\":" + parameters) + (id == null ? "" : ",\"id\":" + id) + "}";
         private static void Error(string json, int code) => Assert.AreEqual(code, (int)JObject.Parse(json)["error"]["code"], json);
@@ -307,6 +313,51 @@ namespace AustinHarris.JsonRpcTestN
             await Run(Request("run"), context: new object());
             gate.SetResult(0);
             await escaped;
+        }
+
+        [Test]
+        public async Task FlowScope_CompletedOnAnotherThread_LeavesThatThreadItsOwnFrame()
+        {
+            // A hooked Flow invocation suspends here and completes on a pool thread, where its scope is
+            // disposed. That thread must keep its own frame afterwards: when it was handed this thread's
+            // frame instead, a synchronous dispatch on each thread saved and restored the same frame, and
+            // the interleaving below left this thread's method reading no id at all.
+            var handler = Handler.GetSessionHandler(_session);
+            handler.SetPreProcessHandler((request, context) => null);
+            int completedOn = 0;
+            handler.SetPostProcessHandler((request, response, context) => { if (request.Method == "suspend") completedOn = Environment.CurrentManagedThreadId; return null; });
+            var suspended = new TaskCompletionSource<int>();
+            Bind("suspend", new Func<Task<int>>(() => suspended.Task));
+            var entered = new ManualResetEventSlim();
+            var release = new ManualResetEventSlim();
+            var left = new ManualResetEventSlim();
+            Bind("hold", new Func<int>(() => { entered.Set(); release.Wait(); return 1; }));
+            var mine = new object();
+            Bind("peek", new Func<int>(() =>
+            {
+                release.Set();
+                left.Wait();
+                return (Handler.RpcRequestId().IsAbsent ? 0 : 1) + (ReferenceEquals(Handler.RpcContext(), mine) ? 2 : 0);
+            }));
+            Bind("warm", new Func<int>(() => 1));
+            Sync(Request("warm"));   // this thread owns a frame before the suspension, as any thread that has dispatched does
+            var pending = Run(Request("suspend"));
+            int completingThread = 0;
+            var other = Task.Run(() =>
+            {
+                completingThread = Environment.CurrentManagedThreadId;
+                suspended.SetResult(7);
+                Sync(Request("hold", id: "2"));
+                left.Set();
+            });
+            // Block, do not await, until the other thread is inside "hold": an awaited continuation could be
+            // run on that thread, ahead of "hold", and wait for itself.
+            entered.Wait();
+            var response = Sync(Request("peek", id: "\"mine\""), mine);
+            await other;
+            Assert.AreEqual("{\"jsonrpc\":\"2.0\",\"result\":7,\"id\":1}", await pending);
+            Assume.That(completedOn, Is.EqualTo(completingThread), "the completion did not run the scope's cleanup on the completing thread");
+            Assert.AreEqual("{\"jsonrpc\":\"2.0\",\"result\":3,\"id\":\"mine\"}", response, "this thread's method sees its own id and context while the other thread dispatches");
         }
 
         [TestCaseSource(nameof(Serializers))]

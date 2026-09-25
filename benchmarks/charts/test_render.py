@@ -103,6 +103,15 @@ class Outputs(unittest.TestCase):
                 self.assertIn(render.esc(s["published"]), self.outputs["compare-streamjsonrpc.svg"] + self.outputs["kestrel-transports.svg"] + self.outputs["inprocess-paths.svg"], s["id"])
         for p in self.data["sets"]["sync"]["series"][0]["points"]:
             self.assertIn(p["published"], self.outputs["sync-threads.svg"])
+        for s in self.data["sets"]["headline"]["series"]:
+            self.assertIn(render.esc(s["published"]), self.outputs["headline-1x-vs-2.svg"], s["id"])
+
+    def test_headline_multiples_are_against_the_first_row(self):
+        svg = self.outputs["headline-1x-vs-2.svg"]
+        base = self.data["sets"]["headline"]["series"][0]["high"]
+        for s in self.data["sets"]["headline"]["series"][1:]:
+            self.assertIn(f"{s['high'] / base:.1f}\u00d7 the first row", svg, s["id"])
+        self.assertEqual(svg.count("the first row"), len(self.data["sets"]["headline"]["series"]) - 1)
 
     def test_clip_ids_are_unique_across_themes(self):
         ids = re.findall(r'clipPath id="([^"]+)"', self.outputs["sync-threads.svg"] + self.outputs["sync-threads-dark.svg"])

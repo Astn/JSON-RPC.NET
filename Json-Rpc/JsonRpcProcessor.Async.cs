@@ -188,13 +188,21 @@ namespace AustinHarris.JsonRpc
             if (scratch.Output.WrittenCount != 0) scratch.Output.CopyTo(destination);
         }
 
-        // Transferable exclusive leases. A bounded shared array avoids thread-affine ownership and
-        // linked-list node allocations. Nothing from synchronous Scratch is used here.
+        // Transferable exclusive leases. A one-slot thread-static cache of idle scratches sits in front of a
+        // bounded shared array; the array, under its lock, is the miss path and the overflow. The slot is a
+        // cache, not an owner: a lease that suspends is handed to the completing continuation, and Return() on
+        // whatever thread that runs on caches into that thread's slot, never into the origin thread's. A warm,
+        // non-reentrant inline document takes no lock; a cold or nested one may take both. Retention bound:
+        // one scratch per thread that has run ProcessAsync plus 64 shared slots; retained input and output
+        // buffers are at most CapacityLimit each; the cached reader is dropped after a document over
+        // CapacityLimit, and no reader-size cap is enforced (a custom serializer's reader may retain arbitrary
+        // state). Nothing from synchronous Scratch is used here.
         private sealed class AsyncScratch
         {
             private const int CapacityLimit = 64 * 1024;
             private static readonly AsyncScratch[] Pool = new AsyncScratch[64];
             private static int _count;
+            [ThreadStatic] private static AsyncScratch _slot;
             private byte[] _input;
             private JsonRpcSerializer _readerOwner;
             internal JsonRpcRequestReader Reader;
@@ -204,6 +212,14 @@ namespace AustinHarris.JsonRpc
 
             internal static AsyncScratch Rent()
             {
+                // The slot is cleared before the lease is exposed, so a ProcessAsync call made from inside a
+                // running method (the same thread, overlapping documents) falls through to the pool.
+                var cached = _slot;
+                if (cached != null)
+                {
+                    _slot = null;
+                    return cached;
+                }
                 lock (Pool)
                 {
                     if (_count > 0)
@@ -264,12 +280,22 @@ namespace AustinHarris.JsonRpc
                         Output = new PooledByteBufferWriter(4096);
                     }
                     else Output.Clear();
+                    // Only a scratch whose reader released cleanly is cached; a throwing Release leaves reusable
+                    // false and the scratch is disposed below instead of being published in a damaged state.
                     bool retained = false;
                     if (reusable)
                     {
-                        lock (Pool)
+                        if (_slot == null)
                         {
-                            if (_count < Pool.Length) { Pool[_count++] = this; retained = true; }
+                            _slot = this;
+                            retained = true;
+                        }
+                        else
+                        {
+                            lock (Pool)
+                            {
+                                if (_count < Pool.Length) { Pool[_count++] = this; retained = true; }
+                            }
                         }
                     }
                     if (!retained)

@@ -18,3 +18,11 @@ Benchmark classes:
 - `AsyncDispatchBenchmarks`: a synchronous method through `Process` and `ProcessAsync`, `Task<int>` and `ValueTask<int>` methods that complete inline, and a method that yields once, each with the default `RpcContextFlow.None` and with `RpcContextFlow.Flow`. The inline default rows should allocate nothing; the `Flow` rows pay for the execution-context bridge; the yielding rows show the cost of a real suspension.
 
 Read the `Allocated` column first: a non-zero value on a numeric shape means the request touched the GC, which the fast path must not do. Then compare `Mean`, but only between runs on an idle machine or within one run: background load biases ratios as well as absolute numbers, which is why `BindingComparisonBenchmarks` puts both registrations in one process.
+
+These rows run on one thread, so they cannot detect a process-wide serialization point. The `AsyncScratch` pool lock capped `ProcessAsync` at about 4 M RPC/s on every core count while every inline `None` row here stayed at 0 B and the same mean. Before a release, and after any change to dispatch, pooling or the async path, also run the scaling gate on the reference machine and paste its table into the release notes:
+
+```bash
+dotnet run -c Release --project TestServer_Console -- --scale 3 16 4.0
+```
+
+It fails when an inline row scales less than 4× from 1 to 16 workers. The lock gave 1.3; the per-thread cache gives about 7. The pull-request build runs a diagnostic `--scale 3 4 2.0` on the shared runner. It also checks that every `lock`, `Interlocked`, `Volatile.Write`, thread-static and writable static field on the request-path files is listed in `.github/request-path-sync.allowlist` with a reason.

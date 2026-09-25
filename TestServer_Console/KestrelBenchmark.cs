@@ -27,14 +27,17 @@ namespace TestServer_Console;
 /// answering the same five requests over HTTP (one request per POST, and a batch per POST) and over a raw
 /// TCP connection with pipelined requests. Clients and server share the machine, so each figure is an
 /// upper bound on what one box can do talking to itself; the in-process rows are the same requests through
-/// the byte entry point with no transport at all, for scale.
+/// the byte entry point with no transport at all, for scale. With <c>asyncMethods</c> the host runs with
+/// <c>EnableAsyncMethods = true</c>, so every document goes through <c>ProcessAsync</c>, and a second TCP row
+/// answers the same five calls from methods that await <c>Task.Yield()</c> once: a real suspension per request.
 /// </summary>
 internal static class KestrelBenchmark
 {
     private static readonly byte[] ResultPrefix = Encoding.UTF8.GetBytes("{\"jsonrpc\":\"2.0\",\"result\":");
     private static readonly byte[] BatchResultPrefix = Encoding.UTF8.GetBytes("[{\"jsonrpc\":\"2.0\",\"result\":");
+    private const string YieldPrefix = "yield.";
 
-    internal static async Task RunAsync(Action<string> print, double seconds = 3, int clients = 0, int pipeline = 256)
+    internal static async Task RunAsync(Action<string> print, double seconds = 3, int clients = 0, int pipeline = 256, bool asyncMethods = false)
     {
         print ??= Console.WriteLine;
         if (clients <= 0) clients = Environment.ProcessorCount;
@@ -51,17 +54,18 @@ internal static class KestrelBenchmark
             k.Listen(IPAddress.Loopback, 0);
             k.Listen(IPAddress.Loopback, tcpPort, l => l.UseConnectionHandler<JsonRpcConnectionHandler>());
         });
-        builder.Services.AddJsonRpc();
+        builder.Services.AddJsonRpc(o => o.EnableAsyncMethods = asyncMethods);
         var app = builder.Build();
         app.MapJsonRpc("/rpc");
         await app.StartAsync();
+        if (asyncMethods) BindYieldingMethods();
 
         try
         {
             var addresses = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>().Addresses;
             var httpUrl = addresses.First(a => !a.EndsWith(":" + tcpPort)) + "/rpc";
 
-            print($"Kestrel on {httpUrl} (HTTP) and 127.0.0.1:{tcpPort} (TCP), {clients} clients, pipeline {pipeline}, {seconds:0.#} s per row\n");
+            print($"Kestrel on {httpUrl} (HTTP) and 127.0.0.1:{tcpPort} (TCP), {clients} clients, pipeline {pipeline}, {seconds:0.#} s per row, EnableAsyncMethods = {(asyncMethods ? "true" : "false")}\n");
 
             var rows = new List<BenchmarkRunner.ChartRow>();
             var session = Handler.DefaultSessionId();
@@ -90,16 +94,44 @@ internal static class KestrelBenchmark
             // TCP, pipelined.
             TcpRun(tcpPort, inputs, clients, 0.5, pipeline, ResultPrefix);
             (count, secs) = TcpRun(tcpPort, inputs, clients, seconds, pipeline, ResultPrefix);
-            rows.Add(new BenchmarkRunner.ChartRow($"TCP, {pipeline} pipelined", count / secs, $"{count,12:N0} RPCs"));
+            rows.Add(new BenchmarkRunner.ChartRow($"TCP, {pipeline} pipelined{(asyncMethods ? ", inline methods" : "")}", count / secs, $"{count,12:N0} RPCs"));
             print($"  TCP done ({count / secs:N0} RPC/s)");
 
-            BenchmarkRunner.PrintBarChart($"Kestrel benchmark - {Config.Serializer.Name} - RPC/s by transport", "Transport", rows);
+            if (asyncMethods)
+            {
+                // The same five calls, each answered by a method that awaits Task.Yield() before returning.
+                var yieldInputs = inputs.Select(i => Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(i).Replace("\"method\":\"", "\"method\":\"" + YieldPrefix))).ToArray();
+                TcpRun(tcpPort, yieldInputs, clients, 0.5, pipeline, ResultPrefix);
+                (count, secs) = TcpRun(tcpPort, yieldInputs, clients, seconds, pipeline, ResultPrefix);
+                rows.Add(new BenchmarkRunner.ChartRow($"TCP, {pipeline} pipelined, yielding methods", count / secs, $"{count,12:N0} RPCs"));
+                print($"  TCP yielding done ({count / secs:N0} RPC/s)");
+            }
+
+            BenchmarkRunner.PrintBarChart($"Kestrel benchmark - {Config.Serializer.Name} - EnableAsyncMethods = {(asyncMethods ? "true" : "false")} - RPC/s by transport", "Transport", rows);
         }
         finally
         {
             await app.StopAsync();
             await app.DisposeAsync();
+            if (asyncMethods) UnbindYieldingMethods();
         }
+    }
+
+    private static readonly string[] YieldNames = { "add", "addInt", "NullableFloatToNullableFloat", "Test2", "StringMe" };
+
+    /// <summary>The five benchmark methods as <c>async Task&lt;T&gt;</c> methods that yield once, on the default session under a prefix.</summary>
+    private static void BindYieldingMethods()
+    {
+        ServiceBinder.BindMethod(YieldPrefix + "add", new Func<double, double, Task<double>>(async (l, r) => { await Task.Yield(); return l + r; }));
+        ServiceBinder.BindMethod(YieldPrefix + "addInt", new Func<int, int, Task<int>>(async (l, r) => { await Task.Yield(); return l + r; }));
+        ServiceBinder.BindMethod(YieldPrefix + "NullableFloatToNullableFloat", new Func<float?, Task<float?>>(async a => { await Task.Yield(); return a; }));
+        ServiceBinder.BindMethod(YieldPrefix + "Test2", new Func<decimal, Task<decimal?>>(async x => { await Task.Yield(); return x; }));
+        ServiceBinder.BindMethod(YieldPrefix + "StringMe", new Func<string, Task<string>>(async x => { await Task.Yield(); return x; }));
+    }
+
+    private static void UnbindYieldingMethods()
+    {
+        foreach (var name in YieldNames) ServiceBinder.UnbindMethod(YieldPrefix + name);
     }
 
     internal static byte[] BuildBatch(byte[][] inputs, int size)

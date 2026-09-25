@@ -1,0 +1,35 @@
+# Every `lock (`, `Interlocked.`, `Volatile.Write`, `[ThreadStatic]` field and writable static field in the
+# request-path files (core and both companion serializers), with the reason it is allowed there.
+# Format: file | the code line, trimmed, without its trailing comment | reason, starting with its tag:
+#   per-thread            the field is thread-static, so no line is shared
+#   miss-path             touched only when a per-thread cache misses or overflows, never by a warm inline document
+#   registration-only     written when methods or sessions are bound, never by a request
+#   read-only-after-init  written once at startup, then only read
+#   shared-write          a request can write it and every core reads it: the reason must say why it is tolerated
+# Checked by .github/scripts/check_request_path_sync.py in the pull-request workflow. The measurement that backs this
+# list is `TestServer_Console --scale` (README, Benchmarks). A `[ThreadStatic]` attribute on its own line is not
+# listed; the field line under it is.
+Json-Rpc/JsonRpcProcessor.Async.cs | private static int _count; | miss-path: the shared pool's fill count, read and written only under lock (Pool)
+Json-Rpc/JsonRpcProcessor.Async.cs | [ThreadStatic] private static AsyncScratch _slot; | per-thread: the one-slot cache of an idle async scratch
+Json-Rpc/JsonRpcProcessor.Async.cs | lock (Pool) | miss-path: AsyncScratch.Rent, taken only when the thread's slot is empty (cold thread, nested or overlapping document)
+Json-Rpc/JsonRpcProcessor.Async.cs | lock (Pool) | miss-path: AsyncScratch.Return, taken only when the completing thread's slot is already occupied; the array is the bounded overflow
+Json-Rpc/JsonRpcProcessor.cs | [ThreadStatic] private static Scratch _current; | per-thread: the synchronous scratch
+Json-Rpc/Handler.Async.cs | [ThreadStatic] private static InvocationState __unflowedState; | per-thread: the invocation frame of a RpcContextFlow.None call
+Json-Rpc/Handler.cs | private static int _sessionHandlerMasterVersion = 1; | registration-only: written by Interlocked.Increment when a session is created or destroyed; requests read it to validate their per-thread snapshot
+Json-Rpc/Handler.cs | Interlocked.Increment(ref _sessionHandlerMasterVersion); | registration-only: GetSessionHandler creating a session and DestroySession; never on the request path
+Json-Rpc/Handler.cs | private static Dictionary<string, Handler> _sessionHandlersLocal; | per-thread ([ThreadStatic] on the line above): the thread's snapshot of the session registry
+Json-Rpc/Handler.cs | private static int _sessionHandlerLocalVersion = 0; | per-thread ([ThreadStatic] on the line above): the snapshot's version
+Json-Rpc/Handler.cs | private static string _lastSessionId; | per-thread ([ThreadStatic] on the line above): the last-session cache
+Json-Rpc/Handler.cs | private static Handler _lastSessionHandler; | per-thread ([ThreadStatic] on the line above): the last-session cache
+Json-Rpc/Handler.cs | private static InvocationState __state; | per-thread ([ThreadStatic] on the line above): the current invocation frame
+Json-Rpc/Jsmn/JsmnSerializer.cs | [ThreadStatic] private static JsmnTokenizer _scratch; | per-thread: the tokenizer scratch
+Json-Rpc/Jsmn/JsmnSerializer.cs | [ThreadStatic] private static bool _scratchInUse; | per-thread: re-entrancy flag for the tokenizer scratch
+Json-Rpc/Serialization/Utf8KeyTable.cs | lock (_writeLock) | registration-only: Set, Remove, Clear and ReplaceAll rebuild a snapshot under the lock; requests read the published snapshot without it
+Json-Rpc/Serialization/Utf8KeyTable.cs | System.Threading.Volatile.Write(ref _snapshot, snapshot); | registration-only: publishes a rebuilt snapshot; read-only afterwards
+Json-Rpc/RpcBinding.cs | lock (_sync) | registration-only: RpcBinding.Dispose unbinding an interface tree
+AustinHarris.JsonRpc.SystemTextJson/SystemTextJsonRpcSerializer.cs | [ThreadStatic] private static Utf8JsonWriter _cachedWriter; | per-thread: the cached writer
+AustinHarris.JsonRpc.SystemTextJson/SystemTextJsonRpcSerializer.cs | [ThreadStatic] private static JsonSerializerOptions _cachedWriterOptions; | per-thread: the options the cached writer was built with
+AustinHarris.JsonRpc.SystemTextJson/SystemTextJsonRpcSerializer.cs | [ThreadStatic] private static bool _cachedWriterInUse; | per-thread: re-entrancy flag for the cached writer
+AustinHarris.JsonRpc.SystemTextJson/SystemTextJsonRpcSerializer.cs | [ThreadStatic] private static byte[] _scratch; | per-thread: transcoding scratch
+AustinHarris.JsonRpc.SystemTextJson/SystemTextJsonRpcSerializer.cs | private static Entry _last; | shared-write: TypeInfo<T>'s last-options cache, rewritten whenever the options differ from the previous call, so a per-request write when two serializers with different options serve requests concurrently; tolerated because one options object is the common case; the per-thread copy is the first candidate of the 2026-09-25 P6 resolution, pending its A/B
+AustinHarris.JsonRpc.Newtonsoft/NewtonsoftJsonRpcSerializer.cs | [ThreadStatic] private static Scratch _current; | per-thread: the Json.NET scratch

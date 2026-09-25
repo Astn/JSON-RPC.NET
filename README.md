@@ -4,12 +4,32 @@
 
 JSON-RPC.Net is a [JSON-RPC 2.0](https://www.jsonrpc.org/specification) server for .NET. You give it a request document and it gives you the response document, bytes in and bytes out; the transport is yours. Host it in Kestrel, a console app, sockets, pipes, or a Blazor WebAssembly page.
 
-Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer pluggable. The core depends on no JSON library: Json.NET and System.Text.Json ship as separate packages, and the built-in serializer needs neither. On one core it answers a small request in about 217 ns, with no allocation for numeric parameters. A Kestrel host on an 8-core desktop answers over 14 million requests per second over pipelined TCP. [Benchmarks](#benchmarks) gives the method and the full tables.
+Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer pluggable. The core depends on no JSON library: Json.NET and System.Text.Json ship as separate packages, and the built-in serializer needs neither. On one core it answers a small request in about 214 ns, with no allocation for numeric parameters. The library alone answers over 30 million requests per second on an 8-core desktop, ten times what 1.2.3 does on the same machine. Over pipelined TCP, a Kestrel host answers 14.3 M to 16.5 M requests per second. [Benchmarks](#benchmarks) gives the method and the full tables.
+
+## Performance
+
+2.0 answers the same five requests 4.3 times faster than 1.2.3 through the 1.x string API and 10.3 times faster through the byte entry points its hosts use. The synchronous byte path handles 31.7 M requests per second on 16 threads of one 8-core desktop, with no allocation for a numeric request. All results come from the same machine, the same requests and one session, one run per row.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="benchmarks/charts/headline-1x-vs-2-dark.svg">
+  <img alt="JSON-RPC.Net 1.2.3 and 2.0 on one machine, one run per row on 2026-09-25: 3.08 M requests per second through the 1.2.3 string API, 13.3 M through the same API on 2.0, and 31.7 M and 32.1 M through the 2.0 byte entry points" src="benchmarks/charts/headline-1x-vs-2.svg">
+</picture>
+
+| Path | RPC/s | Against 1.2.3 |
+| --- | ---: | ---: |
+| 1.2.3, `Task<string> Process(string)`, thread pool, best batch size | 3.08 M | |
+| 2.0, the same string API and the same loop | 13.3 M | 4.3× |
+| 2.0, `Process(bytes)`, 16 dedicated threads | 31.7 M | 10.3× |
+| 2.0, `ProcessAsync(bytes)`, 16 awaited workers | 32.1 M | 10.4× |
+
+The request path uses a span tokenizer over the UTF-8 bytes and invokers compiled against the concrete reader and writer. It writes the response straight into a pooled buffer, with no `Task`, result string or continuation per request. A numeric request never touches the GC. Over Kestrel TCP, the AspNetCore package holds 14.3 M to 16.5 M with 256 requests in flight per connection. [Benchmarks](#benchmarks) has the full tables, conditions and the ranges over each day's runs. The [explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) has the exact values. `benchmarks/Baseline` re-runs the 1.2.3 row from NuGet with the same loop as the 2.0 harness.
+
 
 It is a server only. There are no client proxies and no server-to-client calls. If you need a bidirectional RPC framework, look at [StreamJsonRpc](https://www.nuget.org/packages/StreamJsonRpc); the benchmarks compare the two.
 
 This README and the package guides are also published at [astn.github.io/JSON-RPC.NET](https://astn.github.io/JSON-RPC.NET/). What the library does by default and what it leaves to you is under [Security](#security).
 
+- [Performance](#performance)
 - [Packages](#packages)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -286,7 +306,9 @@ In the second `-32602` row, "could not convert" means the serializer refused the
 
 ## Asynchronous methods and cancellation
 
-A method may return `Task`, `Task<T>`, `ValueTask` or `ValueTask<T>`. Call it through `JsonRpcProcessor.ProcessAsync`. The processor awaits the method and writes its result; `Task` and `ValueTask` answer `null`. A method that completes synchronously runs inline, allocates nothing on the library's side, and the byte overloads then return `Task.CompletedTask`.
+A method may return `Task`, `Task<T>`, `ValueTask` or `ValueTask<T>`. Call it through `JsonRpcProcessor.ProcessAsync`. The processor awaits the method and writes its result; `Task` and `ValueTask` answer `null`. A method that completes synchronously runs inline and the byte overloads then return `Task.CompletedTask`.
+
+**Cost.** With `RpcContextFlow.None`, the built-in numeric fast path adds no dispatcher allocation when the invocation completes inline. The service's own allocations (a `Task.FromResult`, a result string) are separate and included in the harness figures. Flow allocates an `InvocationState` even when the call completes inline. A method that suspends may allocate its own async state plus completion state in the result writer, the request handler and the document processor. The yielding benchmark measured 559 B per request under None in a single run at one worker on 2026-09-25, including the service's allocations. A suspension also costs a continuation per request. The figures are in [Async](#async-processasync-awaited-workers).
 
 ```csharp
 [JsonRpcMethod("lookup")]
@@ -476,28 +498,35 @@ The `jsonrpc` member policy (`Lenient` by default) is a compatibility setting, n
 
 ## Benchmarks
 
-| What | RPC/s | Details |
-| --- | ---: | --- |
-| Library alone, 16 threads | 30.6 M to 35.8 M | [Sync](#sync-the-library-alone) |
-| Kestrel TCP, 256 pipelined | 15.2 M to 15.5 M | [Kestrel](#kestrel-through-the-aspnetcore-package) |
-| Kestrel HTTP, batch of 100 per POST | 12.7 M to 13.7 M | |
-| Kestrel HTTP, one request per POST | 128 k to 168 k | HTTP/1.1 round trips dominate |
+| What | API and mode | RPC/s | Details |
+| --- | --- | ---: | --- |
+| Library alone, 16 threads | `Process(bytes)`, dedicated threads | 31.7 M to 36.4 M | [Sync](#sync-the-library-alone) |
+| Library alone, 16 workers | `ProcessAsync(bytes)`, awaited workers, methods that complete inline | 22.2 M to 32.1 M | [Async](#async-processasync-awaited-workers); the spread is across registrations, not runs |
+| Library alone, 16 workers, one real suspension per request | `ProcessAsync(bytes)`, `yieldsOnce` | 8.96 M | |
+| Kestrel TCP, 256 pipelined | `EnableAsyncMethods = false` | 14.3 M to 16.5 M | [Kestrel](#kestrel-through-the-aspnetcore-package) |
+| Kestrel TCP, 256 pipelined | `EnableAsyncMethods = true`, methods that complete inline | 15.0 M to 15.4 M | |
+| Kestrel TCP, 256 pipelined | `EnableAsyncMethods = true`, methods that suspend once | 1.25 M to 1.29 M | |
+| Kestrel HTTP, batch of 100 per POST | `EnableAsyncMethods = false` | 12.8 M to 14.5 M | |
+| Kestrel HTTP, one request per POST | `EnableAsyncMethods = false` | 123 k to 182 k | HTTP/1.1 round trips dominate |
+| Legacy string API, thread pool | `Task<string> Process(string)`, batches of 6,000 | 12.4 M to 13.3 M | [Legacy](#legacy-string-api-scheduled-synchronous-execution); the 1.x overloads, not the byte path |
 
-All numbers below are from an AMD Ryzen 7 7800X3D (8 cores / 16 threads, 4.2 GHz), 64 GB, Windows 11, .NET 10, Release, Server GC, with the built-in serializer, measured 2026-09-23. Where a row gives two figures they are the spread over that day's runs on an otherwise idle machine; the WSL virtual machine, which takes 15 to 25 % of the box when idle, was shut down for the Kestrel and comparison runs. A single benchmark thread on this machine varies with whatever else lands on its core's SMT sibling, so the 1-thread rows are from runs on an idle core.
+The Sync, Async, Legacy and Kestrel results were measured on 2026-09-25 on an idle AMD Ryzen 7 7800X3D (8 cores / 16 threads, 4.2 GHz), 64 GB, Windows 11, .NET 10, Release, Server GC, with the built-in serializer. Throughput ranges are the low and high over that day's runs: three runs for Sync, Legacy and default-mode Kestrel, two for the `EnableAsyncMethods = true` rows. Each Async throughput cell is one 3 s run; the summary's inline Async spread is across registrations, not runs. Each Sync ns figure is the reported cost from one of that row's runs. The StreamJsonRpc and gRPC comparison and its in-process rows are from 2026-09-23, with the WSL virtual machine shut down. Their ranges cover two runs; the comparison's single throughput figure is the value both runs rounded to. The WebAssembly results are also from 2026-09-23: one interpreter run and the better of two AOT runs per row. The connection sweep is a separate session with WSL and other work active, so its absolute figures are not comparable with the tables. A single benchmark thread on this machine varies with whatever else lands on its core's SMT sibling, so the 1-thread rows are from runs on an idle core.
 
 `TestServer_Console` is the benchmark harness. It binds one service with five small methods (`add`, `addInt`, `NullableFloatToNullableFloat`, `Test2`, `StringMe`), drives the same five requests through the server, checks every response is a `result` rather than an error, and ends each mode with a bar chart of RPC/s. For one-request timings with an allocation column, the numbers to check before merging a change to the dispatch path, see [benchmarks/Micro](benchmarks/Micro/README.md).
 
 ```
 dotnet run -c Release --project TestServer_Console -- --sync 3      # library only, 1..N threads (add a thread count, e.g. --sync 3 1, for one row)
-dotnet run -c Release --project TestServer_Console -- --async 3 1   # ProcessAsync, Flow and None separately; no published figures yet
-dotnet run -c Release --project TestServer_Console -- --kestrel 3   # through the AspNetCore package, HTTP and TCP
+dotnet run -c Release --project TestServer_Console -- --async 3 16  # ProcessAsync from 16 awaited workers, one row per registration (--async 3 1 for the 1-worker column)
+dotnet run -c Release --project TestServer_Console -- --scale 3 16 4.0   # release gate: ProcessAsync must scale at least 4x from 1 to 16 workers
+dotnet run -c Release --project TestServer_Console -- --kestrel 3   # through the AspNetCore package, HTTP and TCP (add `async` for EnableAsyncMethods = true)
 dotnet run -c Release --project TestServer_Console -- --compare 3   # the same calls through StreamJsonRpc and gRPC for .NET, side by side
 dotnet run -c Release --project TestServer_Console -- --sweep 2 benchmarks/charts/sweep.json   # every library and transport at 1, 2, 4, 8, 16 connections; one file per run
-dotnet run -c Release --project TestServer_Console                  # menu: Enter = Task mode, s = sync, k = Kestrel, x = compare, q = quit
+dotnet run -c Release --project TestServer_Console                  # menu: Enter = Process(bytes), a = ProcessAsync(bytes), t = legacy string API, k = Kestrel, x = compare, q = quit
+dotnet run -c Release --project benchmarks/Baseline                 # the last 1.x release (1.2.3 from NuGet) through the same loop as the t entry
 dotnet run --project samples/WasmHost                               # browser: "Run benchmark" on the page
 ```
 
-`--async [seconds] [workers]` uses `ProcessAsync` with separate sessions and the same five wire names as `--sync`. It reports synchronous returns through the new API, completed `Task<T>` and inline `ValueTask<T>`, with Flow and None registrations reported separately, plus a `yieldsOnce` shape that awaits `Task.Yield()`. Responses and ids are validated before timing, and allocation totals include the service methods' own allocations.
+The three modes measure different things and are named for the entry point they call. `Process(bytes), dedicated threads` measures the library alone. `ProcessAsync(bytes), awaited workers` measures the entry point an asynchronous host calls. `Legacy Process(string), scheduled synchronous work` measures the 1.x string overloads through the thread pool. The Kestrel rows say whether `EnableAsyncMethods` was on.
 
 ### Sync: the library alone
 
@@ -510,32 +539,60 @@ dotnet run --project samples/WasmHost                               # browser: "
 
 | Threads | RPC/s | ns per request per thread | Allocations per request |
 | ---: | ---: | ---: | --- |
-| 1 | 4.5 M to 4.6 M | 217 | 0 bytes for numeric shapes, one string for `StringMe` |
-| 2 | 7.6 M to 9.5 M | 222 | |
-| 4 | 16.4 M to 17.4 M | 230 | |
-| 8 | 25.1 M to 26.8 M | 298 | |
-| 16 | 30.6 M to 35.8 M | 446 | |
+| 1 | 4.6 M to 5.0 M | 214 | 0 bytes for numeric shapes, one string for `StringMe` |
+| 2 | 8.5 M to 9.1 M | 235 | |
+| 4 | 16.6 M to 17.1 M | 234 | |
+| 8 | 22.8 M to 27.7 M | 292 | |
+| 16 | 31.7 M to 36.4 M | 439 | |
 
 Per-thread cost rises with thread count because the 16 threads share 8 physical cores.
 
-### Task: scheduled synchronous execution
+### Async: ProcessAsync, awaited workers
 
-The default mode submits batches through the `Task`-returning `Process` overload from every core at once, the way an async host would, so it pays for the thread-pool hop, a `Task`, a result string and a continuation per request. Each batch size is repeated for at least half a second after a one-second warm-up. Throughput peaks once a batch is large enough to keep every core busy and falls off again when hundreds of thousands of requests are queued at once:
+`--async [seconds] [workers]` calls the byte-level `JsonRpcProcessor.ProcessAsync` from `Task.Run` workers that await each call. It uses the same five requests and loop shape as `--sync`. Workers start behind a barrier, stop on a shared flag and walk the inputs with an index. Worker startup is reported separately. Each row registers the five methods with one return shape and one `RpcContextFlow`. The `yieldsOnce` rows use one method that awaits `Task.Yield()`, giving a real suspension per request. Responses are checked before timing. The bytes column reports allocations per request at one worker, including the service method's own allocations. The inline rows use exact per-thread counts, and the `yieldsOnce` rows use the process-wide counter.
+
+| Registration | 1 worker | 16 workers | B per request |
+| --- | ---: | ---: | ---: |
+| synchronous methods, None | 3.47 M | 24.6 M | 6 |
+| `Task<T>`, Flow | 2.94 M | 22.2 M | 251 |
+| `Task<T>`, None | 3.47 M | 30.0 M | 67 |
+| `ValueTask<T>`, Flow | 3.11 M | 23.4 M | 190 |
+| `ValueTask<T>`, None | 3.76 M | 32.1 M | 6 |
+| `yieldsOnce`, Flow | 915 k | 6.89 M | 741 |
+| `yieldsOnce`, None | 1.14 M | 8.96 M | 559 |
+
+The 16-worker rows are an equal-weight mix of the five requests, except `yieldsOnce`, which is one request. The table below gives bytes per request for each request shape at one worker, including the method's own allocations. The harness prints these lines before each row.
+
+| Registration | `add` | `addInt` | nullable float | decimal | `StringMe` |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| synchronous methods, None | 0 | 0 | 0 | 0 | 32 |
+| `Task<T>`, Flow | 256 | 184 | 256 | 272 | 288 |
+| `Task<T>`, None | 72 | 0 | 72 | 88 | 104 |
+| `ValueTask<T>`, Flow | 184 | 184 | 184 | 184 | 216 |
+| `ValueTask<T>`, None | 0 | 0 | 0 | 0 | 32 |
+
+With `RpcContextFlow.None`, the dispatcher adds no allocation to a method that completes inline. Allocations in the `Task<T>` None row come from the service's own `Task.FromResult` (`Task<int>` for 8 comes from the runtime's cache). The 32 bytes of `StringMe` are its result string. Flow allocates the `InvocationState` and the execution-context bridge on every call, inline or not. A real suspension allocates the method's own async state plus completion state in the result writer, the request handler and the document processor. The `yieldsOnce` None row measured 559 B per request at one worker, including the method's own allocations. The 7 to 10 M target for a hosted server applies to methods that complete inline. A method that suspends also costs a continuation per request.
+
+Before 2.0.0, the `ProcessAsync` path was capped near 4 M RPC/s at every worker count because each document took one lock on the shared scratch pool. No single-threaded benchmark could see this limit. Each thread now caches one scratch in front of that pool. `--scale [seconds] [workers] [threshold]` is the gate that catches the next such limit. It measures the inline None rows at 1, 2 and 16 workers in three paired runs and takes the medians. It exits non-zero when any 16/1 ratio is below 4.0. The lock gave 1.3; the cache gives 7.1 to 7.3 on the idle reference machine (the gate's medians, 2026-09-25). Run it on the reference machine before a release and paste its table into the release notes. The pull-request build runs a diagnostic `--scale 3 4 2.0` on the shared runner. It also checks that every `lock`, `Interlocked`, `Volatile.Write`, thread-static and writable static field on the request-path files of the core and both companion serializers is listed in `.github/request-path-sync.allowlist` with a reason (per-thread, miss-path, registration-only, read-only-after-init).
+
+### Legacy string API: scheduled synchronous execution
+
+The `t` menu entry submits batches through the 1.x `Task<string> Process(string)` overload from every core at once. This compatibility string API pays for transcoding, a thread-pool hop, a `Task`, a result string and a continuation per request. An asynchronous host uses the byte entry points measured in the Sync and Async tables above. Each batch size is repeated for at least half a second after a one-second warm-up. Throughput peaks once a batch is large enough to keep every core busy and falls off again when hundreds of thousands of requests are queued at once:
 
 | Batch size | RPC/s |
 | ---: | ---: |
-| 50 | 1.5 M |
-| 300 | 7.8 M |
-| 6,000 | 10.9 M |
-| 36,000 | 12.0 M |
-| 252,000 | 7.6 M |
-| 2,016,000 | 7.2 M |
+| 50 | 1.6 M to 2.0 M |
+| 300 | 8.0 M to 9.2 M |
+| 6,000 | 12.4 M to 13.3 M |
+| 36,000 | 11.6 M to 13.3 M |
+| 252,000 | 7.5 M to 7.8 M |
+| 2,016,000 | 7.5 M to 8.0 M |
 
-Task mode is slower than sync mode because it measures the .NET thread pool and a `Task`, a string and a continuation per request as much as the library. The AspNetCore host does not use that string path or allocate a result string: it awaits transport reads and flushes without a thread per connection, as the next table shows.
+This mode is slower than the byte modes because it measures the cost of the .NET thread pool and a `Task`, a string and a continuation per request as much as the library itself. The AspNetCore host does not use that string path or allocate a result string. It awaits transport reads and flushes without a thread per connection, as the next table shows.
 
 ### Kestrel: through the AspNetCore package
 
-`--kestrel` starts a real Kestrel on loopback with `MapJsonRpc` and `JsonRpcConnectionHandler`, then drives it with 16 clients on the same machine, so every figure is an upper bound for one box talking to itself. The in-process rows are the same requests through the byte entry point with no transport at all, for scale.
+`--kestrel [seconds]` starts a real Kestrel on loopback with `MapJsonRpc` and `JsonRpcConnectionHandler`, then drives it with 16 clients on the same machine. Every figure is therefore an upper bound for one box talking to itself. The in-process rows show the same requests through the byte entry point with no transport, to give a sense of scale. The `EnableAsyncMethods = false` rows are the default, where the host calls `Process`. `--kestrel 3 async` runs the same host with `EnableAsyncMethods = true` and sends every document through `ProcessAsync`. It also adds a TCP row whose five methods await `Task.Yield()` before answering.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="benchmarks/charts/kestrel-transports-dark.svg">
@@ -544,12 +601,14 @@ Task mode is slower than sync mode because it measures the .NET thread pool and 
 
 | Transport | RPC/s | Note |
 | --- | ---: | --- |
-| in-process, 16 threads | 30.8 M to 31.3 M | |
-| HTTP, 1 request per POST | 128 k to 168 k | 95 to 125 µs per round trip per client depending on the run; HTTP/1.1 request-response is the cost, not the server |
-| HTTP, batch of 100 per POST | 12.7 M to 13.7 M | |
-| TCP, 256 pipelined | 15.2 M to 15.5 M | ring-buffer clients, one thread each, streaming framer |
+| in-process, 16 threads | 33.8 M to 37.1 M | |
+| HTTP, 1 request per POST | 123 k to 182 k | 88 to 130 µs per round trip per client depending on the run; HTTP/1.1 request-response is the cost, not the server |
+| HTTP, batch of 100 per POST | 12.8 M to 14.5 M | |
+| TCP, 256 pipelined | 14.3 M to 16.5 M | ring-buffer clients, one thread each, streaming framer |
+| TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that complete inline | 15.0 M to 15.4 M | `--kestrel 3 async`, two runs; inside the spread of the `false` row |
+| TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that suspend once | 1.25 M to 1.29 M | five `async Task<T>` methods awaiting `Task.Yield()` |
 
-The TCP client keeps 256 requests in flight per connection and refills from a precomputed ring of request bytes with one `Send` per refill; the server side is the same `Process` call the HTTP endpoint makes, fed by `JsonFramer`.
+The TCP client keeps 256 requests in flight per connection and refills from a precomputed ring of request bytes with one `Send` per refill. On the server, `JsonFramer` feeds the same `Process` call the HTTP endpoint makes. With `EnableAsyncMethods = true`, the connection handler processes each connection's documents one at a time, in order. So 256 pipelined requests are 256 sequential invocations, and a method that suspends pays that cost per request. Concurrency comes from the 16 connections.
 
 ### Versus StreamJsonRpc and gRPC
 
@@ -593,7 +652,7 @@ StreamJsonRpc's server side has no "document in, document out" call, so its in-p
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="benchmarks/charts/compare-connections-dark.svg">
-  <img alt="Every library and transport by client connections, 1 to 16: three panels on a shared log axis, one per library, with a marker shape and dash per setting and whiskers spanning two runs" src="benchmarks/charts/compare-connections.svg">
+  <img alt="Every library and transport by client connections, 1 to 16: three panels on a shared log axis, one per library, with a marker shape and dash per setting and whiskers spanning five runs" src="benchmarks/charts/compare-connections.svg">
 </picture>
 
 `--sweep` runs every one of those paths at 1, 2, 4, 8 and 16 client connections (gRPC: channels) and writes one JSON file per run; the chart above is five 2 s runs per point, the marker at the median and the whisker from the lowest to the highest run. It is a separate session from the tables: the WSL virtual machine was running and other work was active, so its absolute figures sit below the table rows (JSON-RPC.Net over TCP 10.9 M to 13.0 M at 16 connections against 13.7 M to 14.6 M in the table), and its gRPC unary figure runs higher (360 k to 404 k against 192 k to 198 k; the cause is not pinned down, and the table keeps the `--compare` figure). What the sweep adds is the shape: JSON-RPC.Net over TCP and batched HTTP climb almost linearly with connections, StreamJsonRpc gains 8 to 10× from one connection to sixteen, and gRPC's .NET client is flat from two channels on because it competes with the server for the same eight cores.
@@ -611,6 +670,10 @@ simdjson was evaluated as a fourth parser and not adopted: through the only main
 ### History
 
 The charts, the explorer page and the figures in this file come from one data file, [benchmarks/charts/benchmarks.json](benchmarks/charts/benchmarks.json); how they are rendered and checked is under [Building](#charts).
+
+On 2026-09-25 the `ProcessAsync` path was found capped near 4 M RPC/s at every worker count. Every document took one lock on the shared scratch pool, which the single-threaded micro-benchmarks could not detect. A one-slot per-thread cache in front of the pool took the inline rows to 22.2 M to 32.1 M at 16 workers (one run per registration), against 31.7 M for the synchronous entry point in the same session. The `--scale` gate and the request-path allowlist exist to catch the next such limit before a release.
+
+The Performance section at the top reports one session on 2026-09-25. The last 1.x release on NuGet, 1.2.3, was driven by the same loop as the `t` entry ([benchmarks/Baseline](benchmarks/Baseline/Program.cs)). It reached 3.08 M at its best batch size of 1,200 and fell to 1.5 M at two million. In the same session, 2.0 peaked at 13.3 M through the same string API, and the byte entry points ran at 31.7 M and 32.1 M.
 
 The 2026-09-23 performance pass (compiled invokers that read the tokens and write the pooled buffer through direct calls instead of virtual, delegate and interface calls; a tokenizer that keeps its scanner state in locals; a last-session cache; envelope keys matched by length; a flat method table) was measured A/B in one session: the same seven runs of `--sync 2 1` went from 3.2 M to 4.1 M (median 3.6 M) before to 4.0 M to 4.8 M (median 4.4 M) after, about 20 to 25 % more on one thread. The transport rows are bound by the loopback round trips rather than by the library and moved less.
 

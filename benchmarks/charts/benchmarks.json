@@ -3,14 +3,34 @@
   "machine": "AMD Ryzen 7 7800X3D (8 cores / 16 threads, 4.2 GHz), 64 GB, Windows 11",
   "runtime": ".NET 10, Release, Server GC, built-in serializer",
   "sets": {
+    "headline": {
+      "title": "JSON-RPC.Net 1.2.3 and 2.0 on one machine",
+      "date": "2026-09-25",
+      "source": "README.md, Performance table; branch async-scratch-cache",
+      "harness": "benchmarks/Baseline (1.2.3 from NuGet), then TestServer_Console menu entry t, --sync 3 16 and --async 3 16, one session",
+      "workload": "the five benchmark requests; the string rows are the best batch size of the thread-pool loop, the byte rows a loop on 16 dedicated threads or 16 awaited workers",
+      "conditions": "idle box; one run per row",
+      "policy": "one run per row, all in one session; the day-to-day ranges are the sync, async, legacy and kestrel sets",
+      "groups": [
+        { "heading": "1.2.3, the last 1.x release on NuGet", "rule": false, "series": ["headline-123-string"] },
+        { "heading": "2.0, the same string API and the same loop", "rule": false, "series": ["headline-20-string"] },
+        { "heading": "2.0, the byte entry points", "rule": false, "series": ["headline-20-sync", "headline-20-async"] }
+      ],
+      "series": [
+        { "id": "headline-123-string", "label": "Task<string> Process(string), thread pool", "note": "best batch size, 1,200; Json.NET on every request", "family": "scale", "low": 3080000, "high": 3080000, "status": "single", "published": "3.08 M" },
+        { "id": "headline-20-string", "label": "Task<string> Process(string), thread pool", "note": "best batch size, 36,000; the 1.x overloads, kept for compatibility", "family": "ours", "low": 13300000, "high": 13300000, "status": "single", "published": "13.3 M" },
+        { "id": "headline-20-sync", "label": "Process(bytes), 16 dedicated threads", "note": "the library alone; 0 B per numeric request", "family": "ours", "low": 31700000, "high": 31700000, "status": "single", "published": "31.7 M" },
+        { "id": "headline-20-async", "label": "ProcessAsync(bytes), 16 awaited workers", "note": "ValueTask<T> methods, RpcContextFlow.None; 6 B per request", "family": "ours", "low": 32100000, "high": 32100000, "status": "single", "published": "32.1 M" }
+      ]
+    },
     "sync": {
       "title": "JSON-RPC.Net alone, by worker threads",
-      "date": "2026-09-23",
-      "source": "README.md, Sync table; commit 192a97f",
+      "date": "2026-09-25",
+      "source": "README.md, Sync table; branch async-scratch-cache",
       "harness": "TestServer_Console --sync 3, and --sync 2 <n> for single rows",
       "workload": "the five benchmark requests through the byte-level JsonRpcProcessor.Process in a loop; no scheduler, no transport",
-      "conditions": "idle box, WSL VM shut down; the 1-thread row from an idle core",
-      "policy": "observed low and high over the day's runs; run count not recorded; ns per request is the harness's reported figure for one run",
+      "conditions": "idle box; three 3 s runs of --sync 3 in one session",
+      "policy": "low and high over three runs; ns per request is the harness's reported figure for one of them",
       "x": { "name": "worker threads", "values": [1, 2, 4, 8, 16] },
       "series": [
         {
@@ -18,32 +38,106 @@
           "label": "JSON-RPC.Net, byte entry point",
           "family": "ours",
           "points": [
-            { "low": 4500000, "high": 4600000, "status": "range", "published": "4.5 M to 4.6 M", "ns": 217 },
-            { "low": 7600000, "high": 9500000, "status": "range", "published": "7.6 M to 9.5 M", "ns": 222 },
-            { "low": 16400000, "high": 17400000, "status": "range", "published": "16.4 M to 17.4 M", "ns": 230 },
-            { "low": 25100000, "high": 26800000, "status": "range", "published": "25.1 M to 26.8 M", "ns": 298 },
-            { "low": 30600000, "high": 35800000, "status": "range", "published": "30.6 M to 35.8 M", "ns": 446 }
+            { "low": 4570000, "high": 5000000, "status": "range", "published": "4.6 M to 5.0 M", "ns": 214 },
+            { "low": 8500000, "high": 9100000, "status": "range", "published": "8.5 M to 9.1 M", "ns": 235 },
+            { "low": 16600000, "high": 17100000, "status": "range", "published": "16.6 M to 17.1 M", "ns": 234 },
+            { "low": 22800000, "high": 27700000, "status": "range", "published": "22.8 M to 27.7 M", "ns": 292 },
+            { "low": 31700000, "high": 36400000, "status": "range", "published": "31.7 M to 36.4 M", "ns": 439 }
+          ]
+        }
+      ]
+    },
+    "async16": {
+      "title": "ProcessAsync, 16 awaited workers, by registration",
+      "date": "2026-09-25",
+      "source": "README.md, Async table, 16-worker column; branch async-scratch-cache",
+      "harness": "TestServer_Console --async 3 16",
+      "workload": "the five benchmark requests (yieldsOnce: one request) through the byte-level JsonRpcProcessor.ProcessAsync from Task.Run workers that await each call",
+      "conditions": "idle box; one 3 s run per row",
+      "policy": "one run per row",
+      "groups": [
+        { "heading": "methods that complete inline, RpcContextFlow.None", "rule": false, "series": ["async16-sync-none", "async16-task-none", "async16-valuetask-none"] },
+        { "heading": "methods that complete inline, RpcContextFlow.Flow", "rule": false, "series": ["async16-task-flow", "async16-valuetask-flow"] },
+        { "heading": "one real suspension per request (yieldsOnce)", "rule": true, "series": ["async16-yield-none", "async16-yield-flow"] }
+      ],
+      "series": [
+        { "id": "async16-sync-none", "label": "synchronous methods, None", "note": "6 B per request, the StringMe result string", "family": "ours", "low": 24600000, "high": 24600000, "status": "single", "published": "24.6 M" },
+        { "id": "async16-task-none", "label": "Task<T>, None", "note": "67 B per request, the service's own Task.FromResult", "family": "ours", "low": 30000000, "high": 30000000, "status": "single", "published": "30.0 M" },
+        { "id": "async16-valuetask-none", "label": "ValueTask<T>, None", "note": "6 B per request", "family": "ours", "low": 32100000, "high": 32100000, "status": "single", "published": "32.1 M" },
+        { "id": "async16-task-flow", "label": "Task<T>, Flow", "note": "251 B per request", "family": "ours", "low": 22200000, "high": 22200000, "status": "single", "published": "22.2 M" },
+        { "id": "async16-valuetask-flow", "label": "ValueTask<T>, Flow", "note": "190 B per request", "family": "ours", "low": 23400000, "high": 23400000, "status": "single", "published": "23.4 M" },
+        { "id": "async16-yield-none", "label": "yieldsOnce, None", "note": "559 B per request", "family": "ours", "low": 8960000, "high": 8960000, "status": "single", "published": "8.96 M" },
+        { "id": "async16-yield-flow", "label": "yieldsOnce, Flow", "note": "741 B per request", "family": "ours", "low": 6890000, "high": 6890000, "status": "single", "published": "6.89 M" }
+      ]
+    },
+    "async1": {
+      "title": "ProcessAsync, one awaited worker, by registration",
+      "date": "2026-09-25",
+      "source": "README.md, Async table, 1-worker column; branch async-scratch-cache",
+      "harness": "TestServer_Console --async 3 1",
+      "workload": "as async16, one worker",
+      "conditions": "idle box; one 3 s run per row",
+      "policy": "one run per row",
+      "groups": [
+        { "heading": "methods that complete inline, RpcContextFlow.None", "rule": false, "series": ["async1-sync-none", "async1-task-none", "async1-valuetask-none"] },
+        { "heading": "methods that complete inline, RpcContextFlow.Flow", "rule": false, "series": ["async1-task-flow", "async1-valuetask-flow"] },
+        { "heading": "one real suspension per request (yieldsOnce)", "rule": true, "series": ["async1-yield-none", "async1-yield-flow"] }
+      ],
+      "series": [
+        { "id": "async1-sync-none", "label": "synchronous methods, None", "family": "ours", "low": 3470000, "high": 3470000, "status": "single", "published": "3.47 M" },
+        { "id": "async1-task-none", "label": "Task<T>, None", "family": "ours", "low": 3470000, "high": 3470000, "status": "single", "published": "3.47 M" },
+        { "id": "async1-valuetask-none", "label": "ValueTask<T>, None", "family": "ours", "low": 3760000, "high": 3760000, "status": "single", "published": "3.76 M" },
+        { "id": "async1-task-flow", "label": "Task<T>, Flow", "family": "ours", "low": 2940000, "high": 2940000, "status": "single", "published": "2.94 M" },
+        { "id": "async1-valuetask-flow", "label": "ValueTask<T>, Flow", "family": "ours", "low": 3110000, "high": 3110000, "status": "single", "published": "3.11 M" },
+        { "id": "async1-yield-none", "label": "yieldsOnce, None", "family": "ours", "low": 1140000, "high": 1140000, "status": "single", "published": "1.14 M" },
+        { "id": "async1-yield-flow", "label": "yieldsOnce, Flow", "family": "ours", "low": 915000, "high": 915000, "status": "single", "published": "915 k" }
+      ]
+    },
+    "legacy": {
+      "title": "Legacy string API through the thread pool, by batch size",
+      "date": "2026-09-25",
+      "source": "README.md, Legacy table; branch async-scratch-cache",
+      "harness": "TestServer_Console, menu entry t",
+      "workload": "the five benchmark requests through the 1.x Task<string> Process(string) overload, submitted in batches from every core through Parallel.For",
+      "conditions": "idle box; three runs of the t entry in one session",
+      "policy": "low and high over three runs",
+      "x": { "name": "batch size", "values": [50, 300, 6000, 36000, 252000, 2016000] },
+      "series": [
+        {
+          "id": "legacy-string",
+          "label": "JSON-RPC.Net, 1.x string overloads",
+          "family": "ours",
+          "points": [
+            { "low": 1570000, "high": 2030000, "status": "range", "published": "1.6 M to 2.0 M" },
+            { "low": 7990000, "high": 9190000, "status": "range", "published": "8.0 M to 9.2 M" },
+            { "low": 12360000, "high": 13260000, "status": "range", "published": "12.4 M to 13.3 M" },
+            { "low": 11570000, "high": 13290000, "status": "range", "published": "11.6 M to 13.3 M" },
+            { "low": 7470000, "high": 7800000, "status": "range", "published": "7.5 M to 7.8 M" },
+            { "low": 7490000, "high": 8030000, "status": "range", "published": "7.5 M to 8.0 M" }
           ]
         }
       ]
     },
     "kestrel": {
       "title": "JSON-RPC.Net by transport",
-      "date": "2026-09-23",
-      "source": "README.md, Kestrel table; commit 192a97f",
+      "date": "2026-09-25",
+      "source": "README.md, Kestrel table; branch async-scratch-cache",
       "harness": "TestServer_Console --kestrel 3",
       "workload": "AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, 16 clients on the server's 8 cores",
-      "conditions": "WSL VM shut down; two 3 s runs",
-      "policy": "observed low and high over two runs",
+      "conditions": "idle box; three 3 s runs of --kestrel 3 and two of --kestrel 3 async, one session",
+      "policy": "low and high over the runs: three for the default rows, two for the EnableAsyncMethods = true rows",
       "groups": [
-        { "heading": "", "rule": false, "series": ["ours-http-1", "ours-http-100", "ours-tcp"] },
+        { "heading": "EnableAsyncMethods = false (the default)", "rule": false, "series": ["ours-http-1", "ours-http-100", "ours-tcp"] },
+        { "heading": "EnableAsyncMethods = true: every document through ProcessAsync", "rule": false, "series": ["ours-tcp-async-inline", "ours-tcp-async-yield"] },
         { "heading": "Reference: no transport", "rule": true, "series": ["ours-inproc-16"] }
       ],
       "series": [
-        { "id": "ours-http-1", "label": "HTTP, 1 request per POST", "note": "each client awaits one POST at a time; 95 to 125 µs per round trip", "family": "ours", "low": 128000, "high": 168000, "status": "range", "published": "128 k to 168 k" },
-        { "id": "ours-http-100", "label": "HTTP, batch of 100 per POST", "note": "one POST outstanding per client, 100 RPCs in it", "family": "ours", "low": 12700000, "high": 13700000, "status": "range", "published": "12.7 M to 13.7 M" },
-        { "id": "ours-tcp", "label": "TCP, 256 pipelined", "note": "JsonRpcConnectionHandler, 256 requests in flight per connection", "family": "ours", "low": 15200000, "high": 15500000, "status": "range", "published": "15.2 M to 15.5 M" },
-        { "id": "ours-inproc-16", "label": "in-process, 16 threads", "note": "the same requests through the byte entry point", "family": "scale", "low": 30800000, "high": 31300000, "status": "range", "published": "30.8 M to 31.3 M" }
+        { "id": "ours-http-1", "label": "HTTP, 1 request per POST", "note": "each client awaits one POST at a time; 88 to 130 µs per round trip", "family": "ours", "low": 123000, "high": 182000, "status": "range", "published": "123 k to 182 k" },
+        { "id": "ours-http-100", "label": "HTTP, batch of 100 per POST", "note": "one POST outstanding per client, 100 RPCs in it", "family": "ours", "low": 12800000, "high": 14500000, "status": "range", "published": "12.8 M to 14.5 M" },
+        { "id": "ours-tcp", "label": "TCP, 256 pipelined", "note": "JsonRpcConnectionHandler, 256 requests in flight per connection", "family": "ours", "low": 14300000, "high": 16500000, "status": "range", "published": "14.3 M to 16.5 M" },
+        { "id": "ours-tcp-async-inline", "label": "TCP, 256 pipelined, methods that complete inline", "note": "--kestrel 3 async", "family": "ours", "low": 15000000, "high": 15400000, "status": "range", "published": "15.0 M to 15.4 M" },
+        { "id": "ours-tcp-async-yield", "label": "TCP, 256 pipelined, methods that suspend once", "note": "five async Task<T> methods awaiting Task.Yield(); documents are sequential per connection", "family": "ours", "low": 1250000, "high": 1290000, "status": "range", "published": "1.25 M to 1.29 M" },
+        { "id": "ours-inproc-16", "label": "in-process, 16 threads", "note": "the same requests through the byte entry point", "family": "scale", "low": 33800000, "high": 37100000, "status": "range", "published": "33.8 M to 37.1 M" }
       ]
     },
     "compare": {
