@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="940" height="496" viewBox="0 0 940 496" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="d3cafb28c8a9">
-<title>JSON-RPC.Net by transport</title><desc>AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, 16 clients on the server's 8 cores, two 3 s runs. HTTP clients await one POST at a time; TCP keeps 256 requests in flight per connection. Data revision d3cafb28c8a9.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="496" viewBox="0 0 940 496" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="783ebf59e091">
+<title>JSON-RPC.Net by transport</title><desc>AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, 16 clients on the server's 8 cores, two 3 s runs. HTTP clients await one POST at a time; TCP keeps 256 requests in flight per connection. Data revision 783ebf59e091.</desc>
 <rect width="940" height="496" rx="10" fill="#0d1117" stroke="#30363d"/>
 <text x="24.0" y="32.0" text-anchor="start" font-size="18" fill="#f0f6fc" font-weight="600">JSON-RPC.Net by transport</text>
 <text x="24.0" y="54.0" text-anchor="start" font-size="12" fill="#9da7b3">AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, 16 clients on the server's 8 cores, two 3 s runs.</text>
@@ -42,17 +42,17 @@
 <line x1="669.5" y1="220.0" x2="669.5" y2="232.0" stroke="#009e73" stroke-width="3"/>
 <line x1="670.8" y1="220.0" x2="670.8" y2="232.0" stroke="#009e73" stroke-width="3"/>
 <text x="768.0" y="230.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">15.2 M to 15.5 M</text>
-<text x="24.0" y="266.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">EnableAsyncMethods = true: every document through ProcessAsync (2026-09-25, one run, busy machine)</text>
+<text x="24.0" y="266.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">EnableAsyncMethods = true: every document through ProcessAsync (2026-09-25, one run)</text>
 <text x="316.0" y="300.0" text-anchor="end" font-size="13" fill="#f0f6fc">TCP, 256 pipelined, methods that complete inline</text>
-<text x="316.0" y="314.0" text-anchor="end" font-size="10" fill="#9da7b3">--kestrel 3 async; the same run's default-mode TCP row was 14.0 M</text>
-<circle cx="660.5" cy="296.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
-<circle cx="660.5" cy="296.0" r="2" fill="#009e73"/>
-<text x="768.0" y="300.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">13.3 M</text>
+<text x="316.0" y="314.0" text-anchor="end" font-size="10" fill="#9da7b3">--kestrel 3 async; --kestrel 3 in the same session gave 16.5 M for the default-mode TCP row</text>
+<circle cx="670.4" cy="296.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<circle cx="670.4" cy="296.0" r="2" fill="#009e73"/>
+<text x="768.0" y="300.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">15.4 M</text>
 <text x="316.0" y="340.0" text-anchor="end" font-size="13" fill="#f0f6fc">TCP, 256 pipelined, methods that suspend once</text>
 <text x="316.0" y="354.0" text-anchor="end" font-size="10" fill="#9da7b3">five async Task&lt;T&gt; methods awaiting Task.Yield(); documents are sequential per connection</text>
-<circle cx="493.9" cy="336.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
-<circle cx="493.9" cy="336.0" r="2" fill="#009e73"/>
-<text x="768.0" y="340.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">1.13 M</text>
+<circle cx="502.8" cy="336.0" r="4.5" fill="#0d1117" stroke="#009e73" stroke-width="2"/>
+<circle cx="502.8" cy="336.0" r="2" fill="#009e73"/>
+<text x="768.0" y="340.0" text-anchor="start" font-size="13" fill="#f0f6fc" font-weight="600">1.29 M</text>
 <line x1="24" y1="368" x2="916" y2="368" stroke="#30363d"/>
 <text x="24.0" y="388.0" text-anchor="start" font-size="12" fill="#f0f6fc" font-weight="600">Reference: no transport</text>
 <text x="316.0" y="422.0" text-anchor="end" font-size="13" fill="#f0f6fc">in-process, 16 threads</text>

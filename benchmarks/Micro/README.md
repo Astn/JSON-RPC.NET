@@ -24,4 +24,4 @@ These rows run on one thread, so they cannot see a process-wide serialization po
 dotnet run -c Release --project TestServer_Console -- --scale 3 16 4.0
 ```
 
-It fails when an inline row scales less than 4× from 1 to 16 workers (the lock gave 1.3; the per-thread cache gives about 9). The pull-request build runs a diagnostic `--scale 3 4 2.0` on the shared runner and an allowlist check of every `lock`, `Interlocked`, `Volatile.Write`, thread-static and writable static field on the request-path files (`.github/request-path-sync.allowlist`, each with a reason).
+It fails when an inline row scales less than 4× from 1 to 16 workers (the lock gave 1.3; the per-thread cache gives about 7). The pull-request build runs a diagnostic `--scale 3 4 2.0` on the shared runner and an allowlist check of every `lock`, `Interlocked`, `Volatile.Write`, thread-static and writable static field on the request-path files (`.github/request-path-sync.allowlist`, each with a reason).

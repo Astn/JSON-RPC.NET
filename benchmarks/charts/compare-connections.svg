@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="940" height="735" viewBox="0 0 940 735" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="d3cafb28c8a9">
-<title>Every library and transport, by client connections</title><desc>Same five calls, same Kestrel, clients on the server's 8 cores, 2026-09-23. TCP and gRPC keep 256 requests in flight per connection; HTTP clients await one POST at a time (1 or 100 RPCs). 5 runs of 2 s per point; whiskers span the runs. Data revision d3cafb28c8a9.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="735" viewBox="0 0 940 735" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="783ebf59e091">
+<title>Every library and transport, by client connections</title><desc>Same five calls, same Kestrel, clients on the server's 8 cores, 2026-09-23. TCP and gRPC keep 256 requests in flight per connection; HTTP clients await one POST at a time (1 or 100 RPCs). 5 runs of 2 s per point; whiskers span the runs. Data revision 783ebf59e091.</desc>
 <rect width="940" height="735" rx="10" fill="#ffffff" stroke="#d1d5db"/>
 <text x="24.0" y="32.0" text-anchor="start" font-size="18" fill="#1f2328" font-weight="600">Every library and transport, by client connections</text>
 <text x="24.0" y="54.0" text-anchor="start" font-size="12" fill="#57606a">Same five calls, same Kestrel, clients on the server's 8 cores, 2026-09-23. TCP and gRPC keep 256 requests in flight</text>

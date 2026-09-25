@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="940" height="644" viewBox="0 0 940 644" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="d3cafb28c8a9">
-<title>In the browser: interpreter vs AOT</title><desc>samples/WasmHost in Chrome 152, .NET 10, 20,000 RPCs per row. Interpreter: one run. AOT: the better of two runs. Batches are per RPC. The interpreter-to-AOT distance is a deployment difference, not a range. Data revision d3cafb28c8a9.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="644" viewBox="0 0 940 644" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" data-revision="783ebf59e091">
+<title>In the browser: interpreter vs AOT</title><desc>samples/WasmHost in Chrome 152, .NET 10, 20,000 RPCs per row. Interpreter: one run. AOT: the better of two runs. Batches are per RPC. The interpreter-to-AOT distance is a deployment difference, not a range. Data revision 783ebf59e091.</desc>
 <rect width="940" height="644" rx="10" fill="#0d1117" stroke="#30363d"/>
 <text x="24.0" y="32.0" text-anchor="start" font-size="18" fill="#f0f6fc" font-weight="600">In the browser: interpreter vs AOT</text>
 <text x="24.0" y="54.0" text-anchor="start" font-size="12" fill="#9da7b3">samples/WasmHost in Chrome 152, .NET 10, 20,000 RPCs per row. Interpreter: one run. AOT: the better of two runs.</text>

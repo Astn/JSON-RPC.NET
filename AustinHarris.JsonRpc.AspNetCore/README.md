@@ -127,8 +127,8 @@ invoked.
   connection are 256 sequential invocations, not 256 concurrent suspensions; concurrency comes from connections.
   Replies already finished are flushed before the connection waits on a slow method. When the connection closes,
   the running method is waited for and its response discarded.
-- **Cost:** every document then goes through `ProcessAsync`. With methods that complete inline the host measures
-  within a few percent of the synchronous mode; a method that really suspends pays its own async state plus the
+- **Cost:** every document then goes through `ProcessAsync`. With methods that complete inline the TCP row measures
+  about 7 % below the synchronous mode (15.4 M against 16.5 M); a method that really suspends pays its own async state plus the
   library's completion state (about 560 B) and a continuation per request. The main README's Kestrel table has
   both rows, measured with `TestServer_Console --kestrel 3 async`.
 
