@@ -32,8 +32,10 @@ jobs:
         run: dotnet restore AustinHarris.JsonRpc.sln
       # Building the solution packs every package project (GeneratePackageOnBuild); `dotnet pack` on the
       # solution would trip NU5026 with GeneratePackageOnBuild, so the packages come from the build.
+      # ContinuousIntegrationBuild makes the build deterministic and lets Source Link map the symbols package
+      # (.snupkg, pushed alongside each .nupkg) back to this commit on GitHub.
       - name: Build
-        run: dotnet build AustinHarris.JsonRpc.sln --configuration Release --no-restore
+        run: dotnet build AustinHarris.JsonRpc.sln --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
       - name: Test
         run: dotnet test AustinHarris.JsonRpcTestN --configuration Release --no-build
       # The key is requested after the tests so it is fresh for the push (it expires after one hour). `user` is the

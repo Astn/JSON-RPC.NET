@@ -33,7 +33,7 @@ namespace AustinHarris.JsonRpc
         /// <paramref name="parameterNames"/> when given (null entries keep the lambda's own name), else by the
         /// lambda's parameter names, else <c>arg1</c>, <c>arg2</c>... for a delegate whose names are not recoverable.
         /// <paramref name="defaults"/> (keyed by JSON name) make those parameters optional. The name must be free:
-        /// re-registering a name is an error, unlike attribute binding; unbind it first with <see cref="UnbindMethod"/>.
+        /// re-registering a name is an error, unlike attribute binding; unbind it first with <see cref="UnbindMethod(string, string)"/>.
         /// Task and ValueTask delegates require ProcessAsync; async void is rejected.
         /// <paramref name="contextFlow"/> controls ambient context across awaits.
         /// </summary>

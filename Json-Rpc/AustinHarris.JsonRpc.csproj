@@ -13,15 +13,23 @@
         <RepositoryType>git</RepositoryType>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageTags>json-rpc;jsonrpc;json;rpc;server;netstandard;kestrel;pipelines;system.text.json;json.net;fast</PackageTags>
-        <PackageReleaseNotes>https://github.com/Astn/JSON-RPC.NET/blob/master/CHANGELOG.md</PackageReleaseNotes>
+        <PackageTags>json-rpc;jsonrpc;json;rpc;server;netstandard;netstandard2.0;netstandard2.1;net8.0;net10.0;kestrel;pipelines;system.text.json;json.net;fast</PackageTags>
+        <PackageReleaseNotes>2.0.0-preview.1: the request pipeline rebuilt around UTF-8 bytes, the JSON serializer pluggable, Task and ValueTask methods supported again, about ten times the throughput of 1.2.3 on the same machine. What is new: https://astn.github.io/JSON-RPC.NET/changelog.html. Upgrading from 1.x: https://astn.github.io/JSON-RPC.NET/upgrading.html</PackageReleaseNotes>
         <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net10.0</TargetFrameworks>
         <LangVersion>latest</LangVersion>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <PackageIcon>icon.png</PackageIcon>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>
         <None Include="..\README.md" Pack="true" PackagePath="\" />
+        <None Include="..\icon.png" Pack="true" PackagePath="\" />
         <InternalsVisibleTo Include="AustinHarris.JsonRpcTestN" />
         <InternalsVisibleTo Include="AustinHarris.JsonRpc.Micro" />
     </ItemGroup>
