@@ -26,7 +26,42 @@ Coming from 1.x? Read [What is new in 2.0](https://astn.github.io/JSON-RPC.NET/c
 
 ### Declare a service
 
-Create `CalculatorService.cs` with the service below.
+Save this as `server.cs`, a .NET 10 file-based app: one C# file with no project file.
+The `#:sdk` and `#:package` directives select the web SDK and package.
+`ServiceBinder.BindMethod` registers lambdas served by Kestrel at `/rpc`.
+
+```csharp
+#:sdk Microsoft.NET.Sdk.Web
+#:package AustinHarris.JsonRpc.AspNetCore@2.0.0-preview.1
+
+using AustinHarris.JsonRpc;
+using AustinHarris.JsonRpc.AspNetCore;
+
+ServiceBinder.BindMethod("add", (double l, double r) => l + r);
+ServiceBinder.BindMethod("greet", (string who) => "hello " + who);
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddJsonRpc();
+
+var app = builder.Build();
+app.MapJsonRpc("/rpc");
+app.Run();
+```
+
+Run `dotnet run server.cs`; Kestrel prints its listening URL.
+Use `dotnet run server.cs -- --urls http://127.0.0.1:5077` to pin it for this request from another terminal:
+
+```bash
+curl -s -X POST http://127.0.0.1:5077/rpc -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}'
+```
+
+```json
+{"jsonrpc":"2.0","result":3.0,"id":1}
+```
+
+On .NET 8, use the same code in `Program.cs` in an ordinary ASP.NET Core project, install with `dotnet add package AustinHarris.JsonRpc.AspNetCore --prerelease`, and drop the two `#:` lines.
+
+For a service class, create `CalculatorService.cs`.
 Derive from `JsonRpcService` and mark exposed methods with `[JsonRpcMethod]`.
 Constructing the service registers its methods in the default session.
 
@@ -47,7 +82,12 @@ public class CalculatorService : JsonRpcService
 ```
 
 Methods can be `private`. Parameters can be positional or named.
+Optional parameter defaults are honoured; `[JsonRpcParam("name")]` overrides a parameter's JSON name.
 Keep the service instance alive; it serves concurrent requests, so its state must be thread-safe.
+
+Both examples use the default session (`Handler.DefaultSessionId()`).
+Lambdas and classes can be mixed in one session when their method names differ; both examples register `add`, so keep one of them.
+The next step drives `CalculatorService` in process, without a transport.
 
 ### Process requests
 
@@ -64,17 +104,16 @@ using AustinHarris.JsonRpc;
 var service = new CalculatorService();   // binds itself to the default session; keep a reference
 
 // Strings, asynchronous invocation.
-string response = await JsonRpcProcessor.ProcessAsync("{\"jsonrpc\":\"2.0\",\"method\":\"add\",\"params\":[1,2],\"id\":1}");
+string response = await JsonRpcProcessor.ProcessAsync("""{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}""");
 // {"jsonrpc":"2.0","result":3.0,"id":1}
 
 // Strings, synchronous, on the calling thread. Named parameters.
-string sync = JsonRpcProcessor.ProcessSync("{\"method\":\"multiply\",\"params\":{\"l\":6,\"r\":7},\"id\":2}");
+string sync = JsonRpcProcessor.ProcessSync("""{"method":"multiply","params":{"l":6,"r":7},"id":2}""");
 // {"jsonrpc":"2.0","result":42,"id":2}
 
 // Bytes: the native path. The string overloads transcode into it.
-byte[] request = Encoding.UTF8.GetBytes("{\"method\":\"add\",\"params\":[2,3],\"id\":3}");
 var output = new ArrayBufferWriter<byte>();
-JsonRpcProcessor.Process(Handler.DefaultSessionId(), request.AsSpan(), output);
+JsonRpcProcessor.Process(Handler.DefaultSessionId(), """{"method":"add","params":[2,3],"id":3}"""u8, output);
 Console.WriteLine(Encoding.UTF8.GetString(output.WrittenSpan));   // nothing is written for a notification
 ```
 
@@ -86,7 +125,8 @@ The string responses appear in the comments above. The byte call prints:
 
 A batch returns an array when it contains calls that need responses.
 A notification has no `id` and produces no response.
-Pass a `byte[]` as `AsSpan()` to select the span overload.
+A `"""..."""u8` literal is a `ReadOnlySpan<byte>` (C# 11 and later).
+A bare `byte[]` is ambiguous between the memory and span overloads on C# 12 and 13; pass it as `AsSpan()` there.
 
 Use `JsonRpcProcessor.ProcessAsync` for methods returning `Task` or `ValueTask`.
 The synchronous entry points do not await those methods.
