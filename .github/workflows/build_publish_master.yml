@@ -5,6 +5,14 @@ on:
       - "**/*.md"
     branches: [ master ]
 
+# Publishing uses nuget.org Trusted Publishing: the job requests an OIDC token from GitHub, NuGet/login exchanges
+# it for an API key that lives one hour, and the push uses that key. No long-lived NuGet secret is stored here.
+# The nuget.org policy is bound to this repository and to this file's name (build_publish_master.yml); renaming
+# the file or moving the push to another workflow needs a new policy on nuget.org.
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build:
 
@@ -28,9 +36,16 @@ jobs:
         run: dotnet build AustinHarris.JsonRpc.sln --configuration Release --no-restore
       - name: Test
         run: dotnet test AustinHarris.JsonRpcTestN --configuration Release --no-build
+      # The key is requested after the tests so it is fresh for the push (it expires after one hour). `user` is the
+      # nuget.org profile that owns the packages and the trusted publishing policy.
+      - name: NuGet login (OIDC to a temporary API key)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: AustinHarris
       # Publish all four packages: the core and the three companions (Json.NET, System.Text.Json, ASP.NET Core).
       - name: publish nuget version change
         run: |
           for project in Json-Rpc AustinHarris.JsonRpc.Newtonsoft AustinHarris.JsonRpc.SystemTextJson AustinHarris.JsonRpc.AspNetCore; do
-            dotnet nuget push "$project/bin/Release/"*.nupkg --skip-duplicate --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.NugetKey }} # API key for the NuGet feed
+            dotnet nuget push "$project/bin/Release/"*.nupkg --skip-duplicate --source "https://api.nuget.org/v3/index.json" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
           done
