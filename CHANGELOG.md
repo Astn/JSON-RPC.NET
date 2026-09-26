@@ -12,6 +12,7 @@ behaviour: a breaking change to either means a new major version.
 
 ### Added
 
+- `JsonRpcLimits` and `Config.SetLimits`: the core rejects documents over 4 MiB and batches over 1024 entries with `-32600` and a `data` object naming the limit; `JsonRpcLimits.Unlimited` restores the 1.x behaviour.
 - `ServiceBinder.BindInterface` registers interface trees atomically, with contract naming, filtering, defaults and ownership-aware disposal (`RpcBinding`).
 - `ServiceBinder.BindMethod` registers any delegate as a method without attributes or a service class.
 - `JsonRpcProcessor.ProcessAsync` awaits `Task` and `ValueTask` methods with typed result writing, sequential batches and cooperative cancellation; `[JsonRpcCancellation]` injects the processor's token.
@@ -61,6 +62,7 @@ behaviour: a breaking change to either means a new major version.
 
 ### Security
 
+- Documents and batches are bounded in the core by default (`JsonRpcLimits`), independent of the transport.
 - With `Config.IncludeExceptionDetails` off (the default), an unhandled exception is answered as `-32603` with `data: null`: the exception's type name and message are no longer sent. Error handlers still receive the exception itself and can author what the client sees. The same applies to an exception thrown while writing a result. `ExceptionInfo.ForResponse` returns null when details are off.
 - The session registry no longer grows from untrusted session ids on the request path (see Changed).
 

@@ -19,9 +19,17 @@ namespace AustinHarris.JsonRpc
         /// <summary>Processes one document (a request or a batch). Writes the response bytes to <paramref name="output"/>; writes nothing for notifications.</summary>
         public static void Process(string sessionId, in ReadOnlySequence<byte> request, IBufferWriter<byte> output, object context = null, JsonRpcSerializer serializer = null)
         {
+            var handler = GetRequestHandler(sessionId);
+            var limits = handler.Limits ?? Config.Limits;
+            if (ExceedsDocumentLimit(request.Length, limits))
+            {
+                RejectDocument(handler, serializer, output, limits.MaxDocumentBytes,
+                    handler.HasParseErrorHandler ? Utf8Json.ToStringUtf8(request.ToArray()) : null);
+                return;
+            }
             if (request.IsSingleSegment)
             {
-                Process(sessionId, request.First, output, context, serializer);
+                ProcessMemory(handler, limits, request.First, output, context, serializer);
                 return;
             }
             int length = checked((int)request.Length);
@@ -30,7 +38,7 @@ namespace AustinHarris.JsonRpc
             {
                 var buffer = scratch.Input(length);
                 request.CopyTo(buffer);
-                ProcessCore(sessionId, new ReadOnlyMemory<byte>(buffer, 0, length), output, context, serializer, scratch);
+                ProcessCore(handler, limits, new ReadOnlyMemory<byte>(buffer, 0, length), output, context, serializer, scratch);
             }
             finally
             {
@@ -41,10 +49,24 @@ namespace AustinHarris.JsonRpc
         /// <summary>Processes one document held in memory. The memory must stay valid until the call returns.</summary>
         public static void Process(string sessionId, ReadOnlyMemory<byte> request, IBufferWriter<byte> output, object context = null, JsonRpcSerializer serializer = null)
         {
+            var handler = GetRequestHandler(sessionId);
+            var limits = handler.Limits ?? Config.Limits;
+            if (ExceedsDocumentLimit(request.Length, limits))
+            {
+                RejectDocument(handler, serializer, output, limits.MaxDocumentBytes,
+                    handler.HasParseErrorHandler ? Utf8Json.ToStringUtf8(request.Span) : null);
+                return;
+            }
+            ProcessMemory(handler, limits, request, output, context, serializer);
+        }
+
+        private static void ProcessMemory(Handler handler, JsonRpcLimits limits, ReadOnlyMemory<byte> request,
+            IBufferWriter<byte> output, object context, JsonRpcSerializer serializer)
+        {
             var scratch = Scratch.Rent();
             try
             {
-                ProcessCore(sessionId, request, output, context, serializer, scratch);
+                ProcessCore(handler, limits, request, output, context, serializer, scratch);
             }
             finally
             {
@@ -55,12 +77,20 @@ namespace AustinHarris.JsonRpc
         /// <summary>Processes one document from a span (copied into a pooled buffer).</summary>
         public static void Process(string sessionId, ReadOnlySpan<byte> request, IBufferWriter<byte> output, object context = null, JsonRpcSerializer serializer = null)
         {
+            var handler = GetRequestHandler(sessionId);
+            var limits = handler.Limits ?? Config.Limits;
+            if (ExceedsDocumentLimit(request.Length, limits))
+            {
+                RejectDocument(handler, serializer, output, limits.MaxDocumentBytes,
+                    handler.HasParseErrorHandler ? Utf8Json.ToStringUtf8(request) : null);
+                return;
+            }
             var scratch = Scratch.Rent();
             try
             {
                 var buffer = scratch.Input(request.Length);
                 request.CopyTo(buffer);
-                ProcessCore(sessionId, new ReadOnlyMemory<byte>(buffer, 0, request.Length), output, context, serializer, scratch);
+                ProcessCore(handler, limits, new ReadOnlyMemory<byte>(buffer, 0, request.Length), output, context, serializer, scratch);
             }
             finally
             {
@@ -71,6 +101,22 @@ namespace AustinHarris.JsonRpc
         /// <summary>Processes a UTF-8 document and returns the UTF-8 response (empty for notifications).</summary>
         public static byte[] ProcessBytes(string sessionId, ReadOnlySpan<byte> request, object context = null, JsonRpcSerializer serializer = null)
         {
+            var handler = GetRequestHandler(sessionId);
+            var limits = handler.Limits ?? Config.Limits;
+            if (ExceedsDocumentLimit(request.Length, limits))
+            {
+                var rejected = Scratch.Rent();
+                try
+                {
+                    var error = rejected.Output;
+                    error.Clear();
+                    WriteLimitError(error, handler, serializer ?? handler.Serializer ?? Config.Serializer,
+                        "maxDocumentBytes", limits.MaxDocumentBytes,
+                        handler.HasParseErrorHandler ? Utf8Json.ToStringUtf8(request) : null);
+                    return error.ToArray();
+                }
+                finally { rejected.Return(); }
+            }
             var scratch = Scratch.Rent();
             try
             {
@@ -78,7 +124,7 @@ namespace AustinHarris.JsonRpc
                 request.CopyTo(buffer);
                 var output = scratch.Output;
                 output.Clear();
-                ProcessCore(sessionId, new ReadOnlyMemory<byte>(buffer, 0, request.Length), output, context, serializer, scratch, true);
+                ProcessCore(handler, limits, new ReadOnlyMemory<byte>(buffer, 0, request.Length), output, context, serializer, scratch, true);
                 return output.ToArray();
             }
             finally
@@ -143,15 +189,30 @@ namespace AustinHarris.JsonRpc
         // (null converts to string better than to object) with a null document.
         public static string ProcessSync(string sessionId, string jsonRpc, object jsonRpcContext, JsonRpcSerializer serializer = null)
         {
+            var handler = GetRequestHandler(sessionId);
+            var limits = handler.Limits ?? Config.Limits;
+            int length = Encoding.UTF8.GetByteCount(jsonRpc);
+            if (ExceedsDocumentLimit(length, limits))
+            {
+                var rejected = Scratch.Rent();
+                try
+                {
+                    var error = rejected.Output;
+                    error.Clear();
+                    WriteLimitError(error, handler, serializer ?? handler.Serializer ?? Config.Serializer,
+                        "maxDocumentBytes", limits.MaxDocumentBytes, handler.HasParseErrorHandler ? jsonRpc : null);
+                    return error.ToString();
+                }
+                finally { rejected.Return(); }
+            }
             var scratch = Scratch.Rent();
             try
             {
-                int max = Encoding.UTF8.GetMaxByteCount(jsonRpc.Length);
-                var buffer = scratch.Input(max);
-                int length = Encoding.UTF8.GetBytes(jsonRpc, 0, jsonRpc.Length, buffer, 0);
+                var buffer = scratch.Input(length);
+                Encoding.UTF8.GetBytes(jsonRpc, 0, jsonRpc.Length, buffer, 0);
                 var output = scratch.Output;
                 output.Clear();
-                ProcessCore(sessionId, new ReadOnlyMemory<byte>(buffer, 0, length), output, jsonRpcContext, serializer, scratch, true);
+                ProcessCore(handler, limits, new ReadOnlyMemory<byte>(buffer, 0, length), output, jsonRpcContext, serializer, scratch, true);
                 return output.ToString();
             }
             finally
@@ -162,9 +223,8 @@ namespace AustinHarris.JsonRpc
 
         // ------------------------------------------------------------------ core
 
-        private static void ProcessCore(string sessionId, ReadOnlyMemory<byte> document, IBufferWriter<byte> destination, object context, JsonRpcSerializer serializer, Scratch scratch, bool destinationIsScratch = false)
+        private static void ProcessCore(Handler handler, JsonRpcLimits limits, ReadOnlyMemory<byte> document, IBufferWriter<byte> destination, object context, JsonRpcSerializer serializer, Scratch scratch, bool destinationIsScratch = false)
         {
-            if (!Handler.TryGetSessionHandler(sessionId, out var handler)) handler = Handler.UnknownSessionHandler;
             serializer = serializer ?? handler.Serializer ?? Config.Serializer;
 
             // Always render into the rewindable scratch buffer, then hand the bytes to the caller's writer.
@@ -183,6 +243,11 @@ namespace AustinHarris.JsonRpc
                 else if (!reader.IsBatch)
                 {
                     handler.HandleRequest(reader, 0, serializer, output, context);
+                }
+                else if (limits.MaxBatchCount != 0 && reader.Count > limits.MaxBatchCount)
+                {
+                    WriteLimitError(output, handler, serializer, "maxBatchCount", limits.MaxBatchCount,
+                        handler.HasParseErrorHandler ? Utf8Json.ToStringUtf8(document.Span) : null);
                 }
                 else if (reader.Count == 0)
                 {
@@ -223,6 +288,39 @@ namespace AustinHarris.JsonRpc
             {
                 output.CopyTo(destination);
             }
+        }
+
+        private static Handler GetRequestHandler(string sessionId)
+        {
+            return Handler.TryGetSessionHandler(sessionId, out var handler) ? handler : Handler.UnknownSessionHandler;
+        }
+
+        private static bool ExceedsDocumentLimit(long length, JsonRpcLimits limits)
+        {
+            return limits.MaxDocumentBytes != 0 && length > limits.MaxDocumentBytes;
+        }
+
+        private static void WriteLimitError(PooledByteBufferWriter output, Handler handler, JsonRpcSerializer serializer,
+            string limit, long maximum, string rawDocument)
+        {
+            var error = new JsonRpcException(-32600, "Invalid Request", new LimitExceededInfo(limit, maximum));
+            if (handler.HasParseErrorHandler) error = handler.ProcessParseException(rawDocument, error);
+            Handler.WriteErrorEnvelope(output, serializer, error, default);
+        }
+
+        private static void RejectDocument(Handler handler, JsonRpcSerializer serializer, IBufferWriter<byte> destination,
+            long maximum, string rawDocument)
+        {
+            var scratch = Scratch.Rent();
+            try
+            {
+                var output = scratch.Output;
+                output.Clear();
+                WriteLimitError(output, handler, serializer ?? handler.Serializer ?? Config.Serializer,
+                    "maxDocumentBytes", maximum, rawDocument);
+                output.CopyTo(destination);
+            }
+            finally { scratch.Return(); }
         }
 
         /// <summary>Per-thread pooled buffers and a cached reader. Re-entrant calls get a fresh instance.</summary>
