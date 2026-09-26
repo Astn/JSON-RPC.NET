@@ -177,7 +177,7 @@ That is the whole in-process server. The rest of this page is about exposing met
 
 ## Defining methods
 
-A *method* is a callable identified by the `method` member of a request; its implementation is a delegate, a `[JsonRpcMethod]` member of a class, or a member of a bound interface. `ServiceBinder` never asks for a `MethodInfo`; the same word names the -32601 "Method not found" error.
+A *method* is a callable identified by the `method` member of a request; its implementation is a delegate, a `[JsonRpcMethod]` member of a class, or a member of a bound interface. `ServiceBinder` never asks for a `MethodInfo`; the same word names the -32601 "Method not found" error. Names beginning with `rpc.` and the name `$/cancelRequest` are reserved and refused at registration.
 
 ### Classes
 

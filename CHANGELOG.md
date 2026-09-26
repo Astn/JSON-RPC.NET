@@ -38,6 +38,7 @@ behaviour: a breaking change to either means a new major version.
 - The AspNetCore host binds every registered service, `JsonRpcService` subclasses included, to its effective session (the registration's session, then `JsonRpcOptions.SessionId`, then the default). It no longer skips a subclass on the default session.
 - The core package's description says "no JSON library dependency" instead of "no dependencies". The session registry uses the framework's `ConcurrentDictionary`; the `NonBlocking` package reference is gone, so the core has no dependencies on `net8.0` and `net10.0` (measured with `SessionRegistryBenchmarks`: unknown-id lookups and register/destroy cycles got faster, stable lookups and dispatch are unchanged).
 - `SMD.Services` is an `SMDServiceCollection`; every mutation through it updates the dispatch table at once. `SMD.Types` is a process-wide registry.
+- Registration refuses reserved method names (`rpc.`-prefixed and `$/cancelRequest`) on every path, including `BindMethod`, attribute binding and direct additions to `SMDServiceCollection`; `BindInterface` refused `rpc.` alone before.
 - The `jsonrpc` member is checked (`Config.VersionPolicy`, default `Lenient`): a missing member is accepted, `"jsonrpc":"1.0"` or a non-string value is `-32600`.
 - A parameter value the serializer cannot convert is `-32602` with structured data naming the parameter (it was `-32603`); `-32601` names the requested method in its data.
 - Named parameters are checked against the method's parameter list: an unknown or repeated name is `-32602`.
