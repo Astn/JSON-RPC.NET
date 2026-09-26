@@ -48,6 +48,10 @@ behaviour: a breaking change to either means a new major version.
 - Dates and non-finite numbers are written the same way by every serializer (fraction only when non-zero, `Z`/offset/nothing by `Kind`; `NaN` and the infinities as quoted strings).
 - Clarified that the WebAssembly sample is not a Native AOT or full-trimming compatibility guarantee.
 
+### Deprecated
+
+- `Config.SetBeforeProcessHandler` (`JSONRPC0001`), `Handler.RegisterFuction` (`JSONRPC0002`) and `Handler.UnRegisterFunction` (`JSONRPC0003`) are obsolete at warning level with a diagnostic id linking to [docs/obsoletions.md](docs/obsoletions.md); they stay through 2.x and are removed in 3.0.
+
 ### Removed
 
 - `InProcessClient` (obsolete since 1.x); call `JsonRpcProcessor.Process` directly.

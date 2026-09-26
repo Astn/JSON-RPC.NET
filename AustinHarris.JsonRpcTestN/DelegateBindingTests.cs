@@ -128,9 +128,9 @@ namespace AustinHarris.JsonRpcTestN
             Assert.AreEqual("{\"jsonrpc\":\"2.0\",\"result\":2,\"id\":1}", Run("{\"method\":\"m\",\"id\":1}"));
 
             // the legacy surface keeps replacing silently
-#pragma warning disable CS0618
+#pragma warning disable CS0618, JSONRPC0002
             Handler.GetSessionHandler(Session).RegisterFuction("m", new Dictionary<string, Type> { ["returns"] = typeof(int) }, null, new Func<int>(() => 3));
-#pragma warning restore CS0618
+#pragma warning restore CS0618, JSONRPC0002
             Assert.AreEqual("{\"jsonrpc\":\"2.0\",\"result\":3,\"id\":1}", Run("{\"method\":\"m\",\"id\":1}"));
         }
 

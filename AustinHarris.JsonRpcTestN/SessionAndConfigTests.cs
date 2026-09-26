@@ -203,9 +203,9 @@ namespace AustinHarris.JsonRpcTestN
             int pre = 0;
             try
             {
-#pragma warning disable CS0618
+#pragma warning disable CS0618, JSONRPC0001
                 Config.SetBeforeProcessHandler(Session, (request, context) => { pre++; return null; });
-#pragma warning restore CS0618
+#pragma warning restore CS0618, JSONRPC0001
                 JsonRpcProcessor.ProcessSync(Session, "{\"jsonrpc\":\"2.0\",\"method\":\"sc.ping\",\"id\":1}", null);
                 Assert.AreEqual(1, pre);
                 Config.SetPreProcessHandler(Session, null);
@@ -250,10 +250,10 @@ namespace AustinHarris.JsonRpcTestN
             }
             finally
             {
-#pragma warning disable CS0618
+#pragma warning disable CS0618, JSONRPC0003
                 Handler.DefaultHandler.UnRegisterFunction("sc.bound");
                 Handler.GetSessionHandler(Session).UnRegisterFunction("sc.unbound");
-#pragma warning restore CS0618
+#pragma warning restore CS0618, JSONRPC0003
             }
         }
     }

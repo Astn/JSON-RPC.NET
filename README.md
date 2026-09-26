@@ -788,6 +788,7 @@ Most 1.x services run unchanged. [Upgrading from 1.x](docs/upgrading.md) lists t
 ## Versioning and support
 
 - **Versioning.** The 2.x packages follow [Semantic Versioning](https://semver.org/) for the public API and the wire behaviour documented here: a breaking change to either arrives only in a new major version.
+- **Deprecations.** An obsolete member warns with a `JSONRPC0xxx` diagnostic id whose link explains the replacement ([obsoletions](docs/obsoletions.md)); it stays at warning level through 2.x and is removed in the next major.
 - **Releases.** The four packages are built from one repository, carry one version number and are released together; use matching versions. There is no release cadence.
 - **Previews.** 2.0 ships as `2.0.0-preview.N` first. A preview is complete and tested, but the public API may still change between previews; the stable 2.0.0 follows once the API has settled.
 - **Tested** means the `net8.0` and `net10.0` test runs on Windows and Linux listed under [Requirements](#requirements). Other runtimes can load the `netstandard` assets and are not tested.
