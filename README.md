@@ -75,7 +75,7 @@ The "Covers" column is what each target framework admits, not what is tested. CI
 
 Dependencies at 2.0.0: none on `net8.0` and `net10.0`; on `netstandard` only, `System.Memory` 4.6.3, and `netstandard2.0` also references `System.Threading.Tasks.Extensions` 4.5.0 for `ValueTask`. The Newtonsoft package depends on Newtonsoft.Json 13.0.4 and the System.Text.Json package on System.Text.Json 10.0.3.
 
-The core uses no reflection emit, so it runs under the WebAssembly interpreter and under WebAssembly AOT (see [samples/WasmHost](samples/WasmHost)). It is not annotated for trimming: services and their `[JsonRpcMethod]` members are found by reflection, so keep those types rooted if you publish trimmed.
+The core uses no reflection emit. The WebAssembly sample runs under the configurations listed in [samples/WasmHost/README.md](samples/WasmHost/README.md); it validates neither `PublishTrimmed` nor `PublishAot`, which are unsupported: services and their `[JsonRpcMethod]` members are found by reflection and the invokers are compiled expression trees.
 
 ## Installation
 
@@ -177,7 +177,7 @@ That is the whole in-process server. The rest of this page is about exposing met
 
 ## Defining methods
 
-A *method* is a callable identified by the `method` member of a request; its implementation is a delegate, a `[JsonRpcMethod]` member of a class, or a member of a bound interface. `ServiceBinder` never asks for a `MethodInfo`; the same word names the -32601 "Method not found" error.
+A *method* is a callable identified by the `method` member of a request; its implementation is a delegate, a `[JsonRpcMethod]` member of a class, or a member of a bound interface. `ServiceBinder` never asks for a `MethodInfo`; the same word names the -32601 "Method not found" error. Names beginning with `rpc.` and the name `$/cancelRequest` are reserved and refused at registration.
 
 ### Classes
 
@@ -248,6 +248,39 @@ The core is transport-agnostic. Pick whichever of these fits, or build your own 
 
 Call the processor yourself, as in [Getting started](#getting-started). The byte overloads take what a `PipeReader` gives you (`ReadOnlySequence<byte>`) and write to any `IBufferWriter<byte>`: a `PipeWriter`, a socket buffer or `HttpResponse.BodyWriter`. Nothing is written for a notification, so check `output.WrittenCount` before sending. If your transport carries several documents per connection, `JsonFramer.TryReadDocument` cuts complete documents out of the byte stream without parsing them.
 
+A host that owns its transport also owns the deadline (the core has none; see [Deadlines](#asynchronous-methods-and-cancellation)). Link a `CancellationTokenSource` to the connection's lifetime token, arm it with `CancelAfter` and pass its token to `ProcessAsync` and to the write of the reply. When the budget expires, abort the transport at once, but still await the call: `ProcessAsync` completes only after the running method has terminated, a cancelled call commits no response bytes, and until the await returns the request memory and the output writer belong to the call, so neither goes back to a pool or is reused before then.
+
+```csharp
+// One request document on a connection the host owns: `rented` came from ArrayPool<byte>.Shared,
+// `transport` is the connection's stream, `lifetime` is cancelled when the connection closes.
+static async Task ServeDocumentAsync(string sessionId, byte[] rented, int length, Stream transport,
+    CancellationToken lifetime)
+{
+    var output = new ArrayBufferWriter<byte>();
+    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
+    deadline.CancelAfter(TimeSpan.FromSeconds(5));
+    // When the budget expires, abort the transport at once, even while a method is still running.
+    using var abort = deadline.Token.Register(static s => ((Stream)s!).Dispose(), transport);
+    try
+    {
+        await JsonRpcProcessor.ProcessAsync(sessionId, new ReadOnlyMemory<byte>(rented, 0, length), output,
+            context: transport, serializer: null, cancellationToken: deadline.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        return;   // the call has terminated and wrote no response bytes
+    }
+    finally
+    {
+        // Only now that the awaited call has returned may the input go back to the pool
+        // (or the output be reused): until then the processor may still read and write them.
+        ArrayPool<byte>.Shared.Return(rented);
+    }
+    if (output.WrittenCount > 0)   // nothing is written for a notification
+        await transport.WriteAsync(output.WrittenMemory, deadline.Token);
+}
+```
+
 ### Kestrel HTTP endpoint
 
 ```csharp
@@ -279,7 +312,7 @@ builder.WebHost.ConfigureKestrel(k =>
 
 Clients write JSON documents back to back (whitespace or newlines between them are fine) and read the responses in the same order, also back to back with no separator; notifications produce nothing. The framer accepts strict JSON only, so single-quoted strings and other lenient syntax are refused on a raw connection even with the Json.NET serializer.
 
-A raw connection has no authentication, authorisation or rate limiting; those are HTTP middleware and do not run here. Listen on loopback or a Unix socket, or put something in front that authenticates. A document larger than `MaxRequestBytes` (4 MB) aborts the connection.
+A raw connection has no authentication, authorisation or rate limiting; those are HTTP middleware and do not run here. Listen on loopback or a Unix socket, or put something in front that authenticates. A document larger than `MaxRequestBytes` (4 MB) aborts the connection. The core applies its own `JsonRpcLimits` to the document the host hands over, so the transport limit is met first and the core limit second.
 
 With `EnableAsyncMethods = true`, documents on one connection are processed one at a time in order, and replies already finished are flushed before the connection waits on a slow method. Separate connections run concurrently.
 
@@ -333,6 +366,7 @@ The errors the library raises itself carry structured `data`, identical for ever
 | Code | `error.data` | Object seen by the error handler |
 | --- | --- | --- |
 | `-32601` Method not found | `{"method":"<name as requested>"}` | `MethodNotFoundInfo` |
+| `-32600` Invalid Request: the document or batch exceeds a configured limit | `{"limit":"maxDocumentBytes","maximum":4194304}` or `{"limit":"maxBatchCount","maximum":1024}` (the configured maximum) | `LimitExceededInfo` |
 | `-32602` Invalid params: count, missing, unknown or repeated named parameter | a sentence, e.g. `"Named parameter 'b' was not present."` | `string` |
 | `-32602` Invalid params: a value the serializer could not convert | `{"reason":"conversion","parameter":"b","index":1,"expectedType":"int32"}` plus `"message"` when `Config.IncludeExceptionDetails` is on; the value sent is never echoed | `ParameterErrorInfo` (with the serializer's exception in `Cause`) |
 | `-32603` Internal error: the method threw, its result could not be written, or a parameter's type is one the serializer cannot handle | `null`, or the full `ExceptionInfo` when `Config.IncludeExceptionDetails` is on, see [Exception disclosure](#exception-disclosure) | `Exception` |
@@ -357,6 +391,8 @@ string response = await JsonRpcProcessor.ProcessAsync(sessionId, requestJson,
 ```
 
 **Which entry point to use.** `ProcessAsync` is the only entry point that awaits. `Process` and `ProcessSync` answer an async method with `-32603` and a message pointing to `ProcessAsync`, and do not call it. The older `Task<string> Process(…)` overloads run the synchronous path on the thread pool through `Task.Factory.StartNew`; despite returning a `Task`, they do not await async methods either.
+
+**Deadlines.** The server defines no per-call deadline and no client-supplied deadline member. On HTTP, configure the ASP.NET Core request-timeouts middleware (`AddRequestTimeouts`, `UseRequestTimeouts`, `WithRequestTimeout`) on the endpoint; its budget covers the whole HTTP request including a batch, it is observed only with `EnableAsyncMethods = true` (the synchronous endpoint path passes no token), and only by `[JsonRpcCancellation]` parameters and by the processor between and after batch elements, so a completed result can be discarded without the method having observed a token. Raw and in-process hosts own their lifetime tokens; application methods own finer operation budgets. Cancellation is cooperative: the library waits for running methods and does not undo their effects. A host that owns its transport enforces a deadline itself; [In-process (strings or bytes)](#in-process-strings-or-bytes) shows one.
 
 **Order.** A batch runs one request at a time, in order. Notifications are awaited like any other request.
 
@@ -515,6 +551,15 @@ The built-in serializer is the default. All three serializers write the envelope
 
 The full contract, what the core fixes versus what a serializer decides, is in [docs/serializers.md](docs/serializers.md).
 
+### Limits
+
+```csharp
+Config.SetLimits(new JsonRpcLimits(maxDocumentBytes: 8 * 1024 * 1024, maxBatchCount: 2048));
+Config.SetLimits("legacy-clients", JsonRpcLimits.Unlimited);
+```
+
+Zero disables either bound; `JsonRpcLimits.Unlimited` disables both. A null per-session value inherits the process-wide limits.
+
 ### Nesting depth
 
 Every serializer exposes `MaxDepth` (default 64). A request nested deeper is answered `-32700` before any handler or binding runs, so recursive parameter conversion is bounded by the same number the JSON library itself enforces: the built-in serializer's constructor argument, `JsonSerializerOptions.MaxDepth`, or `JsonSerializerSettings.MaxDepth`.
@@ -541,16 +586,14 @@ What the library does by default:
 - **Exception details are off.** An unhandled exception reaches the client as `-32603` with `data: null`: no type name, no message. `Config.IncludeExceptionDetails = true` sends the type, message, stack trace, source, HResult and inner exceptions; use it in development only. See [Exception disclosure](#exception-disclosure).
 - **Rejected values are not echoed.** A `-32602` conversion error names the parameter and the expected type, never the value sent.
 - **Nesting is limited to 64 levels.** A deeper request is `-32700` before any of your code runs.
-- **Request size is limited on the Kestrel host only.** `MaxRequestBytes` defaults to 4 MB: HTTP answers `413`, a raw connection is aborted. The core itself does not limit document length; that is the transport's job. There is no limit on how many requests a batch holds, no response-size limit and no request deadline; a batch runs sequentially, so a 4 MB batch of small requests ties up one request's worth of server time for all of them.
+- **Document and batch size are limited.** The core rejects a document over `JsonRpcLimits.MaxDocumentBytes` (4 MiB by default) or a batch with more than `MaxBatchCount` entries (1024) with `-32600` and a `data` object naming the limit, before anything is parsed or executed; `Config.SetLimits` changes them, `JsonRpcLimits.Unlimited` disables them. The Kestrel host also bounds bytes while receiving (`MaxRequestBytes`, 4 MB: HTTP answers `413`, a raw connection is aborted), so the first applicable limit wins. There is no response-size limit and no request deadline; a batch runs sequentially, so a batch of small requests ties up one request's worth of server time for all of them.
 - **Every `[JsonRpcMethod]` is callable.** Visibility does not matter (private methods are exposed), and `AddJsonRpcServicesFromAssembly` exposes every class in the assembly that carries the attribute.
 - **Requests do not create sessions.** An unknown session id answers `-32601` and leaves the registry alone; sessions are created by binding and by the per-session `Config` setters, and live until destroyed; see [Sessions and context](#sessions-and-context).
 - **Cancellation is cooperative.** It waits for a running method and cannot undo what the method already did.
 
 What it leaves to you:
 
-- **Authentication and authorisation.** On HTTP, use endpoint metadata: `app.MapJsonRpc("/rpc").RequireAuthorization("api")`. A raw connection has none; listen on loopback or a Unix socket, or authenticate in front of it.
-- **Per-method authorisation.** Check `Handler.RpcContext()` (the `HttpContext` on HTTP) inside the method, or reject in a pre-process handler (which moves the session to the slower path).
-- **Transport security, rate limiting and deadlines.** TLS, rate limits and timeouts are Kestrel's and the middleware pipeline's, not this library's. Raw connections bypass the HTTP middleware and need equivalent controls at the listener.
+Authentication, connection identity, TLS, rate limiting, request logging and deadlines belong to the host. HTTP hosts use ASP.NET Core middleware and endpoint metadata (`RequireAuthorization`, `UseRateLimiter`, the request-timeouts middleware); raw connections bypass that pipeline, so listen on loopback or a Unix socket, authenticate in front of them and use listener limits. Methods enforce authorisation that depends on parameter values. Core limits constrain admitted documents and batches, while transports bound bytes during receipt. Authentication and credential handling remain application responsibilities.
 - **Service state.** One service instance serves every request concurrently; see [Classes](#classes).
 
 The `jsonrpc` member policy (`Lenient` by default) is a compatibility setting, not a control; see [The `jsonrpc` member](#the-jsonrpc-member).
@@ -745,10 +788,11 @@ Most 1.x services run unchanged. [Upgrading from 1.x](docs/upgrading.md) lists t
 ## Versioning and support
 
 - **Versioning.** The 2.x packages follow [Semantic Versioning](https://semver.org/) for the public API and the wire behaviour documented here: a breaking change to either arrives only in a new major version.
+- **Deprecations.** An obsolete member warns with a `JSONRPC0xxx` diagnostic id whose link explains the replacement ([obsoletions](docs/obsoletions.md)); it stays at warning level through 2.x and is removed in the next major.
 - **Releases.** The four packages are built from one repository, carry one version number and are released together; use matching versions. There is no release cadence.
 - **Previews.** 2.0 ships as `2.0.0-preview.N` first. A preview is complete and tested, but the public API may still change between previews; the stable 2.0.0 follows once the API has settled.
 - **Tested** means the `net8.0` and `net10.0` test runs on Windows and Linux listed under [Requirements](#requirements). Other runtimes can load the `netstandard` assets and are not tested.
-- **Trimming** is unsupported until the library is annotated and that is validated in CI.
+- **Trimming and Native AOT** are unsupported until the library is annotated and that is validated in CI.
 - **1.x** receives no further releases.
 - **Changes** are recorded per version in [CHANGELOG.md](CHANGELOG.md); the NuGet release notes link there.
 - **Vulnerabilities** are reported privately, see [SECURITY.md](SECURITY.md). Questions and bugs go to [GitHub issues](https://github.com/Astn/JSON-RPC.NET/issues).

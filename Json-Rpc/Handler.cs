@@ -151,6 +151,15 @@ namespace AustinHarris.JsonRpc
         /// </summary>
         public JsonRpcVersionPolicy? VersionPolicy { get; set; }
 
+        private volatile JsonRpcLimits _limits;
+
+        /// <summary>The limits for this session. Null inherits <see cref="Config.Limits"/>.</summary>
+        public JsonRpcLimits Limits
+        {
+            get { return _limits; }
+            set { _limits = value; }
+        }
+
         /// <summary>
         /// Provides access to a context specific to each JsonRpc method invocation.
         /// Warning: Must be called from within the execution context of the jsonRpc Method to return the context
@@ -274,13 +283,21 @@ namespace AustinHarris.JsonRpc
         /// <param name="parameterNameTypeMapping">The parameter names and types that will be positionally bound to the function; the last entry is the return type</param>
         /// <param name="parameterNameDefaultValueMapping">Optional default values for parameters</param>
         /// <param name="implementation">A reference to the Function</param>
-        [Obsolete("Use ServiceBinder.BindMethod; unlike RegisterFuction it throws when the name is already registered instead of replacing it.")]
+#if NET5_0_OR_GREATER
+        [Obsolete(Obsoletions.RegisterFuctionMessage, DiagnosticId = Obsoletions.RegisterFuctionDiagId, UrlFormat = Obsoletions.SharedUrlFormat)]
+#else
+        [Obsolete(Obsoletions.RegisterFuctionDiagId + ": " + Obsoletions.RegisterFuctionMessage)]
+#endif
         public void RegisterFuction(string methodName, Dictionary<string, Type> parameterNameTypeMapping, Dictionary<string, object> parameterNameDefaultValueMapping, Delegate implementation)
         {
             MetaData.AddService(methodName, parameterNameTypeMapping, parameterNameDefaultValueMapping ?? new Dictionary<string, object>(), implementation);
         }
 
-        [Obsolete("Use ServiceBinder.UnbindMethod.")]
+#if NET5_0_OR_GREATER
+        [Obsolete(Obsoletions.UnRegisterFunctionMessage, DiagnosticId = Obsoletions.UnRegisterFunctionDiagId, UrlFormat = Obsoletions.SharedUrlFormat)]
+#else
+        [Obsolete(Obsoletions.UnRegisterFunctionDiagId + ": " + Obsoletions.UnRegisterFunctionMessage)]
+#endif
         public void UnRegisterFunction(string methodName)
         {
             MetaData.RemoveService(methodName);
@@ -815,6 +832,9 @@ namespace AustinHarris.JsonRpc
                     break;
                 case MethodNotFoundInfo notFound:
                     notFound.WriteTo(output);
+                    break;
+                case LimitExceededInfo limitExceeded:
+                    limitExceeded.WriteTo(output);
                     break;
                 case ParameterErrorInfo parameterError:
                     parameterError.WriteTo(output);
