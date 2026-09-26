@@ -119,7 +119,7 @@ namespace AustinHarris.JsonRpcTestN
         }
 
         [Test()]
-        public void TestInProcessClient()
+        public void ProcessStringOverloadNullableFloat()
         {
             string request = @"{""method"":""NullableFloatToNullableFloat"",""params"":[0.0],""id"":1}";
             string expectedResult = "{\"jsonrpc\":\"2.0\",\"result\":0.0,\"id\":1}";
