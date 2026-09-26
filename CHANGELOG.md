@@ -12,6 +12,7 @@ behaviour: a breaking change to either means a new major version.
 
 ### Added
 
+- `JsonRpcLimits` and `Config.SetLimits`: the core rejects documents over 4 MiB and batches over 1024 entries with `-32600` and a `data` object naming the limit; `JsonRpcLimits.Unlimited` restores the 1.x behaviour.
 - `ServiceBinder.BindInterface` registers interface trees atomically, with contract naming, filtering, defaults and ownership-aware disposal (`RpcBinding`).
 - `ServiceBinder.BindMethod` registers any delegate as a method without attributes or a service class.
 - `JsonRpcProcessor.ProcessAsync` awaits `Task` and `ValueTask` methods with typed result writing, sequential batches and cooperative cancellation; `[JsonRpcCancellation]` injects the processor's token.
@@ -26,6 +27,7 @@ behaviour: a breaking change to either means a new major version.
 - `protected JsonRpcService(bool autoBind)`: a subclass constructed with `base(false)` binds itself nowhere, for services that a host or an explicit `BindService` call binds.
 - `SECURITY.md` (private vulnerability reporting) and this changelog.
 - `TestServer_Console --scale` is the release gate for the `ProcessAsync` path. It measures the inline rows at 1, 2 and N workers in three paired runs, takes the medians and fails when N/1 is below the threshold. `--kestrel [seconds] async` runs the host with `EnableAsyncMethods = true`. The README adds `--async` rows for `ProcessAsync` at 1 and 16 workers. The 1.x string overloads' thread-pool benchmark is now the `t` menu entry and no longer the default.
+- `--scale` prints per-serializer and yielding-row diagnostics after the gate; the Kestrel `EnableAsyncMethods = true` row with methods that suspend once is a release-required regression row: re-measured before each release against the previous release's figure, with no absolute floor.
 
 ### Changed
 
@@ -38,12 +40,18 @@ behaviour: a breaking change to either means a new major version.
 - The AspNetCore host binds every registered service, `JsonRpcService` subclasses included, to its effective session (the registration's session, then `JsonRpcOptions.SessionId`, then the default). It no longer skips a subclass on the default session.
 - The core package's description says "no JSON library dependency" instead of "no dependencies". The session registry uses the framework's `ConcurrentDictionary`; the `NonBlocking` package reference is gone, so the core has no dependencies on `net8.0` and `net10.0` (measured with `SessionRegistryBenchmarks`: unknown-id lookups and register/destroy cycles got faster, stable lookups and dispatch are unchanged).
 - `SMD.Services` is an `SMDServiceCollection`; every mutation through it updates the dispatch table at once. `SMD.Types` is a process-wide registry.
+- Registration refuses reserved method names (`rpc.`-prefixed and `$/cancelRequest`) on every path, including `BindMethod`, attribute binding and direct additions to `SMDServiceCollection`; `BindInterface` refused `rpc.` alone before.
 - The `jsonrpc` member is checked (`Config.VersionPolicy`, default `Lenient`): a missing member is accepted, `"jsonrpc":"1.0"` or a non-string value is `-32600`.
 - A parameter value the serializer cannot convert is `-32602` with structured data naming the parameter (it was `-32603`); `-32601` names the requested method in its data.
 - Named parameters are checked against the method's parameter list: an unknown or repeated name is `-32602`.
 - Batches: the empty-batch error is `-32600`; a batch made only of notifications produces nothing; a batch always answers with an array when it produces at least one response.
 - Notifications never get a wire response, whatever their outcome.
 - Dates and non-finite numbers are written the same way by every serializer (fraction only when non-zero, `Z`/offset/nothing by `Kind`; `NaN` and the infinities as quoted strings).
+- Clarified that the WebAssembly sample is not a Native AOT or full-trimming compatibility guarantee.
+
+### Deprecated
+
+- `Config.SetBeforeProcessHandler` (`JSONRPC0001`), `Handler.RegisterFuction` (`JSONRPC0002`) and `Handler.UnRegisterFunction` (`JSONRPC0003`) are obsolete at warning level with a diagnostic id linking to [docs/obsoletions.md](docs/obsoletions.md); they stay through 2.x and are removed in 3.0.
 
 ### Removed
 
@@ -60,6 +68,7 @@ behaviour: a breaking change to either means a new major version.
 
 ### Security
 
+- Documents and batches are bounded in the core by default (`JsonRpcLimits`), independent of the transport.
 - With `Config.IncludeExceptionDetails` off (the default), an unhandled exception is answered as `-32603` with `data: null`: the exception's type name and message are no longer sent. Error handlers still receive the exception itself and can author what the client sees. The same applies to an exception thrown while writing a result. `ExceptionInfo.ForResponse` returns null when details are off.
 - The session registry no longer grows from untrusted session ids on the request path (see Changed).
 

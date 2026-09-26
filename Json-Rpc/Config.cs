@@ -67,6 +67,23 @@ namespace AustinHarris.JsonRpc
             set { _versionPolicy = value; }
         }
 
+        private static volatile JsonRpcLimits _limits = JsonRpcLimits.Default;
+
+        /// <summary>The process-wide document and batch limits, used when a session has no override.</summary>
+        public static JsonRpcLimits Limits => _limits;
+
+        /// <summary>Sets the process-wide document and batch limits. Null is not allowed.</summary>
+        public static void SetLimits(JsonRpcLimits limits)
+        {
+            _limits = limits ?? throw new ArgumentNullException(nameof(limits));
+        }
+
+        /// <summary>Sets one session's limits; null makes it inherit <see cref="Limits"/>. Creates the session if needed.</summary>
+        public static void SetLimits(string sessionId, JsonRpcLimits limits)
+        {
+            Handler.GetSessionHandler(sessionId).Limits = limits;
+        }
+
         /// <summary>Sets the version policy for one session; null makes the session follow <see cref="VersionPolicy"/>.</summary>
         public static void SetVersionPolicy(string sessionId, JsonRpcVersionPolicy? policy)
         {
@@ -124,7 +141,11 @@ namespace AustinHarris.JsonRpc
         }
 
         /// <summary>The former name of <see cref="SetPreProcessHandler(string, PreProcessHandler)"/>.</summary>
-        [Obsolete("Use SetPreProcessHandler(sessionId, handler).")]
+#if NET5_0_OR_GREATER
+        [Obsolete(Obsoletions.SetBeforeProcessHandlerMessage, DiagnosticId = Obsoletions.SetBeforeProcessHandlerDiagId, UrlFormat = Obsoletions.SharedUrlFormat)]
+#else
+        [Obsolete(Obsoletions.SetBeforeProcessHandlerDiagId + ": " + Obsoletions.SetBeforeProcessHandlerMessage)]
+#endif
         public static void SetBeforeProcessHandler(string sessionId, PreProcessHandler handler)
         {
             SetPreProcessHandler(sessionId, handler);

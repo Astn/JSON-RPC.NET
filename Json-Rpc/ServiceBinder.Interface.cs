@@ -21,8 +21,8 @@ namespace AustinHarris.JsonRpc
         /// Only public instance methods declared by the selected interfaces are exported; names, attributes,
         /// and optional defaults come from those declarations, including explicit implementations.
         /// Recursive getters run once per mount at registration and may have side effects. A failure publishes
-        /// nothing; getter side effects cannot be undone. Empty, reserved <c>rpc.</c>, duplicate, and occupied
-        /// names are rejected. Generic methods and default interface bodies are unsupported.
+        /// nothing; getter side effects cannot be undone. Empty, reserved (<c>rpc.</c>-prefixed or <c>$/cancelRequest</c>),
+        /// duplicate, and occupied names are rejected. Generic methods and default interface bodies are unsupported.
         /// The returned handle owns the registrations, not the lifetime of the implementation objects.
         /// </summary>
         public static RpcBinding BindInterface<TInterface>(string sessionId, TInterface implementation,
@@ -118,8 +118,8 @@ namespace AustinHarris.JsonRpc
                 var description = new RpcInterfaceMethod(method, path, leaf, defaultName);
                 if (_include != null && !_include(description)) return;
                 string name = _nameRule == null ? defaultName : _nameRule(description);
-                if (string.IsNullOrWhiteSpace(name) || name.StartsWith("rpc.", StringComparison.Ordinal))
-                    throw new ArgumentException("Invalid or reserved JSON-RPC interface method name: '" + name + "'.");
+                if (string.IsNullOrWhiteSpace(name))
+                    throw new ArgumentException("Invalid JSON-RPC interface method name: '" + name + "'.");
                 if (Entries.ContainsKey(name)) throw new ArgumentException("Duplicate JSON-RPC interface method name '" + name + "'.");
                 if (method.ContainsGenericParameters)
                     throw new ArgumentException("Generic interface method '" + method.Name + "' is not supported.");
