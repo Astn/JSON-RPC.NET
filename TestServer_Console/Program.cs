@@ -27,13 +27,17 @@ namespace TestServer_Console
 
             // `dotnet run -- --scale [seconds] [workers] [threshold]` is the release gate for the ProcessAsync path:
             // the inline rows at 1, 2 and N workers, three paired runs, medians; exit code 1 when N/1 is below the threshold.
+            // After the gate it prints a per-serializer diagnostics table that never changes the exit code; a final
+            // `--no-diagnostics` argument skips it.
             if (args.Length > 0 && args[0] == "--scale")
             {
                 double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 3;
                 int workers = args.Length > 2 && int.TryParse(args[2], out var t) ? t : 16;
                 double threshold = args.Length > 3 && double.TryParse(args[3], out var r) ? r : 4.0;
+                bool diagnostics = !(args.Length > 1 && args[args.Length - 1] == "--no-diagnostics");
                 bool pass = AsyncBenchmark.ScaleAsync(Console.WriteLine, seconds, workers, threshold).GetAwaiter().GetResult();
                 Environment.ExitCode = pass ? 0 : 1;
+                if (diagnostics) AsyncBenchmark.ScaleDiagnosticsAsync(Console.WriteLine, seconds, workers).GetAwaiter().GetResult();
                 return;
             }
 

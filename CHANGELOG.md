@@ -27,6 +27,7 @@ behaviour: a breaking change to either means a new major version.
 - `protected JsonRpcService(bool autoBind)`: a subclass constructed with `base(false)` binds itself nowhere, for services that a host or an explicit `BindService` call binds.
 - `SECURITY.md` (private vulnerability reporting) and this changelog.
 - `TestServer_Console --scale` is the release gate for the `ProcessAsync` path. It measures the inline rows at 1, 2 and N workers in three paired runs, takes the medians and fails when N/1 is below the threshold. `--kestrel [seconds] async` runs the host with `EnableAsyncMethods = true`. The README adds `--async` rows for `ProcessAsync` at 1 and 16 workers. The 1.x string overloads' thread-pool benchmark is now the `t` menu entry and no longer the default.
+- `--scale` prints per-serializer and yielding-row diagnostics after the gate; the Kestrel `EnableAsyncMethods = true` row with methods that suspend once is a release-required regression row: re-measured before each release against the previous release's figure, with no absolute floor.
 
 ### Changed
 

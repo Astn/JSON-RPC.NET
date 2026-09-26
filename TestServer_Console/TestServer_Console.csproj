@@ -31,6 +31,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Json-Rpc\AustinHarris.JsonRpc.csproj" />
     <ProjectReference Include="..\AustinHarris.JsonRpc.AspNetCore\AustinHarris.JsonRpc.AspNetCore.csproj" />
+    <ProjectReference Include="..\AustinHarris.JsonRpc.Newtonsoft\AustinHarris.JsonRpc.Newtonsoft.csproj" />
+    <ProjectReference Include="..\AustinHarris.JsonRpc.SystemTextJson\AustinHarris.JsonRpc.SystemTextJson.csproj" />
   </ItemGroup>
 
 </Project>
