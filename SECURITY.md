@@ -19,6 +19,6 @@ alongside it.
 
 ## What the library does and does not do
 
-The README's [Security](README.md#security) section lists what the library does by default (exception
-redaction, nesting limit, request-size limit on the Kestrel host) and what it leaves to the host: authentication,
-authorisation, transport security, rate limiting and deadlines.
+The README's [Security](README.md#security) section lists what the library does by default (exception redaction, nesting limit, document and batch limits in the core, request-size limit on the Kestrel host) and what it leaves to the host.
+
+Authentication, connection identity, TLS, rate limiting, request logging and deadlines belong to the host. HTTP hosts use ASP.NET Core middleware and endpoint metadata (`RequireAuthorization`, `UseRateLimiter`, the request-timeouts middleware); raw connections bypass that pipeline, so listen on loopback or a Unix socket, authenticate in front of them and use listener limits. Methods enforce authorisation that depends on parameter values. Core limits constrain admitted documents and batches, while transports bound bytes during receipt. Authentication and credential handling remain application responsibilities.

@@ -72,6 +72,7 @@ namespace AustinHarris.JsonRpcTestN
 
             _app = builder.Build();
             _app.MapJsonRpc("/rpc");
+            _app.MapJsonRpc("/raised-limit", new JsonRpcOptions { MaxRequestBytes = 6 * 1024 * 1024 });
             await _app.StartAsync();
 
             var addresses = _app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>().Addresses;
@@ -157,9 +158,26 @@ namespace AustinHarris.JsonRpcTestN
         [Test]
         public async Task Http_LargeBody_Is413()
         {
-            var big = "{\"jsonrpc\":\"2.0\",\"method\":\"internal.echo\",\"params\":[\"" + new string('x', 5 * 1024 * 1024) + "\"],\"id\":1}";
+            var big = SizedDocument(4 * 1024 * 1024 + 1);
             var response = await PostAsync(big);
             Assert.AreEqual(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+        }
+
+        [Test]
+        public async Task Http_RaisedTransportLimit_UsesCoreDocumentLimit()
+        {
+            var response = await _http.PostAsync("/raised-limit",
+                new StringContent(SizedDocument(4 * 1024 * 1024 + 1), Encoding.UTF8, "application/json"));
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            Assert.AreEqual("{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32600,\"message\":\"Invalid Request\",\"data\":{\"limit\":\"maxDocumentBytes\",\"maximum\":4194304}},\"id\":null}",
+                await response.Content.ReadAsStringAsync());
+        }
+
+        private static string SizedDocument(int bytes)
+        {
+            const string prefix = "{\"method\":\"IntToInt\",\"params\":[\"";
+            const string suffix = "\"],\"id\":1}";
+            return prefix + new string('x', bytes - prefix.Length - suffix.Length) + suffix;
         }
 
         [Test]

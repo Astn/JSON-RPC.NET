@@ -109,7 +109,8 @@ namespace AustinHarris.JsonRpc
     /// The services of one session keyed by JSON method name. A dictionary for callers; underneath, every
     /// mutation also replaces the lock-free UTF-8 dispatch table the request path resolves methods from, so
     /// an added, removed or replaced service is visible to the next request. Reads of the dictionary take a
-    /// lock; the request path never does.
+    /// lock; the request path never does. Names beginning with <c>rpc.</c> and the name <c>$/cancelRequest</c>
+    /// are reserved: every public way of adding a service refuses them with an <see cref="ArgumentException"/>.
     /// </summary>
     public sealed class SMDServiceCollection : IDictionary<string, SMDService>, IReadOnlyDictionary<string, SMDService>
     {
@@ -117,11 +118,27 @@ namespace AustinHarris.JsonRpc
         private readonly Utf8KeyTable<SMDService> _table = new Utf8KeyTable<SMDService>();
         private readonly object _sync = new object();
 
+        private const string ReservedPrefix = "rpc.";
+        private const string CancelRequest = "$/cancelRequest";
+
+        /// <summary>
+        /// Refuses the names the specification reserves (<c>rpc.</c>-prefixed, ordinal and case-sensitive) and
+        /// <c>$/cancelRequest</c>. The name is compared as given: no trimming and no case folding.
+        /// </summary>
+        private static void ThrowIfReserved(string name, string paramName)
+        {
+            if (name == null) throw new ArgumentNullException(paramName);
+            if (name.StartsWith(ReservedPrefix, StringComparison.Ordinal) || string.Equals(name, CancelRequest, StringComparison.Ordinal))
+                throw new ArgumentException("'" + name + "' is a reserved JSON-RPC method name.", paramName);
+        }
+
         internal void AddBatch(IReadOnlyDictionary<string, SMDService> entries)
         {
             if (entries.Count == 0) return;
             lock (_sync)
             {
+                // Every name is checked before anything is copied or added, so a batch with one reserved name adds nothing.
+                foreach (var entry in entries) ThrowIfReserved(entry.Key, nameof(entries));
                 var next = new Dictionary<string, SMDService>(_services);
                 foreach (var entry in entries)
                 {
@@ -173,6 +190,7 @@ namespace AustinHarris.JsonRpc
             {
                 if (key == null) throw new ArgumentNullException(nameof(key));
                 if (value == null) throw new ArgumentNullException(nameof(value));
+                ThrowIfReserved(key, nameof(key));
                 lock (_sync)
                 {
                     _services[key] = value;
@@ -225,8 +243,27 @@ namespace AustinHarris.JsonRpc
         {
             if (key == null) throw new ArgumentNullException(nameof(key));
             if (value == null) throw new ArgumentNullException(nameof(value));
+            ThrowIfReserved(key, nameof(key));
             lock (_sync)
             {
+                _services.Add(key, value);
+                _table.Set(key, value);
+            }
+        }
+
+        /// <summary>
+        /// Adds a service under a reserved name, for the library's own <c>rpc.discover</c> registration.
+        /// It bypasses only the reserved-name check: an existing <paramref name="key"/> still throws
+        /// <see cref="ArgumentException"/>. Internal, so the reserved check is the only public path; unused in 2.0.0.
+        /// </summary>
+        internal void AddReserved(string key, SMDService value)
+        {
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (value == null) throw new ArgumentNullException(nameof(value));
+            lock (_sync)
+            {
+                if (_services.ContainsKey(key))
+                    throw new ArgumentException("JSON-RPC method '" + key + "' is already registered.", nameof(key));
                 _services.Add(key, value);
                 _table.Set(key, value);
             }

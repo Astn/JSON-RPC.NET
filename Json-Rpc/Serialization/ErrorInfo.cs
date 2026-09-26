@@ -4,6 +4,36 @@ using System.Text;
 
 namespace AustinHarris.JsonRpc.Serialization
 {
+    /// <summary>The structured <c>data</c> of a -32600 document-byte or batch-count limit error.</summary>
+    public sealed class LimitExceededInfo
+    {
+        private static readonly byte[] Prefix = Encoding.ASCII.GetBytes("{\"limit\":");
+        private static readonly byte[] MaximumKey = Encoding.ASCII.GetBytes(",\"maximum\":");
+
+        /// <summary>Creates the error data with the limit's name and configured maximum.</summary>
+        public LimitExceededInfo(string limit, long maximum)
+        {
+            Limit = limit;
+            Maximum = maximum;
+        }
+
+        /// <summary><c>maxDocumentBytes</c> or <c>maxBatchCount</c>.</summary>
+        public string Limit { get; }
+
+        /// <summary>The configured maximum that was exceeded.</summary>
+        public long Maximum { get; }
+
+        /// <summary>Writes the same JSON data bytes for every serializer.</summary>
+        public void WriteTo(IBufferWriter<byte> output)
+        {
+            Utf8Json.WriteRaw(output, Prefix);
+            Utf8Json.WriteString(output, Limit);
+            Utf8Json.WriteRaw(output, MaximumKey);
+            Utf8Json.WriteInt64(output, Maximum);
+            Utf8Json.WriteByte(output, (byte)'}');
+        }
+    }
+
     /// <summary>
     /// The <c>data</c> of a -32601 error: <c>{"method":"name"}</c>, the effective method name (decoded, and as
     /// replaced by a pre-process handler). Written the same way by every serializer. Nothing else is disclosed: the
