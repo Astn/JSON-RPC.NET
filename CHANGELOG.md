@@ -46,6 +46,7 @@ behaviour: a breaking change to either means a new major version.
 - Batches: the empty-batch error is `-32600`; a batch made only of notifications produces nothing; a batch always answers with an array when it produces at least one response.
 - Notifications never get a wire response, whatever their outcome.
 - Dates and non-finite numbers are written the same way by every serializer (fraction only when non-zero, `Z`/offset/nothing by `Kind`; `NaN` and the infinities as quoted strings).
+- Clarified that the WebAssembly sample is not a Native AOT or full-trimming compatibility guarantee.
 
 ### Removed
 

@@ -75,7 +75,7 @@ The "Covers" column is what each target framework admits, not what is tested. CI
 
 Dependencies at 2.0.0: none on `net8.0` and `net10.0`; on `netstandard` only, `System.Memory` 4.6.3, and `netstandard2.0` also references `System.Threading.Tasks.Extensions` 4.5.0 for `ValueTask`. The Newtonsoft package depends on Newtonsoft.Json 13.0.4 and the System.Text.Json package on System.Text.Json 10.0.3.
 
-The core uses no reflection emit, so it runs under the WebAssembly interpreter and under WebAssembly AOT (see [samples/WasmHost](samples/WasmHost)). It is not annotated for trimming: services and their `[JsonRpcMethod]` members are found by reflection, so keep those types rooted if you publish trimmed.
+The core uses no reflection emit. The WebAssembly sample runs under the configurations listed in [samples/WasmHost/README.md](samples/WasmHost/README.md); it validates neither `PublishTrimmed` nor `PublishAot`, which are unsupported: services and their `[JsonRpcMethod]` members are found by reflection and the invokers are compiled expression trees.
 
 ## Installation
 
@@ -248,6 +248,39 @@ The core is transport-agnostic. Pick whichever of these fits, or build your own 
 
 Call the processor yourself, as in [Getting started](#getting-started). The byte overloads take what a `PipeReader` gives you (`ReadOnlySequence<byte>`) and write to any `IBufferWriter<byte>`: a `PipeWriter`, a socket buffer or `HttpResponse.BodyWriter`. Nothing is written for a notification, so check `output.WrittenCount` before sending. If your transport carries several documents per connection, `JsonFramer.TryReadDocument` cuts complete documents out of the byte stream without parsing them.
 
+A host that owns its transport also owns the deadline (the core has none; see [Deadlines](#asynchronous-methods-and-cancellation)). Link a `CancellationTokenSource` to the connection's lifetime token, arm it with `CancelAfter` and pass its token to `ProcessAsync` and to the write of the reply. When the budget expires, abort the transport at once, but still await the call: `ProcessAsync` completes only after the running method has terminated, a cancelled call commits no response bytes, and until the await returns the request memory and the output writer belong to the call, so neither goes back to a pool or is reused before then.
+
+```csharp
+// One request document on a connection the host owns: `rented` came from ArrayPool<byte>.Shared,
+// `transport` is the connection's stream, `lifetime` is cancelled when the connection closes.
+static async Task ServeDocumentAsync(string sessionId, byte[] rented, int length, Stream transport,
+    CancellationToken lifetime)
+{
+    var output = new ArrayBufferWriter<byte>();
+    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
+    deadline.CancelAfter(TimeSpan.FromSeconds(5));
+    // When the budget expires, abort the transport at once, even while a method is still running.
+    using var abort = deadline.Token.Register(static s => ((Stream)s!).Dispose(), transport);
+    try
+    {
+        await JsonRpcProcessor.ProcessAsync(sessionId, new ReadOnlyMemory<byte>(rented, 0, length), output,
+            context: transport, serializer: null, cancellationToken: deadline.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        return;   // the call has terminated and wrote no response bytes
+    }
+    finally
+    {
+        // Only now that the awaited call has returned may the input go back to the pool
+        // (or the output be reused): until then the processor may still read and write them.
+        ArrayPool<byte>.Shared.Return(rented);
+    }
+    if (output.WrittenCount > 0)   // nothing is written for a notification
+        await transport.WriteAsync(output.WrittenMemory, deadline.Token);
+}
+```
+
 ### Kestrel HTTP endpoint
 
 ```csharp
@@ -358,6 +391,8 @@ string response = await JsonRpcProcessor.ProcessAsync(sessionId, requestJson,
 ```
 
 **Which entry point to use.** `ProcessAsync` is the only entry point that awaits. `Process` and `ProcessSync` answer an async method with `-32603` and a message pointing to `ProcessAsync`, and do not call it. The older `Task<string> Process(…)` overloads run the synchronous path on the thread pool through `Task.Factory.StartNew`; despite returning a `Task`, they do not await async methods either.
+
+**Deadlines.** The server defines no per-call deadline and no client-supplied deadline member. On HTTP, configure the ASP.NET Core request-timeouts middleware (`AddRequestTimeouts`, `UseRequestTimeouts`, `WithRequestTimeout`) on the endpoint; its budget covers the whole HTTP request including a batch, it is observed only with `EnableAsyncMethods = true` (the synchronous endpoint path passes no token), and only by `[JsonRpcCancellation]` parameters and by the processor between and after batch elements, so a completed result can be discarded without the method having observed a token. Raw and in-process hosts own their lifetime tokens; application methods own finer operation budgets. Cancellation is cooperative: the library waits for running methods and does not undo their effects. A host that owns its transport enforces a deadline itself; [In-process (strings or bytes)](#in-process-strings-or-bytes) shows one.
 
 **Order.** A batch runs one request at a time, in order. Notifications are awaited like any other request.
 
@@ -756,7 +791,7 @@ Most 1.x services run unchanged. [Upgrading from 1.x](docs/upgrading.md) lists t
 - **Releases.** The four packages are built from one repository, carry one version number and are released together; use matching versions. There is no release cadence.
 - **Previews.** 2.0 ships as `2.0.0-preview.N` first. A preview is complete and tested, but the public API may still change between previews; the stable 2.0.0 follows once the API has settled.
 - **Tested** means the `net8.0` and `net10.0` test runs on Windows and Linux listed under [Requirements](#requirements). Other runtimes can load the `netstandard` assets and are not tested.
-- **Trimming** is unsupported until the library is annotated and that is validated in CI.
+- **Trimming and Native AOT** are unsupported until the library is annotated and that is validated in CI.
 - **1.x** receives no further releases.
 - **Changes** are recorded per version in [CHANGELOG.md](CHANGELOG.md); the NuGet release notes link there.
 - **Vulnerabilities** are reported privately, see [SECURITY.md](SECURITY.md). Questions and bugs go to [GitHub issues](https://github.com/Astn/JSON-RPC.NET/issues).
