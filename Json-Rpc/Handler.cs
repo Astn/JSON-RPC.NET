@@ -151,6 +151,15 @@ namespace AustinHarris.JsonRpc
         /// </summary>
         public JsonRpcVersionPolicy? VersionPolicy { get; set; }
 
+        private volatile JsonRpcLimits _limits;
+
+        /// <summary>The limits for this session. Null inherits <see cref="Config.Limits"/>.</summary>
+        public JsonRpcLimits Limits
+        {
+            get { return _limits; }
+            set { _limits = value; }
+        }
+
         /// <summary>
         /// Provides access to a context specific to each JsonRpc method invocation.
         /// Warning: Must be called from within the execution context of the jsonRpc Method to return the context
@@ -815,6 +824,9 @@ namespace AustinHarris.JsonRpc
                     break;
                 case MethodNotFoundInfo notFound:
                     notFound.WriteTo(output);
+                    break;
+                case LimitExceededInfo limitExceeded:
+                    limitExceeded.WriteTo(output);
                     break;
                 case ParameterErrorInfo parameterError:
                     parameterError.WriteTo(output);

@@ -279,7 +279,7 @@ builder.WebHost.ConfigureKestrel(k =>
 
 Clients write JSON documents back to back (whitespace or newlines between them are fine) and read the responses in the same order, also back to back with no separator; notifications produce nothing. The framer accepts strict JSON only, so single-quoted strings and other lenient syntax are refused on a raw connection even with the Json.NET serializer.
 
-A raw connection has no authentication, authorisation or rate limiting; those are HTTP middleware and do not run here. Listen on loopback or a Unix socket, or put something in front that authenticates. A document larger than `MaxRequestBytes` (4 MB) aborts the connection.
+A raw connection has no authentication, authorisation or rate limiting; those are HTTP middleware and do not run here. Listen on loopback or a Unix socket, or put something in front that authenticates. A document larger than `MaxRequestBytes` (4 MB) aborts the connection. The core applies its own `JsonRpcLimits` to the document the host hands over, so the transport limit is met first and the core limit second.
 
 With `EnableAsyncMethods = true`, documents on one connection are processed one at a time in order, and replies already finished are flushed before the connection waits on a slow method. Separate connections run concurrently.
 
@@ -333,6 +333,7 @@ The errors the library raises itself carry structured `data`, identical for ever
 | Code | `error.data` | Object seen by the error handler |
 | --- | --- | --- |
 | `-32601` Method not found | `{"method":"<name as requested>"}` | `MethodNotFoundInfo` |
+| `-32600` Invalid Request: the document or batch exceeds a configured limit | `{"limit":"maxDocumentBytes","maximum":4194304}` or `{"limit":"maxBatchCount","maximum":1024}` (the configured maximum) | `LimitExceededInfo` |
 | `-32602` Invalid params: count, missing, unknown or repeated named parameter | a sentence, e.g. `"Named parameter 'b' was not present."` | `string` |
 | `-32602` Invalid params: a value the serializer could not convert | `{"reason":"conversion","parameter":"b","index":1,"expectedType":"int32"}` plus `"message"` when `Config.IncludeExceptionDetails` is on; the value sent is never echoed | `ParameterErrorInfo` (with the serializer's exception in `Cause`) |
 | `-32603` Internal error: the method threw, its result could not be written, or a parameter's type is one the serializer cannot handle | `null`, or the full `ExceptionInfo` when `Config.IncludeExceptionDetails` is on, see [Exception disclosure](#exception-disclosure) | `Exception` |
@@ -515,6 +516,15 @@ The built-in serializer is the default. All three serializers write the envelope
 
 The full contract, what the core fixes versus what a serializer decides, is in [docs/serializers.md](docs/serializers.md).
 
+### Limits
+
+```csharp
+Config.SetLimits(new JsonRpcLimits(maxDocumentBytes: 8 * 1024 * 1024, maxBatchCount: 2048));
+Config.SetLimits("legacy-clients", JsonRpcLimits.Unlimited);
+```
+
+Zero disables either bound; `JsonRpcLimits.Unlimited` disables both. A null per-session value inherits the process-wide limits.
+
 ### Nesting depth
 
 Every serializer exposes `MaxDepth` (default 64). A request nested deeper is answered `-32700` before any handler or binding runs, so recursive parameter conversion is bounded by the same number the JSON library itself enforces: the built-in serializer's constructor argument, `JsonSerializerOptions.MaxDepth`, or `JsonSerializerSettings.MaxDepth`.
@@ -541,16 +551,14 @@ What the library does by default:
 - **Exception details are off.** An unhandled exception reaches the client as `-32603` with `data: null`: no type name, no message. `Config.IncludeExceptionDetails = true` sends the type, message, stack trace, source, HResult and inner exceptions; use it in development only. See [Exception disclosure](#exception-disclosure).
 - **Rejected values are not echoed.** A `-32602` conversion error names the parameter and the expected type, never the value sent.
 - **Nesting is limited to 64 levels.** A deeper request is `-32700` before any of your code runs.
-- **Request size is limited on the Kestrel host only.** `MaxRequestBytes` defaults to 4 MB: HTTP answers `413`, a raw connection is aborted. The core itself does not limit document length; that is the transport's job. There is no limit on how many requests a batch holds, no response-size limit and no request deadline; a batch runs sequentially, so a 4 MB batch of small requests ties up one request's worth of server time for all of them.
+- **Document and batch size are limited.** The core rejects a document over `JsonRpcLimits.MaxDocumentBytes` (4 MiB by default) or a batch with more than `MaxBatchCount` entries (1024) with `-32600` and a `data` object naming the limit, before anything is parsed or executed; `Config.SetLimits` changes them, `JsonRpcLimits.Unlimited` disables them. The Kestrel host also bounds bytes while receiving (`MaxRequestBytes`, 4 MB: HTTP answers `413`, a raw connection is aborted), so the first applicable limit wins. There is no response-size limit and no request deadline; a batch runs sequentially, so a batch of small requests ties up one request's worth of server time for all of them.
 - **Every `[JsonRpcMethod]` is callable.** Visibility does not matter (private methods are exposed), and `AddJsonRpcServicesFromAssembly` exposes every class in the assembly that carries the attribute.
 - **Requests do not create sessions.** An unknown session id answers `-32601` and leaves the registry alone; sessions are created by binding and by the per-session `Config` setters, and live until destroyed; see [Sessions and context](#sessions-and-context).
 - **Cancellation is cooperative.** It waits for a running method and cannot undo what the method already did.
 
 What it leaves to you:
 
-- **Authentication and authorisation.** On HTTP, use endpoint metadata: `app.MapJsonRpc("/rpc").RequireAuthorization("api")`. A raw connection has none; listen on loopback or a Unix socket, or authenticate in front of it.
-- **Per-method authorisation.** Check `Handler.RpcContext()` (the `HttpContext` on HTTP) inside the method, or reject in a pre-process handler (which moves the session to the slower path).
-- **Transport security, rate limiting and deadlines.** TLS, rate limits and timeouts are Kestrel's and the middleware pipeline's, not this library's. Raw connections bypass the HTTP middleware and need equivalent controls at the listener.
+Authentication, connection identity, TLS, rate limiting, request logging and deadlines belong to the host. HTTP hosts use ASP.NET Core middleware and endpoint metadata (`RequireAuthorization`, `UseRateLimiter`, the request-timeouts middleware); raw connections bypass that pipeline, so listen on loopback or a Unix socket, authenticate in front of them and use listener limits. Methods enforce authorisation that depends on parameter values. Core limits constrain admitted documents and batches, while transports bound bytes during receipt. Authentication and credential handling remain application responsibilities.
 - **Service state.** One service instance serves every request concurrently; see [Classes](#classes).
 
 The `jsonrpc` member policy (`Lenient` by default) is a compatibility setting, not a control; see [The `jsonrpc` member](#the-jsonrpc-member).

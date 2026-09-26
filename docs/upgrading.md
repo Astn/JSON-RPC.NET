@@ -15,6 +15,7 @@ Most 1.x services run unchanged. Read the first list before you build, and the s
 
 ## Changes clients will see on the wire
 
+- **Limits.** A document over 4 MiB or a batch with more than 1024 entries is `-32600` with `data = {"limit":…,"maximum":…}` before anything runs; `Config.SetLimits(JsonRpcLimits.Unlimited)` restores the 1.x behaviour.
 - **Version member.** The `jsonrpc` member is checked (`Config.VersionPolicy`, default `Lenient`): a missing member is still accepted, but `"jsonrpc":"1.0"` or a non-string value is now `-32600`. Set `Ignore` for the 1.x behaviour.
 - **Parse errors.** Requests nested deeper than 64 levels are `-32700` (configurable per serializer, see [Nesting depth](../README.md#nesting-depth)). Invalid UTF-8 and non-strict JSON (unless the serializer is lenient) are `-32700` as well.
 - **Batches.** The empty-batch error code is the spec's `-32600` (it was `3200`). Batches made only of notifications produce an empty response instead of `[]` with a dangling comma. A batch always answers with a JSON array when it produces at least one response; a one-request batch is no longer unwrapped to a bare response object.

@@ -17,7 +17,21 @@ namespace AustinHarris.JsonRpc
         public static Task ProcessAsync(string sessionId, ReadOnlySequence<byte> request, IBufferWriter<byte> output,
             object context = null, JsonRpcSerializer serializer = null, CancellationToken cancellationToken = default)
         {
-            if (request.IsSingleSegment) return ProcessAsync(sessionId, request.First, output, context, serializer, cancellationToken);
+            if (request.IsSingleSegment)
+                return StartAsyncDocument(sessionId, request.First, output, context, serializer, cancellationToken);
+            Handler handler;
+            JsonRpcLimits limits;
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                handler = GetRequestHandler(sessionId);
+                limits = handler.Limits ?? Config.Limits;
+                if (ExceedsDocumentLimit(request.Length, limits))
+                    return RejectAsyncDocument(handler, serializer, output, limits.MaxDocumentBytes,
+                        handler.HasParseErrorHandler ? Utf8Json.ToStringUtf8(request.ToArray()) : null, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return Task.FromCanceled(cancellationToken); }
+            catch (Exception ex) { return Task.FromException(ex); }
             var scratch = AsyncScratch.Rent();
             int length;
             byte[] buffer;
@@ -28,7 +42,8 @@ namespace AustinHarris.JsonRpc
                 request.CopyTo(buffer);
             }
             catch { scratch.Return(); throw; }
-            return StartAsyncDocument(sessionId, new ReadOnlyMemory<byte>(buffer, 0, length), output, context, serializer, cancellationToken, scratch);
+            return StartAsyncDocument(sessionId, new ReadOnlyMemory<byte>(buffer, 0, length), output, context,
+                serializer, cancellationToken, handler, limits, scratch);
         }
 
         /// <summary>
@@ -38,7 +53,7 @@ namespace AustinHarris.JsonRpc
         public static Task ProcessAsync(string sessionId, ReadOnlyMemory<byte> request, IBufferWriter<byte> output,
             object context = null, JsonRpcSerializer serializer = null, CancellationToken cancellationToken = default)
         {
-            return StartAsyncDocument(sessionId, request, output, context, serializer, cancellationToken, AsyncScratch.Rent());
+            return StartAsyncDocument(sessionId, request, output, context, serializer, cancellationToken);
         }
 
         /// <summary>
@@ -48,6 +63,19 @@ namespace AustinHarris.JsonRpc
         public static Task ProcessAsync(string sessionId, ReadOnlySpan<byte> request, IBufferWriter<byte> output,
             object context = null, JsonRpcSerializer serializer = null, CancellationToken cancellationToken = default)
         {
+            Handler handler;
+            JsonRpcLimits limits;
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                handler = GetRequestHandler(sessionId);
+                limits = handler.Limits ?? Config.Limits;
+                if (ExceedsDocumentLimit(request.Length, limits))
+                    return RejectAsyncDocument(handler, serializer, output, limits.MaxDocumentBytes,
+                        handler.HasParseErrorHandler ? Utf8Json.ToStringUtf8(request) : null, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return Task.FromCanceled(cancellationToken); }
+            catch (Exception ex) { return Task.FromException(ex); }
             var scratch = AsyncScratch.Rent();
             byte[] buffer;
             try
@@ -56,17 +84,31 @@ namespace AustinHarris.JsonRpc
                 request.CopyTo(buffer);
             }
             catch { scratch.Return(); throw; }
-            return StartAsyncDocument(sessionId, new ReadOnlyMemory<byte>(buffer, 0, request.Length), output, context, serializer, cancellationToken, scratch);
+            return StartAsyncDocument(sessionId, new ReadOnlyMemory<byte>(buffer, 0, request.Length), output,
+                context, serializer, cancellationToken, handler, limits, scratch);
         }
 
         /// <summary>Processes a string asynchronously on the selected session, returning an empty string for notifications.</summary>
         public static async Task<string> ProcessAsync(string sessionId, string jsonRpc, object context = null,
             JsonRpcSerializer serializer = null, CancellationToken cancellationToken = default)
         {
-            var input = Encoding.UTF8.GetBytes(jsonRpc);
+            cancellationToken.ThrowIfCancellationRequested();
+            var handler = GetRequestHandler(sessionId);
+            var limits = handler.Limits ?? Config.Limits;
+            int length = Encoding.UTF8.GetByteCount(jsonRpc);
             using (var output = new PooledByteBufferWriter())
             {
-                await ProcessAsync(sessionId, new ReadOnlyMemory<byte>(input), output, context, serializer, cancellationToken).ConfigureAwait(false);
+                if (ExceedsDocumentLimit(length, limits))
+                {
+                    await RejectAsyncDocument(handler, serializer, output, limits.MaxDocumentBytes,
+                        handler.HasParseErrorHandler ? jsonRpc : null, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    var input = Encoding.UTF8.GetBytes(jsonRpc);
+                    await StartAsyncDocument(sessionId, new ReadOnlyMemory<byte>(input), output, context,
+                        serializer, cancellationToken, handler, limits).ConfigureAwait(false);
+                }
                 return output.ToString();
             }
         }
@@ -78,13 +120,22 @@ namespace AustinHarris.JsonRpc
         }
 
         private static Task StartAsyncDocument(string sessionId, ReadOnlyMemory<byte> document, IBufferWriter<byte> destination,
-            object context, JsonRpcSerializer serializer, CancellationToken token, AsyncScratch scratch)
+            object context, JsonRpcSerializer serializer, CancellationToken token, Handler handler = null,
+            JsonRpcLimits limits = null, AsyncScratch scratch = null)
         {
             bool transferred = false;
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (!Handler.TryGetSessionHandler(sessionId, out var handler)) handler = Handler.UnknownSessionHandler;
+                if (handler == null)
+                {
+                    handler = GetRequestHandler(sessionId);
+                    limits = handler.Limits ?? Config.Limits;
+                }
+                if (ExceedsDocumentLimit(document.Length, limits))
+                    return RejectAsyncDocument(handler, serializer, destination, limits.MaxDocumentBytes,
+                        handler.HasParseErrorHandler ? Utf8Json.ToStringUtf8(document.Span) : null, token);
+                scratch = scratch ?? AsyncScratch.Rent();
                 serializer = serializer ?? handler.Serializer ?? Config.Serializer;
                 scratch.DocumentLength = document.Length;
                 var reader = scratch.GetReader(serializer);
@@ -105,6 +156,11 @@ namespace AustinHarris.JsonRpc
                         return completion;
                     }
                     pending.GetAwaiter().GetResult();
+                }
+                else if (limits.MaxBatchCount != 0 && reader.Count > limits.MaxBatchCount)
+                {
+                    WriteLimitError(output, handler, serializer, "maxBatchCount", limits.MaxBatchCount,
+                        handler.HasParseErrorHandler ? Utf8Json.ToStringUtf8(document.Span) : null);
                 }
                 else if (reader.Count == 0)
                 {
@@ -145,7 +201,25 @@ namespace AustinHarris.JsonRpc
             {
                 return Task.FromException(ex);
             }
-            finally { if (!transferred) scratch.Return(); }
+            finally { if (!transferred) scratch?.Return(); }
+        }
+
+        private static Task RejectAsyncDocument(Handler handler, JsonRpcSerializer serializer, IBufferWriter<byte> destination,
+            long maximum, string rawDocument, CancellationToken token)
+        {
+            AsyncScratch scratch = null;
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                scratch = AsyncScratch.Rent();
+                WriteLimitError(scratch.Output, handler, serializer ?? handler.Serializer ?? Config.Serializer,
+                    "maxDocumentBytes", maximum, rawDocument);
+                CommitAsyncDocument(scratch, destination, token);
+                return Task.CompletedTask;
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { return Task.FromCanceled(token); }
+            catch (Exception ex) { return Task.FromException(ex); }
+            finally { scratch?.Return(); }
         }
 
         private static async Task FinishSingleDocumentAsync(ValueTask<bool> pending, AsyncScratch scratch, IBufferWriter<byte> destination, CancellationToken token)
