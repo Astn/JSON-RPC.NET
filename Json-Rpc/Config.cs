@@ -141,7 +141,11 @@ namespace AustinHarris.JsonRpc
         }
 
         /// <summary>The former name of <see cref="SetPreProcessHandler(string, PreProcessHandler)"/>.</summary>
-        [Obsolete("Use SetPreProcessHandler(sessionId, handler).")]
+#if NET5_0_OR_GREATER
+        [Obsolete(Obsoletions.SetBeforeProcessHandlerMessage, DiagnosticId = Obsoletions.SetBeforeProcessHandlerDiagId, UrlFormat = Obsoletions.SharedUrlFormat)]
+#else
+        [Obsolete(Obsoletions.SetBeforeProcessHandlerDiagId + ": " + Obsoletions.SetBeforeProcessHandlerMessage)]
+#endif
         public static void SetBeforeProcessHandler(string sessionId, PreProcessHandler handler)
         {
             SetPreProcessHandler(sessionId, handler);

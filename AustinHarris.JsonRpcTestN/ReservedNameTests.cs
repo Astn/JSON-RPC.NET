@@ -137,7 +137,7 @@ namespace AustinHarris.JsonRpcTestN
         public void RegisterFuction_RefusesReserved_AcceptsTheRest()
         {
             var handler = Handler.GetSessionHandler(Session);
-#pragma warning disable CS0618
+#pragma warning disable CS0618, JSONRPC0002
             foreach (var name in Reserved)
                 AssertReserved(name, () => handler.RegisterFuction(name, new Dictionary<string, Type> { ["returns"] = typeof(int) }, null, new Func<int>(() => 1)));
             foreach (var name in Allowed)
@@ -145,7 +145,7 @@ namespace AustinHarris.JsonRpcTestN
                 handler.RegisterFuction(name, new Dictionary<string, Type> { ["returns"] = typeof(int) }, null, new Func<int>(() => 1));
                 AssertRegistered(name);
             }
-#pragma warning restore CS0618
+#pragma warning restore CS0618, JSONRPC0002
         }
 
         [Test]
