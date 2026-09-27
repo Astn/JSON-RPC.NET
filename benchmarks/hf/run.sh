@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
-  echo "usage: run.sh <ref> [runs]" >&2
+  echo "usage: run.sh <ref: branch, tag or commit> [runs]" >&2
   exit 2
 fi
 ref=$1
@@ -22,8 +22,8 @@ fi
 
 work=$(mktemp -d)
 git clone https://github.com/Astn/JSON-RPC.NET.git "$work"
-git -C "$work" fetch origin "$ref"
-git -C "$work" checkout --detach FETCH_HEAD
+# A branch, tag or full hash is fetched; anything else (a short hash) is resolved from the full clone.
+git -C "$work" fetch origin "$ref" && git -C "$work" checkout --detach FETCH_HEAD || git -C "$work" checkout --detach "$ref"
 cd "$work"
 dotnet build -c Release TestServer_Console -nodeReuse:false
 dotnet run -c Release --no-build --project TestServer_Console -- --machine

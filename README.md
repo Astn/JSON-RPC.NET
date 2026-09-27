@@ -630,7 +630,7 @@ dotnet run --project samples/WasmHost                               # browser: "
 
 The three modes measure different things and are named for the entry point they call. `Process(bytes), dedicated threads` measures the library alone. `ProcessAsync(bytes), awaited workers` measures the entry point an asynchronous host calls. `Legacy Process(string), scheduled synchronous work` measures the 1.x string overloads through the thread pool. The Kestrel rows say whether `EnableAsyncMethods` was on.
 
-On Hugging Face Jobs, run `benchmarks/hf/launch.sh <ref> <flavor> [runs]` and retrieve JSON with `benchmarks/hf/fetch.py <job id> <out dir>`; `cpu-upgrade` is 8 vCPU ($0.03/h), `cpu-xl` is 16 vCPU ($1/h), and `cpu-performance` is 32 vCPU ($1.90/h), while `cpu-basic` is 2 vCPU for smoke runs only. These are shared vCPUs, so each job's figures belong to its own machine row and are never merged into the reference-box tables.
+On Hugging Face Jobs, run `benchmarks/hf/launch.sh <ref> <flavor> [runs]` (`<ref>` is a branch, tag or commit) and retrieve JSON with `benchmarks/hf/fetch.py <job id> <out dir>`; `cpu-upgrade` is 8 vCPU ($0.03/h), `cpu-xl` is 16 vCPU ($1/h), and `cpu-performance` is 32 vCPU ($1.90/h), while `cpu-basic` is 2 vCPU for smoke runs only. These are shared vCPUs, so each job's figures belong to its own machine row and are never merged into the reference-box tables.
 
 ### Sync: the library alone
 
