@@ -83,7 +83,7 @@ The core uses no reflection emit. The WebAssembly sample runs under the configur
 dotnet add package AustinHarris.JsonRpc --prerelease
 ```
 
-2.0 is published as `2.0.0-preview.1`; without `--prerelease`, NuGet resolves to the last 1.x release.
+2.0 is published as `2.0.0-preview.2`; without `--prerelease`, NuGet resolves to the last 1.x release.
 
 Add `AustinHarris.JsonRpc.Newtonsoft` or `AustinHarris.JsonRpc.SystemTextJson` if you want that serializer, and `AustinHarris.JsonRpc.AspNetCore` to host in Kestrel.
 
@@ -95,7 +95,7 @@ Save this as `server.cs`. It is a .NET 10 file-based app: one C# file with no pr
 
 ```csharp
 #:sdk Microsoft.NET.Sdk.Web
-#:package AustinHarris.JsonRpc.AspNetCore@2.0.0-preview.1
+#:package AustinHarris.JsonRpc.AspNetCore@2.0.0-preview.2
 
 using AustinHarris.JsonRpc;
 using AustinHarris.JsonRpc.AspNetCore;
