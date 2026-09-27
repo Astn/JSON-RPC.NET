@@ -125,7 +125,7 @@ internal static class GrpcCompare
     /// Unary calls: <paramref name="channels"/> HTTP/2 connections, each with <paramref name="inFlight"/> workers
     /// that await one call at a time, so at most <c>channels × inFlight</c> calls are outstanding.
     /// </summary>
-    internal static async Task<(long count, double seconds)> UnaryRun(int port, int channels, int inFlight, double seconds)
+    internal static async Task<(long count, double seconds, CpuUsage cpu)> UnaryRun(int port, int channels, int inFlight, double seconds)
     {
         var chans = OpenChannels(port, channels);
         try
@@ -135,6 +135,7 @@ internal static class GrpcCompare
 
             var counts = new long[channels * inFlight];
             using var stop = new CancellationTokenSource();
+            var meter = CpuMeter.Start();
             var sw = Stopwatch.StartNew();
             var workers = new Task[counts.Length];
             for (int i = 0; i < workers.Length; i++)
@@ -154,7 +155,7 @@ internal static class GrpcCompare
             stop.Cancel();
             await Task.WhenAll(workers);
             sw.Stop();
-            return (counts.Sum(), sw.Elapsed.TotalSeconds);
+            return (counts.Sum(), sw.Elapsed.TotalSeconds, meter.Stop());
         }
         finally
         {
@@ -168,13 +169,14 @@ internal static class GrpcCompare
     /// client, the writer sends whatever has room as one batch: BufferHint on every message but the last, which
     /// flushes. The server answers each message as it arrives (gRPC's default write, one flush per reply).
     /// </summary>
-    internal static async Task<(long count, double seconds)> StreamRun(int port, int channels, int inFlight, double seconds)
+    internal static async Task<(long count, double seconds, CpuUsage cpu)> StreamRun(int port, int channels, int inFlight, double seconds)
     {
         var chans = OpenChannels(port, channels);
         try
         {
             var counts = new long[channels];
             using var stop = new CancellationTokenSource();
+            var meter = CpuMeter.Start();
             var sw = Stopwatch.StartNew();
             var streams = new Task[channels];
             for (int i = 0; i < channels; i++)
@@ -217,7 +219,7 @@ internal static class GrpcCompare
             stop.Cancel();
             await Task.WhenAll(streams);
             sw.Stop();
-            return (counts.Sum(), sw.Elapsed.TotalSeconds);
+            return (counts.Sum(), sw.Elapsed.TotalSeconds, meter.Stop());
         }
         finally
         {

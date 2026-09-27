@@ -82,19 +82,19 @@ internal static class CompareBenchmark
 
             // ---- in-process floors
             var memInputs = raw.Select(i => (ReadOnlyMemory<byte>)i).ToArray();
-            BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, Warm, out _);
-            var elapsed = BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, seconds, out long total);
-            rows.Add(new BenchmarkRunner.ChartRow("JSON-RPC.Net in-process, 1 thread", total / elapsed, $"{total,12:N0} RPCs  direct call, bytes in, bytes out"));
+            BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, Warm);
+            var (total, elapsed, cpu) = BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, seconds);
+            rows.Add(new BenchmarkRunner.ChartRow("JSON-RPC.Net in-process, 1 thread", total / elapsed, $"{total,12:N0} RPCs  direct call, bytes in, bytes out  {cpu.TrailingText}"));
             print($"  JSON-RPC.Net in-process done ({rows[^1].RpcPerSec:N0} RPC/s)");
 
             PipeRun(newLine, Warm, pipeline);
-            var (count, secs) = PipeRun(newLine, seconds, pipeline);
-            rows.Add(new BenchmarkRunner.ChartRow("StreamJsonRpc in-process, 1 client", count / secs, $"{count,12:N0} RPCs  Pipe pair, newline framing, STJ formatter, {pipeline} pipelined"));
+            var (count, secs, usage) = PipeRun(newLine, seconds, pipeline);
+            rows.Add(new BenchmarkRunner.ChartRow("StreamJsonRpc in-process, 1 client", count / secs, $"{count,12:N0} RPCs  Pipe pair, newline framing, STJ formatter, {pipeline} pipelined  {usage.TrailingText}"));
             print($"  StreamJsonRpc in-process done ({count / secs:N0} RPC/s)");
 
-            (count, secs) = await ProxyRun(Warm);
-            (count, secs) = await ProxyRun(seconds);
-            rows.Add(new BenchmarkRunner.ChartRow("StreamJsonRpc proxy, sequential await", count / secs, $"{count,12:N0} RPCs  {secs / count * 1e6:N1} us per round trip"));
+            await ProxyRun(Warm);
+            (count, secs, usage) = await ProxyRun(seconds);
+            rows.Add(new BenchmarkRunner.ChartRow("StreamJsonRpc proxy, sequential await", count / secs, $"{count,12:N0} RPCs  {secs / count * 1e6:N1} us per round trip  {usage.TrailingText}"));
             print($"  StreamJsonRpc proxy done ({count / secs:N0} RPC/s)");
 
             // ---- Kestrel TCP, same client for every row
@@ -108,20 +108,20 @@ internal static class CompareBenchmark
             {
                 Probe(port, inputs, label);
                 KestrelBenchmark.TcpRun(port, inputs, clients, Warm, pipeline, prefix);
-                (count, secs) = KestrelBenchmark.TcpRun(port, inputs, clients, seconds, pipeline, prefix);
-                rows.Add(new BenchmarkRunner.ChartRow(label, count / secs, $"{count,12:N0} RPCs"));
+                (count, secs, usage) = KestrelBenchmark.TcpRun(port, inputs, clients, seconds, pipeline, prefix);
+                rows.Add(new BenchmarkRunner.ChartRow(label, count / secs, $"{count,12:N0} RPCs  {usage.TrailingText}"));
                 print($"  {label} done ({count / secs:N0} RPC/s)");
             }
 
             // ---- gRPC for .NET on the same Kestrel: HTTP/2 + protobuf, one channel per client
             await GrpcCompare.UnaryRun(grpcPort, clients, pipeline, Warm);
-            (count, secs) = await GrpcCompare.UnaryRun(grpcPort, clients, pipeline, seconds);
-            rows.Add(new BenchmarkRunner.ChartRow("gRPC for .NET unary, HTTP/2", count / secs, $"{count,12:N0} RPCs  {clients} channels, {pipeline} calls in flight each"));
+            (count, secs, usage) = await GrpcCompare.UnaryRun(grpcPort, clients, pipeline, seconds);
+            rows.Add(new BenchmarkRunner.ChartRow("gRPC for .NET unary, HTTP/2", count / secs, $"{count,12:N0} RPCs  {clients} channels, {pipeline} calls in flight each  {usage.TrailingText}"));
             print($"  gRPC unary done ({count / secs:N0} RPC/s)");
 
             await GrpcCompare.StreamRun(grpcPort, clients, pipeline, Warm);
-            (count, secs) = await GrpcCompare.StreamRun(grpcPort, clients, pipeline, seconds);
-            rows.Add(new BenchmarkRunner.ChartRow("gRPC for .NET bidirectional stream", count / secs, $"{count,12:N0} RPCs  {clients} streams, {pipeline} calls in flight each"));
+            (count, secs, usage) = await GrpcCompare.StreamRun(grpcPort, clients, pipeline, seconds);
+            rows.Add(new BenchmarkRunner.ChartRow("gRPC for .NET bidirectional stream", count / secs, $"{count,12:N0} RPCs  {clients} streams, {pipeline} calls in flight each  {usage.TrailingText}"));
             print($"  gRPC stream done ({count / secs:N0} RPC/s)");
 
             BenchmarkRunner.PrintBarChart("JSON-RPC.Net vs StreamJsonRpc vs gRPC - RPC/s", "Library / transport", rows);
@@ -144,7 +144,7 @@ internal static class CompareBenchmark
 
         await using var h = await StartAsync(pipeline);
         int[] connections = { 1, 2, 4, 8, 16 };
-        (string name, string kind, Func<int, double, Task<(long count, double seconds)>> run)[] series =
+        (string name, string kind, Func<int, double, Task<(long count, double seconds, CpuUsage cpu)>> run)[] series =
         {
             ("JSON-RPC.Net, TCP", "ours", (c, s) => Task.FromResult(KestrelBenchmark.TcpRun(h.OursPort, raw, c, s, pipeline, JsonRpcPrefix))),
             ("JSON-RPC.Net, HTTP, batch of 100 per POST", "ours", (c, s) => KestrelBenchmark.HttpRun(h.HttpUrl, batch, 100, c, s)),
@@ -162,14 +162,16 @@ internal static class CompareBenchmark
 
         print($"{Versions()}; Kestrel on loopback, pipeline {pipeline}, {seconds:0.#} s per cell\n");
         var results = new double[series.Length, connections.Length];
+        var usages = new CpuUsage[series.Length, connections.Length];
         for (int ci = 0; ci < connections.Length; ci++)
         {
             for (int si = 0; si < series.Length; si++)
             {
                 await series[si].run(connections[ci], Warm);
-                var (count, secs) = await series[si].run(connections[ci], seconds);
+                var (count, secs, cpu) = await series[si].run(connections[ci], seconds);
                 results[si, ci] = count / secs;
-                print($"  {connections[ci],2} connections  {series[si].name,-55} {results[si, ci],14:N0} RPC/s");
+                usages[si, ci] = cpu;
+                print($"  {connections[ci],2} connections  {series[si].name,-55} {results[si, ci],14:N0} RPC/s  {cpu.TrailingText}");
             }
         }
 
@@ -182,12 +184,20 @@ internal static class CompareBenchmark
         {
             var doc = new
             {
-                machine = "AMD Ryzen 7 7800X3D, 8 cores / 16 threads, Windows 11, .NET 10, Release, Server GC",
+                machine = MachineDescription.Current(),
+                cores = Environment.ProcessorCount,
                 date = DateTime.Now.ToString("yyyy-MM-dd"),
                 secondsPerCell = seconds,
                 pipeline,
                 connections,
-                series = series.Select((s, si) => new { s.name, s.kind, rpcPerSec = connections.Select((_, ci) => Math.Round(results[si, ci])).ToArray() }).ToArray(),
+                series = series.Select((s, si) => new
+                {
+                    s.name, s.kind,
+                    rpcPerSec = connections.Select((_, ci) => Math.Round(results[si, ci])).ToArray(),
+                    cpuSystem = connections.Select((_, ci) => usages[si, ci].SystemPercent is double v ? Math.Round(v, 1) : (double?)null).ToArray(),
+                    cpuProcess = connections.Select((_, ci) => usages[si, ci].ProcessPercent is double v ? Math.Round(v, 1) : (double?)null).ToArray(),
+                    cpuClients = connections.Select((_, ci) => usages[si, ci].ClientPercent is double v ? Math.Round(v, 1) : (double?)null).ToArray()
+                }).ToArray(),
             };
             File.WriteAllText(outputPath, JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = true }) + "\n");
             print($"\nwrote {outputPath}");
@@ -287,7 +297,7 @@ internal static class CompareBenchmark
     /// StreamJsonRpc served over an in-process <see cref="Pipe"/> pair, driven exactly like the TCP client: a ring
     /// of newline-framed requests, a cursor, and refills whenever the pipeline has room.
     /// </summary>
-    private static (long count, double seconds) PipeRun(byte[][] inputs, double seconds, int pipeline)
+    private static (long count, double seconds, CpuUsage cpu) PipeRun(byte[][] inputs, double seconds, int pipeline)
     {
         var toServer = new Pipe();
         var toClient = new Pipe();
@@ -301,6 +311,7 @@ internal static class CompareBenchmark
         var counter = new KestrelBenchmark.ResponseCounter(JsonRpcPrefix);
         int cursor = 0, inFlight = 0;
         long received = 0;
+        var meter = CpuMeter.Start();
         var sw = Stopwatch.StartNew();
         while (sw.Elapsed.TotalSeconds < seconds)
         {
@@ -337,11 +348,11 @@ internal static class CompareBenchmark
         }
         sw.Stop();
         toServer.Writer.Complete();
-        return (received, sw.Elapsed.TotalSeconds);
+        return (received, sw.Elapsed.TotalSeconds, meter.Stop());
     }
 
     /// <summary>A typed StreamJsonRpc proxy awaiting one call at a time over an in-process pipe pair: the usual way the library is used.</summary>
-    private static async Task<(long count, double seconds)> ProxyRun(double seconds)
+    private static async Task<(long count, double seconds, CpuUsage cpu)> ProxyRun(double seconds)
     {
         var toServer = new Pipe();
         var toClient = new Pipe();
@@ -353,6 +364,7 @@ internal static class CompareBenchmark
         client.StartListening();
 
         long n = 0;
+        var meter = CpuMeter.Start();
         var sw = Stopwatch.StartNew();
         while (sw.Elapsed.TotalSeconds < seconds)
         {
@@ -366,6 +378,6 @@ internal static class CompareBenchmark
         sw.Stop();
         toServer.Writer.Complete();
         toClient.Writer.Complete();
-        return (n, sw.Elapsed.TotalSeconds);
+        return (n, sw.Elapsed.TotalSeconds, meter.Stop());
     }
 }

@@ -100,6 +100,7 @@
     return String(v);
   }
   function exact(v) { return Math.round(v).toLocaleString("en-US"); }
+  function cpuValue(p, key) { return p.cpu && p.cpu[key] != null ? p.cpu[key] + " %" : ""; }
   function el(tag, attrs, parent) {
     var e = document.createElementNS(NS, tag);
     for (var k in attrs) e.setAttribute(k, attrs[k]);
@@ -284,13 +285,14 @@
     var i = conns.indexOf(+sel.value), t = document.getElementById("at-conn");
     t.innerHTML = "";
     var h = html("tr", {}, html("thead", {}, t));
-    ["series", "concurrency", "median RPC/s", "low", "high", "n"].forEach(function (c) { html("th", { scope: "col" }, h, c); });
+    ["series", "concurrency", "median RPC/s", "low", "high", "n", "system CPU %", "process CPU %", "client CPU %"].forEach(function (c) { html("th", { scope: "col" }, h, c); });
     var b = html("tbody", {}, t);
     sweep.series.forEach(function (s) {
       var p = s.points[i], r = html("tr", {}, b);
       html("td", {}, r, familyNames[s.family] + ", " + s.label);
       html("td", { style: "text-align:left" }, r, s.concurrency);
       html("td", {}, r, exact(p.median)); html("td", {}, r, exact(p.low)); html("td", {}, r, exact(p.high)); html("td", {}, r, p.n);
+      ["system", "process", "clients"].forEach(function (key) { html("td", {}, r, cpuValue(p, key)); });
     });
   }
   sel.addEventListener("change", atConn);
@@ -300,7 +302,7 @@
   (function () {
     var t = document.getElementById("sweep-table");
     var h = html("tr", {}, html("thead", {}, t));
-    ["series", "connections", "low", "median", "high", "observations (one per run)"].forEach(function (c) { html("th", { scope: "col" }, h, c); });
+    ["series", "connections", "low", "median", "high", "observations (one per run)", "system CPU %", "process CPU %", "client CPU %"].forEach(function (c) { html("th", { scope: "col" }, h, c); });
     var b = html("tbody", {}, t);
     sweep.series.forEach(function (s) {
       s.points.forEach(function (p, i) {
@@ -309,6 +311,7 @@
         html("td", {}, r, conns[i]);
         html("td", {}, r, exact(p.low)); html("td", {}, r, exact(p.median)); html("td", {}, r, exact(p.high));
         html("td", {}, r, p.values.map(exact).join(", "));
+        ["system", "process", "clients"].forEach(function (key) { html("td", {}, r, cpuValue(p, key)); });
       });
     });
   })();

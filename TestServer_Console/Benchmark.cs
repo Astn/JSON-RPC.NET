@@ -62,7 +62,7 @@ public class BenchmarkRunner
         }
 
         // warm up: JIT, type plans, compiled invokers
-        RunSync(session, inputs, serializer, Math.Min(threads, 2), 0.5, out _);
+        RunSync(session, inputs, serializer, Math.Min(threads, 2), 0.5);
 
         // allocation profile per request shape (a zero here means the request never touches the GC)
         {
@@ -90,11 +90,11 @@ public class BenchmarkRunner
 
         foreach (var t in threadCounts)
         {
-            var elapsed = RunSync(session, inputs, serializer, t, seconds, out long total);
+            var (total, elapsed, cpu) = RunSync(session, inputs, serializer, t, seconds);
             double rps = total / elapsed;
             double mbIn = rps * bytesIn / inputs.Length / (1024.0 * 1024.0);
             double mbOut = rps * bytesOut / inputs.Length / (1024.0 * 1024.0);
-            rows.Add(new ChartRow($"{t} thread{(t == 1 ? "" : "s")}", rps, $"{1e9 / rps * t:N0} ns/RPC per thread"));
+            rows.Add(new ChartRow($"{t} thread{(t == 1 ? "" : "s")}", rps, $"{1e9 / rps * t:N0} ns/RPC per thread  {cpu.TrailingText}"));
 
             // The detailed boxes are only printed for the two documented points: one thread and all threads.
             if (t != 1 && t != threads) continue;
@@ -121,7 +121,7 @@ public class BenchmarkRunner
         PrintBarChart($"Sync benchmark - {serializer.Name} - RPC/s by thread count", "Threads", rows);
     }
 
-    internal static double RunSync(string session, ReadOnlyMemory<byte>[] inputs, JsonRpcSerializer serializer, int threads, double seconds, out long total)
+    internal static (long count, double seconds, CpuUsage cpu) RunSync(string session, ReadOnlyMemory<byte>[] inputs, JsonRpcSerializer serializer, int threads, double seconds)
     {
         var counts = new long[threads * 16]; // padded to avoid false sharing
         var stop = false;
@@ -148,14 +148,15 @@ public class BenchmarkRunner
             workers[t].Start();
         }
         ready.SignalAndWait();
+        var meter = CpuMeter.Start();
         var sw = Stopwatch.StartNew();
         Thread.Sleep(TimeSpan.FromSeconds(seconds));
         Volatile.Write(ref stop, true);
         foreach (var w in workers) w.Join();
         sw.Stop();
-        total = 0;
+        long total = 0;
         for (int t = 0; t < threads; t++) total += counts[t * 16];
-        return sw.Elapsed.TotalSeconds;
+        return (total, sw.Elapsed.TotalSeconds, meter.Stop());
     }
 
     internal static void Benchmark(Action<string> print = null)
@@ -193,6 +194,7 @@ public class BenchmarkRunner
             currentPerTaskBytesIn = perTaskBytesIn;
             currentPerTaskBytesOut = perTaskBytesOut;
             currentStopwatch = Stopwatch.StartNew();
+            var cpuMeter = CpuMeter.Start();
             // Live updates every 250 ms. StopProgressTimer() below guarantees no tick is still running here.
             updateTimer = new System.Threading.Timer(OnProgressTick, null, 250, 250);
 
@@ -205,6 +207,7 @@ public class BenchmarkRunner
                 Interlocked.Increment(ref currentBatches);
             } while (currentStopwatch.Elapsed < minIterationTime);
             currentStopwatch.Stop();
+            var cpu = cpuMeter.Stop();
 
             // Wait for any in-flight tick before printing the final box, then close the iteration under the
             // lock so a tick that was queued but not yet started sees benchmarkRunning == false and skips.
@@ -217,7 +220,7 @@ public class BenchmarkRunner
 
             double seconds = currentStopwatch.Elapsed.TotalSeconds;
             long total = (long)cnt * currentBatches;
-            results.Add(new ChartRow($"#{iteration} {cnt,11:N0}", total / seconds, $"{total,11:N0} RPCs in {seconds:F3} s"));
+            results.Add(new ChartRow($"#{iteration} {cnt,11:N0}", total / seconds, $"{total,11:N0} RPCs in {seconds:F3} s  {cpu.TrailingText}"));
         }
 
         lock (renderLock)

@@ -1,12 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
 using Hardware.Info;
+using TestServer_Console;
 
 public class HardwarePrinter
 {
+    /// <summary>The console row the hardware box is drawn from: the first row after the machine description.</summary>
+    internal static int TopRow;
 
 
     private static readonly StringBuilder sb = new StringBuilder(8192); // Preallocate generous capacity for reuse
@@ -152,7 +158,7 @@ public class HardwarePrinter
         // Single write to console
         if (!Console.IsOutputRedirected)
         {
-            Console.SetCursorPosition(0, 0);
+            Console.SetCursorPosition(0, TopRow); // Below the machine description, however many lines it wrapped to.
         }
         Console.Write(sb.ToString());
     }
@@ -177,4 +183,45 @@ public class HardwarePrinter
     [SupportedOSPlatform("windows")]
     [DllImport("kernel32.dll")]
     private static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+}
+
+/// <summary>Describes the CPU capacity and runtime used for a benchmark run.</summary>
+internal static class MachineDescription
+{
+    internal static string Current()
+    {
+        var overridden = Environment.GetEnvironmentVariable("JSONRPC_BENCH_MACHINE");
+        if (!string.IsNullOrWhiteSpace(overridden)) return overridden;
+
+        string model = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? RuntimeInformation.ProcessArchitecture.ToString();
+        int hostCpus = 0;
+        if (OperatingSystem.IsLinux())
+        {
+            try
+            {
+                foreach (var line in File.ReadLines("/proc/cpuinfo"))
+                {
+                    if (line.StartsWith("model name", StringComparison.Ordinal) && model == (Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? RuntimeInformation.ProcessArchitecture.ToString()))
+                        model = line.Split(':', 2)[1].Trim();
+                    if (line.StartsWith("processor", StringComparison.Ordinal) && line.Contains(':')) hostCpus++;
+                }
+            }
+            catch (IOException) { }
+        }
+        else if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var info = new HardwareInfo();
+                info.RefreshAll();
+                model = info.CpuList.FirstOrDefault()?.Name?.Trim() ?? model;   // WMI pads the name with spaces
+            }
+            catch (Exception) { } // WMI can be denied in a restricted runner.
+        }
+
+        string capacity = Environment.ProcessorCount + " cores";
+        if (OperatingSystem.IsLinux() && CpuMeter.TryQuota(out _) && hostCpus > 0)
+            capacity += $" of {hostCpus} host CPUs, cgroup quota";
+        return $"{model}, {capacity}, {RuntimeInformation.OSDescription}, {RuntimeInformation.FrameworkDescription}, Release, {(GCSettings.IsServerGC ? "Server GC" : "Workstation GC")}";
+    }
 }

@@ -15,6 +15,11 @@ namespace TestServer_Console
             services = new object[] { new CalculatorService() };
             // Before any mode runs: the awaited-worker modes (--async, --scale) start their workers on the pool.
             System.Threading.ThreadPool.SetMinThreads(Environment.ProcessorCount * 3, Environment.ProcessorCount * 3);
+            var interactive = !Console.IsOutputRedirected;
+            if (interactive) Console.Clear();
+            Console.WriteLine("Machine: " + MachineDescription.Current());
+            if (interactive) HardwarePrinter.TopRow = Console.CursorTop;
+            if (args.Length > 0 && args[0] == "--machine") return;
 
             // `dotnet run -- --async [seconds] [workers]` drives ProcessAsync from awaited workers (the Async table).
             if (args.Length > 0 && args[0] == "--async")
@@ -41,11 +46,14 @@ namespace TestServer_Console
                 return;
             }
 
-            var interactive = !Console.IsOutputRedirected;
-            if (interactive) Console.Clear();
-            IHardwareInfo hardwareInfo = new HardwareInfo();
-            hardwareInfo.RefreshAll();
-            HardwarePrinter.PrintHardware(hardwareInfo);
+            IHardwareInfo hardwareInfo = null;
+            try
+            {
+                hardwareInfo = new HardwareInfo();
+                hardwareInfo.RefreshAll();
+                HardwarePrinter.PrintHardware(hardwareInfo);
+            }
+            catch (Exception) { hardwareInfo = null; } // A restricted runner may deny WMI.
             Console.WriteLine("Thread pool minimum set to {0}", Environment.ProcessorCount * 3);
 
             // `dotnet run -- --sync [seconds] [threads]` runs the direct synchronous benchmark and exits (CI / scripted runs).
@@ -122,7 +130,7 @@ namespace TestServer_Console
                 return;
             }
             Console.CursorVisible = false;
-            HardwarePrinter.PrintHardware(hardwareInfo);
+            if (hardwareInfo != null) HardwarePrinter.PrintHardware(hardwareInfo);
             var pos = Console.CursorTop;
             BenchmarkRunner.Benchmark((update) =>
             {
