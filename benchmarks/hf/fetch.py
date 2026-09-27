@@ -1,6 +1,7 @@
 """Fetch a Hugging Face Job's UTF-8 log and framed sweep JSON files."""
 import argparse
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -15,8 +16,10 @@ def main():
     parser.add_argument("out_dir", type=pathlib.Path)
     args = parser.parse_args()
 
+    # The hf CLI writes the log with the console's code page unless told otherwise; the harness prints box-drawing characters.
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
     result = subprocess.run(["hf", "jobs", "logs", args.job_id], stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, check=False)
+                            stderr=subprocess.PIPE, check=False, env=env)
     if result.returncode:
         raise SystemExit(result.stderr.decode("utf-8", errors="replace"))
     log = result.stdout.decode("utf-8", errors="replace")
