@@ -12,6 +12,8 @@ behaviour: a breaking change to either means a new major version.
 
 ### Added
 
+- Every benchmark row reports CPU during its timed window (machine, harness process, client threads) as a percent of the available cores; the sweep JSON, the explorer tables and a Hugging Face Jobs runner (`benchmarks/hf/`) carry it.
+
 - `JsonRpcLimits` and `Config.SetLimits`: the core rejects documents over 4 MiB and batches over 1024 entries with `-32600` and a `data` object naming the limit; `JsonRpcLimits.Unlimited` restores the 1.x behaviour.
 - `ServiceBinder.BindInterface` registers interface trees atomically, with contract naming, filtering, defaults and ownership-aware disposal (`RpcBinding`).
 - `ServiceBinder.BindMethod` registers any delegate as a method without attributes or a service class.

@@ -83,6 +83,33 @@ class Validation(unittest.TestCase):
         with self.assertRaises(render.DataError):
             render.fold_sweep(sweep, runs, ["a"])
 
+    def test_sweep_cpu_arrays_and_older_runs(self):
+        sweep = copy.deepcopy(self.data["sets"]["sweep"])
+        def run(with_cpu):
+            series = []
+            for s in sweep["series"]:
+                cell = dict(name=s["name"], rpcPerSec=[100, 200])
+                if with_cpu:
+                    cell.update(cpuSystem=[80.1, 90.2], cpuProcess=[70.0, 85.0],
+                                cpuClients=[30.0, None] if "TCP" in s["name"] else [None, None])
+                series.append(cell)
+            return dict(connections=[1, 2], secondsPerCell=2, pipeline=256, date="d", machine="m",
+                        **({"cores": 2} if with_cpu else {}), series=series)
+        render.fold_sweep(sweep, [run(True), run(True)], ["a", "b"])
+        self.assertEqual(sweep["cores"], 2)
+        self.assertEqual(sweep["series"][0]["points"][0]["cpu"],
+                         dict(system=80.1, process=70.0, clients=30.0))
+        self.assertEqual(sweep["series"][0]["points"][1]["cpu"], dict(system=90.2, process=85.0))
+        old = copy.deepcopy(self.data["sets"]["sweep"])
+        render.fold_sweep(old, [run(False)], ["old"])
+        self.assertNotIn("cores", old)
+        self.assertNotIn("cpu", old["series"][0]["points"][0])
+
+        bad = run(True)
+        bad["series"][0]["cpuSystem"].pop()
+        with self.assertRaises(render.DataError):
+            render.fold_sweep(copy.deepcopy(self.data["sets"]["sweep"]), [bad], ["bad"])
+
 
 class Outputs(unittest.TestCase):
     @classmethod

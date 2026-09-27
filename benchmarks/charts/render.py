@@ -78,6 +78,7 @@ def fold_sweep(sweep, runs, names):
         if r["connections"] != xs:
             raise DataError("sweep runs disagree on the connection counts")
     by_name = {s["name"]: [] for s in sweep["series"]}
+    cpu_by_name = {s["name"]: [] for s in sweep["series"]}
     for r in runs:
         seen = set()
         for s in r["series"]:
@@ -85,7 +86,11 @@ def fold_sweep(sweep, runs, names):
                 raise DataError(f"sweep run has an unknown series {s['name']!r}; add it to benchmarks.json")
             if len(s["rpcPerSec"]) != len(xs):
                 raise DataError(f"sweep series {s['name']!r} has {len(s['rpcPerSec'])} values for {len(xs)} connection counts")
+            for field in ("cpuSystem", "cpuProcess", "cpuClients"):
+                if field in s and len(s[field]) != len(xs):
+                    raise DataError(f"sweep series {s['name']!r} has {len(s[field])} {field} values for {len(xs)} connection counts")
             by_name[s["name"]].append(s["rpcPerSec"])
+            cpu_by_name[s["name"]].append(s)
             seen.add(s["name"])
         missing = set(by_name) - seen
         if missing:
@@ -96,10 +101,23 @@ def fold_sweep(sweep, runs, names):
     sweep["pipeline"] = first["pipeline"]
     sweep["date"] = ", ".join(sorted({r["date"] for r in runs}))
     sweep["machine"] = first["machine"]
+    cores = {r["cores"] for r in runs if "cores" in r}
+    if len(cores) > 1:
+        raise DataError("sweep runs disagree on available cores")
+    if cores:
+        sweep["cores"] = cores.pop()
     for s in sweep["series"]:
         cols = list(zip(*by_name[s["name"]]))
         s["points"] = [dict(low=min(c), high=max(c), median=statistics.median(c), n=len(c), values=list(c),
                             status="range" if len(c) > 1 else "single") for c in cols]
+        for i, point in enumerate(s["points"]):
+            cpu = {}
+            for field, label in (("cpuSystem", "system"), ("cpuProcess", "process"), ("cpuClients", "clients")):
+                values = [run[field][i] for run in cpu_by_name[s["name"]] if field in run and run[field][i] is not None]
+                if values:
+                    cpu[label] = statistics.median(values)
+            if cpu:
+                point["cpu"] = cpu
 
 
 def validate(data):

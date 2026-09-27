@@ -37,7 +37,7 @@ internal static class AsyncBenchmark
     /// <summary>The rows the per-serializer diagnostics after the gate measure: the inline None rows and the <c>yieldsOnce</c> None row.</summary>
     internal static readonly (string shape, RpcContextFlow flow)[] DiagnosticRows = InlineRows.Append(("yield", RpcContextFlow.None)).ToArray();
 
-    internal readonly record struct Measurement(long Count, double Seconds, double StartupSeconds, long AllocatedBytes)
+    internal readonly record struct Measurement(long Count, double Seconds, double StartupSeconds, long AllocatedBytes, CpuUsage Cpu)
     {
         public double RpcPerSec => Count / Seconds;
         public double BytesPerRpc => Count == 0 ? 0 : AllocatedBytes / (double)Count;
@@ -59,8 +59,8 @@ internal static class AsyncBenchmark
                 var m = await Measure(session, rowInputs, workers, seconds, processWide: yield);
                 string label = yield ? "one request (yieldsOnce)" : "equal-weight mix of five requests";
                 print($"{shape} / {flow}: {m.Count:N0} RPCs, {workers} workers, {m.Seconds:F3} s, {m.RpcPerSec:N0} RPC/s; worker startup {m.StartupSeconds * 1000:F1} ms; " +
-                      $"{(yield ? "process-wide" : "worker-thread")} allocation total {m.AllocatedBytes:N0} B ({m.BytesPerRpc:F0} B/RPC, including method and harness allocations); {label}.");
-                summary.Add(new BenchmarkRunner.ChartRow($"{shape} / {flow}", m.RpcPerSec, $"{m.Count,12:N0} RPCs  {m.BytesPerRpc,6:F0} B/RPC"));
+                      $"{(yield ? "process-wide" : "worker-thread")} allocation total {m.AllocatedBytes:N0} B ({m.BytesPerRpc:F0} B/RPC, including method and harness allocations); {label}; {m.Cpu.TrailingText}.");
+                summary.Add(new BenchmarkRunner.ChartRow($"{shape} / {flow}", m.RpcPerSec, $"{m.Count,12:N0} RPCs  {m.BytesPerRpc,6:F0} B/RPC  {m.Cpu.TrailingText}"));
             }
             finally { Handler.DestroySession(session); }
         }
@@ -78,7 +78,7 @@ internal static class AsyncBenchmark
         if (workers < 2) throw new ArgumentOutOfRangeException(nameof(workers));
         var counts = new[] { 1, 2, workers }.Distinct().ToArray();
         print($"Scaling check: ProcessAsync(bytes), {string.Join(", ", counts)} workers, {runs} paired runs of {seconds:0.#} s per cell, medians; {Environment.ProcessorCount} logical processors; gate {workers}/1 >= {threshold:0.0#}.\n");
-        var results = new Dictionary<(string, RpcContextFlow, int), List<double>>();
+        var results = new Dictionary<(string, RpcContextFlow, int), List<Measurement>>();
         foreach (var (shape, flow) in InlineRows)
         {
             string session = "async-scale-" + shape + "-" + flow;
@@ -92,9 +92,9 @@ internal static class AsyncBenchmark
                 foreach (int w in counts)
                 {
                     var m = await Measure(session, rowInputs, w, seconds);
-                    print($"  run {run}: {shape} / {flow}, {w,2} workers: {m.RpcPerSec,14:N0} RPC/s  ({m.Count:N0} RPCs in {m.Seconds:F3} s, startup {m.StartupSeconds * 1000:F1} ms)");
-                    if (!results.TryGetValue((shape, flow, w), out var list)) results[(shape, flow, w)] = list = new List<double>();
-                    list.Add(m.RpcPerSec);
+                    print($"  run {run}: {shape} / {flow}, {w,2} workers: {m.RpcPerSec,14:N0} RPC/s  ({m.Count:N0} RPCs in {m.Seconds:F3} s, startup {m.StartupSeconds * 1000:F1} ms); {m.Cpu.TrailingText}");
+                    if (!results.TryGetValue((shape, flow, w), out var list)) results[(shape, flow, w)] = list = new List<Measurement>();
+                    list.Add(m);
                 }
             }
             finally { Handler.DestroySession(session); }
@@ -102,16 +102,17 @@ internal static class AsyncBenchmark
 
         bool pass = true;
         print("");
-        print($"| Registration | 1 worker | 2 workers | {workers} workers | 2/1 | {workers}/1 | gate |");
-        print("| --- | ---: | ---: | ---: | ---: | ---: | --- |");
+        print($"| Registration | 1 worker | 2 workers | {workers} workers | 2/1 | {workers}/1 | gate | CPU at {workers} workers |");
+        print("| --- | ---: | ---: | ---: | ---: | ---: | --- | --- |");
         foreach (var (shape, flow) in InlineRows)
         {
-            double one = Median(results[(shape, flow, 1)]);
-            double two = Median(results[(shape, flow, 2)]);
-            double many = Median(results[(shape, flow, workers)]);
+            double one = Median(results[(shape, flow, 1)].Select(m => m.RpcPerSec).ToList());
+            double two = Median(results[(shape, flow, 2)].Select(m => m.RpcPerSec).ToList());
+            double many = Median(results[(shape, flow, workers)].Select(m => m.RpcPerSec).ToList());
+            var cpu = MedianCpu(results[(shape, flow, workers)]);
             bool ok = many / one >= threshold;
             pass &= ok;
-            print($"| {shape} / {flow} | {one:N0} | {two:N0} | {many:N0} | {two / one:F2} | {many / one:F2} | {(ok ? "pass" : "FAIL")} |");
+            print($"| {shape} / {flow} | {one:N0} | {two:N0} | {many:N0} | {two / one:F2} | {many / one:F2} | {(ok ? "pass" : "FAIL")} | {cpu.TrailingText} |");
         }
         print("");
         print(pass ? $"Scaling check passed: every inline row scales at least {threshold:0.0#}x from 1 to {workers} workers."
@@ -146,7 +147,7 @@ internal static class AsyncBenchmark
                 where = $"serializer {k + 1} of {serializers.Length}";
                 Config.SetSerializer(serializers[k]());
                 string name = Config.Serializer.Name;
-                rows.Add($"| **{name}** | | | | |");
+                rows.Add($"| **{name}** | | | | | |");
                 foreach (var (shape, flow) in DiagnosticRows)
                 {
                     where = $"{name} / {shape} / {flow}";
@@ -159,10 +160,10 @@ internal static class AsyncBenchmark
                         bool yield = shape == "yield";
                         await Measure(session, rowInputs, workers, Math.Min(seconds, 0.5), processWide: yield);   // warm-up
                         var one = await Measure(session, rowInputs, 1, seconds, processWide: yield);
-                        print($"  {where}, {1,2} workers: {one.RpcPerSec,14:N0} RPC/s  ({one.Count:N0} RPCs in {one.Seconds:F3} s, {one.BytesPerRpc:F0} B/RPC)");
+                        print($"  {where}, {1,2} workers: {one.RpcPerSec,14:N0} RPC/s  ({one.Count:N0} RPCs in {one.Seconds:F3} s, {one.BytesPerRpc:F0} B/RPC); {one.Cpu.TrailingText}");
                         var many = await Measure(session, rowInputs, workers, seconds, processWide: yield);
-                        print($"  {where}, {workers,2} workers: {many.RpcPerSec,14:N0} RPC/s  ({many.Count:N0} RPCs in {many.Seconds:F3} s)");
-                        rows.Add($"| {shape} / {flow} | {one.RpcPerSec:N0} | {many.RpcPerSec:N0} | {many.RpcPerSec / one.RpcPerSec:F2} | {one.BytesPerRpc:F0} |");
+                        print($"  {where}, {workers,2} workers: {many.RpcPerSec,14:N0} RPC/s  ({many.Count:N0} RPCs in {many.Seconds:F3} s); {many.Cpu.TrailingText}");
+                        rows.Add($"| {shape} / {flow} | {one.RpcPerSec:N0} | {many.RpcPerSec:N0} | {many.RpcPerSec / one.RpcPerSec:F2} | {one.BytesPerRpc:F0} | {many.Cpu.TrailingText} |");
                     }
                     finally { Handler.DestroySession(session); }
                 }
@@ -172,8 +173,8 @@ internal static class AsyncBenchmark
         finally { Config.SetSerializer(previous); }
 
         print("");
-        print($"| Serializer / registration | 1 worker | {workers} workers | {workers}/1 | B per request |");
-        print("| --- | ---: | ---: | ---: | ---: |");
+        print($"| Serializer / registration | 1 worker | {workers} workers | {workers}/1 | B per request | CPU at {workers} workers |");
+        print("| --- | ---: | ---: | ---: | ---: | --- |");
         foreach (var row in rows) print(row);
         print("");
         if (failure != null)
@@ -185,6 +186,16 @@ internal static class AsyncBenchmark
         var sorted = values.OrderBy(v => v).ToArray();
         int n = sorted.Length;
         return n % 2 == 1 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+    }
+
+    private static CpuUsage MedianCpu(List<Measurement> values)
+    {
+        double? Mid(Func<Measurement, double?> select)
+        {
+            var measured = values.Select(select).Where(v => v.HasValue).Select(v => v.Value).ToList();
+            return measured.Count == 0 ? null : Median(measured);
+        }
+        return new CpuUsage(Mid(m => m.Cpu.SystemPercent), Mid(m => m.Cpu.ProcessPercent), null, values[0].Cpu.Cores);
     }
 
     private static ReadOnlyMemory<byte>[] Inputs(string shape) => shape == "yield"
@@ -258,6 +269,7 @@ internal static class AsyncBenchmark
         ready.SignalAndWait();
         double startupSeconds = startup.Elapsed.TotalSeconds;
         long before = GC.GetTotalAllocatedBytes(false);
+        var meter = CpuMeter.Start();
         var sw = Stopwatch.StartNew();
         await Task.Delay(TimeSpan.FromSeconds(seconds));
         Volatile.Write(ref stop, 1);
@@ -266,7 +278,7 @@ internal static class AsyncBenchmark
         long processAllocated = GC.GetTotalAllocatedBytes(false) - before;
         long total = 0, allocatedTotal = 0;
         for (int w = 0; w < workers; w++) { total += counts[w * 16]; allocatedTotal += allocs[w * 16]; }
-        return new Measurement(total, sw.Elapsed.TotalSeconds, startupSeconds, processWide ? processAllocated : allocatedTotal);
+        return new Measurement(total, sw.Elapsed.TotalSeconds, startupSeconds, processWide ? processAllocated : allocatedTotal, meter.Stop());
     }
 
     private static void Register(string session, string shape, RpcContextFlow flow)
