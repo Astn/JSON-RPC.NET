@@ -13,6 +13,6 @@ if ! [[ $runs =~ ^[1-9][0-9]*$ ]]; then
   exit 2
 fi
 
-hf jobs run --detach --flavor "$flavor" --timeout 2h --name "jsonrpc-bench-$flavor" mcr.microsoft.com/dotnet/sdk:10.0 bash -lc \
+hf jobs run --detach --flavor "$flavor" --timeout 2h --name "jsonrpc-bench-$flavor" mcr.microsoft.com/dotnet/sdk:10.0 bash -c \
   'git clone https://github.com/Astn/JSON-RPC.NET.git /tmp/jsonrpc-runner && git -C /tmp/jsonrpc-runner fetch origin "$1" && git -C /tmp/jsonrpc-runner checkout --detach FETCH_HEAD && exec bash /tmp/jsonrpc-runner/benchmarks/hf/run.sh "$1" "$2"' \
   bash "$ref" "$runs"
