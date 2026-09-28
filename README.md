@@ -33,7 +33,7 @@ Here is a server you can put in one file. Save it as `server.cs`; the `#:` direc
 
 ```csharp
 #:sdk Microsoft.NET.Sdk.Web
-#:package AustinHarris.JsonRpc.AspNetCore@2.0.0
+#:package AustinHarris.JsonRpc.AspNetCore@2.0.1
 
 using AustinHarris.JsonRpc;
 using AustinHarris.JsonRpc.AspNetCore;

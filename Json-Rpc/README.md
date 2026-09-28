@@ -31,7 +31,7 @@ The `#:sdk` and `#:package` directives select the web SDK and package.
 
 ```csharp
 #:sdk Microsoft.NET.Sdk.Web
-#:package AustinHarris.JsonRpc.AspNetCore@2.0.0
+#:package AustinHarris.JsonRpc.AspNetCore@2.0.1
 
 using AustinHarris.JsonRpc;
 using AustinHarris.JsonRpc.AspNetCore;

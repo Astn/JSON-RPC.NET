@@ -8,7 +8,7 @@ console project against the core package, prints the ObsoleteAttribute on Handle
 Handler.UnRegisterFunction and Config.SetBeforeProcessHandler as the published assembly carries it, formats each
 UrlFormat with its DiagnosticId, requests the page and asserts the anchor id is in the HTML.
 
-Usage: python3 .github/scripts/check_package_links.py 2.0.0 [--keep]   (exit 1 on any failure)
+Usage: python3 .github/scripts/check_package_links.py 2.0.1 [--keep]   (exit 1 on any failure)
 
 The check runs against nuget.org, so it is a release step (after the publish workflow has run and the flat
 container lists the version, which lags the push by a few minutes), not a pull-request gate.

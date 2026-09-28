@@ -8,7 +8,7 @@ the package pages on NuGet link here.
 Versions follow [Semantic Versioning](https://semver.org/) for the public API and the documented wire
 behaviour: a breaking change to either means a new major version.
 
-## Unreleased
+## 2.0.1 (2026-09-28)
 
 ### Fixed
 

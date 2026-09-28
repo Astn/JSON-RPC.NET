@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <JsonRpcVersion Condition="'$(JsonRpcVersion)' == ''">2.0.0</JsonRpcVersion>
+    <JsonRpcVersion Condition="'$(JsonRpcVersion)' == ''">2.0.1</JsonRpcVersion>
     <NoWarn>$(NoWarn);CS0618;JSONRPC0001;JSONRPC0002;JSONRPC0003</NoWarn>
   </PropertyGroup>
   <ItemGroup>
