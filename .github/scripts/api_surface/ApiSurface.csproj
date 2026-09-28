@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <JsonRpcVersion Condition="'$(JsonRpcVersion)' == ''">2.0.0-preview.3</JsonRpcVersion>
+    <NoWarn>$(NoWarn);CS0618;JSONRPC0001;JSONRPC0002;JSONRPC0003</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AustinHarris.JsonRpc" Version="$(JsonRpcVersion)" />
+    <PackageReference Include="AustinHarris.JsonRpc.AspNetCore" Version="$(JsonRpcVersion)" />
+    <PackageReference Include="AustinHarris.JsonRpc.SystemTextJson" Version="$(JsonRpcVersion)" />
+    <PackageReference Include="AustinHarris.JsonRpc.Newtonsoft" Version="$(JsonRpcVersion)" />
+  </ItemGroup>
+</Project>
