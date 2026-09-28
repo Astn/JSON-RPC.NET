@@ -70,7 +70,7 @@ jobs:
             echo
             sed '/^Diagnostics/,$d' scale.txt | grep -E '^\|'
             echo
-            [ "$status" -eq 0 ] && echo "pass: 4/1 at least 2.0" || echo "**flag: 4/1 below 2.0 on this runner; reproduce with --scale 3 16 4.0 on the reference machine before reading it as a regression**"
+            [ "$status" -eq 0 ] && echo "pass: 4/1 at least 2.0" || echo "**flag: 4/1 below 2.0 on this runner; reproduce with the cpu-performance publish job (benchmarks/hf/launch.sh <ref> cpu-performance publish, gate --scale 3 32 4.0) before reading it as a regression**"
             echo
             echo "### Per-serializer diagnostics (one run per cell, not gated)"
             echo

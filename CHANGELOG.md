@@ -8,7 +8,7 @@ the package pages on NuGet link here.
 Versions follow [Semantic Versioning](https://semver.org/) for the public API and the documented wire
 behaviour: a breaking change to either means a new major version.
 
-## 2.0.0 (in preview: `2.0.0-preview.1`)
+## 2.0.0 (in preview: `2.0.0-preview.2`)
 
 ### Added
 
