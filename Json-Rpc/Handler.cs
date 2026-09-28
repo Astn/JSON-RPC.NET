@@ -913,14 +913,34 @@ namespace AustinHarris.JsonRpc
             }
         }
 
+        /// <summary>
+        /// Maps what an invocation threw to the error the handler sees: an authored <see cref="JsonRpcException"/> is
+        /// passed as it is, anything else becomes -32603 with the thrown exception as <c>data</c>. Only the wrappers
+        /// the invocation machinery adds are stripped first (<see cref="UnwrapInvocation"/>); the exception's own
+        /// <see cref="Exception.InnerException"/> is never substituted for it, so an error handler always receives
+        /// the object the method threw, with its cause still attached.
+        /// </summary>
         private JsonRpcException MapException(JsonRequest request, Exception ex)
         {
-            if (ex is TargetInvocationException tie && tie.InnerException != null) ex = tie.InnerException;
+            ex = UnwrapInvocation(ex);
             if (ex is JsonRpcException rpcEx) return ProcessException(request, rpcEx);
-            if (ex.InnerException is JsonRpcException innerRpc) return ProcessException(request, innerRpc);
-            if (ex is JsonRpcBindException) return ProcessException(request, new JsonRpcException(-32603, "Internal Error", ex));
-            if (ex.InnerException != null) return ProcessException(request, new JsonRpcException(-32603, "Internal Error", ex.InnerException));
             return ProcessException(request, new JsonRpcException(-32603, "Internal Error", ex));
+        }
+
+        /// <summary>
+        /// Strips the wrappers that reflection and task machinery put around what a method threw: a
+        /// <see cref="TargetInvocationException"/>, and an <see cref="AggregateException"/> holding exactly one
+        /// exception (a faulted task observed through <c>Result</c> or <c>Wait</c>). An aggregate of several
+        /// failures is kept whole, since no single one of them is "the" error. Nothing else is unwrapped.
+        /// </summary>
+        private static Exception UnwrapInvocation(Exception ex)
+        {
+            while (true)
+            {
+                if (ex is TargetInvocationException tie && tie.InnerException != null) ex = tie.InnerException;
+                else if (ex is AggregateException aggregate && aggregate.InnerExceptions.Count == 1) ex = aggregate.InnerExceptions[0];
+                else return ex;
+            }
         }
 
         /// <summary>
@@ -934,8 +954,8 @@ namespace AustinHarris.JsonRpc
         /// </summary>
         private static JsonRpcException BindingFailure(JsonRpcRequestReader reader, RpcMethod method, int[] map, Exception ex)
         {
-            if (ex is TargetInvocationException tie && tie.InnerException != null) ex = tie.InnerException;
-            if (ex is JsonRpcException || ex.InnerException is JsonRpcException) return null;
+            ex = UnwrapInvocation(ex);
+            if (ex is JsonRpcException) return null;
             if (!ParameterErrorInfo.IsConversionFailure(ex)) return null;
             var parameters = method.Parameters;
             for (int p = 0; p < parameters.Length; p++)
