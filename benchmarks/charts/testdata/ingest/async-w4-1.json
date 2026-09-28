@@ -1,0 +1,140 @@
+{
+  "mode": "async",
+  "machine": "AMD EPYC 7R13 Processor, 4 cores of 64 host CPUs, cgroup quota, Linux 6.1.0 #1 SMP, .NET 10.0.0, Release, Server GC",
+  "runtime": ".NET 10.0.0, Release, Server GC",
+  "serializer": "jsmn",
+  "date": "2026-09-27",
+  "seconds": 3,
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "run": 1,
+  "cores": 4,
+  "workers": 4,
+  "rows": [
+    {
+      "id": "asyncn-sync-none",
+      "shape": "sync",
+      "flow": "None",
+      "rpcPerSec": 9000000,
+      "rpcs": 27000000,
+      "bytesPerRpc": 6,
+      "startupMs": 0.1,
+      "cpu": {
+        "system": 30.0,
+        "process": 25.0
+      },
+      "bytesPerShape": [
+        0,
+        0,
+        0,
+        0,
+        32
+      ]
+    },
+    {
+      "id": "asyncn-task-flow",
+      "shape": "Task",
+      "flow": "Flow",
+      "rpcPerSec": 9100000,
+      "rpcs": 27300000,
+      "bytesPerRpc": 14,
+      "startupMs": 0.1,
+      "cpu": {
+        "system": 30.0,
+        "process": 25.0
+      },
+      "bytesPerShape": [
+        0,
+        0,
+        0,
+        0,
+        32
+      ]
+    },
+    {
+      "id": "asyncn-task-none",
+      "shape": "Task",
+      "flow": "None",
+      "rpcPerSec": 9200000,
+      "rpcs": 27600000,
+      "bytesPerRpc": 22,
+      "startupMs": 0.1,
+      "cpu": {
+        "system": 30.0,
+        "process": 25.0
+      },
+      "bytesPerShape": [
+        0,
+        0,
+        0,
+        0,
+        32
+      ]
+    },
+    {
+      "id": "asyncn-valuetask-flow",
+      "shape": "ValueTask",
+      "flow": "Flow",
+      "rpcPerSec": 9300000,
+      "rpcs": 27900000,
+      "bytesPerRpc": 30,
+      "startupMs": 0.1,
+      "cpu": {
+        "system": 30.0,
+        "process": 25.0
+      },
+      "bytesPerShape": [
+        0,
+        0,
+        0,
+        0,
+        32
+      ]
+    },
+    {
+      "id": "asyncn-valuetask-none",
+      "shape": "ValueTask",
+      "flow": "None",
+      "rpcPerSec": 9400000,
+      "rpcs": 28200000,
+      "bytesPerRpc": 38,
+      "startupMs": 0.1,
+      "cpu": {
+        "system": 30.0,
+        "process": 25.0
+      },
+      "bytesPerShape": [
+        0,
+        0,
+        0,
+        0,
+        32
+      ]
+    },
+    {
+      "id": "asyncn-yield-flow",
+      "shape": "yield",
+      "flow": "Flow",
+      "rpcPerSec": 9500000,
+      "rpcs": 28500000,
+      "bytesPerRpc": 46,
+      "startupMs": 0.1,
+      "cpu": {
+        "system": 30.0,
+        "process": 25.0
+      }
+    },
+    {
+      "id": "asyncn-yield-none",
+      "shape": "yield",
+      "flow": "None",
+      "rpcPerSec": 9600000,
+      "rpcs": 28800000,
+      "bytesPerRpc": 54,
+      "startupMs": 0.1,
+      "cpu": {
+        "system": 30.0,
+        "process": 25.0
+      }
+    }
+  ]
+}

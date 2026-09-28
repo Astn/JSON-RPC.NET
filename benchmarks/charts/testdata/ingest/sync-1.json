@@ -1,0 +1,53 @@
+{
+  "mode": "sync",
+  "machine": "AMD EPYC 7R13 Processor, 4 cores of 64 host CPUs, cgroup quota, Linux 6.1.0 #1 SMP, .NET 10.0.0, Release, Server GC",
+  "runtime": ".NET 10.0.0, Release, Server GC",
+  "serializer": "jsmn",
+  "date": "2026-09-27",
+  "seconds": 3,
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "run": 1,
+  "cores": 4,
+  "threads": 4,
+  "allocations": [
+    {
+      "request": "{\"method\":\"add\",\"params\":[1,2],\"id\":1}",
+      "bytes": 0
+    }
+  ],
+  "rows": [
+    {
+      "id": "ours-sync",
+      "threads": 1,
+      "rpcPerSec": 3000000,
+      "rpcs": 9000000,
+      "nsPerRequest": 300,
+      "cpu": {
+        "system": 20.0,
+        "process": 18.0
+      }
+    },
+    {
+      "id": "ours-sync",
+      "threads": 2,
+      "rpcPerSec": 6000000,
+      "rpcs": 18000000,
+      "nsPerRequest": 310,
+      "cpu": {
+        "system": 40.0,
+        "process": 36.0
+      }
+    },
+    {
+      "id": "ours-sync",
+      "threads": 4,
+      "rpcPerSec": 11000000,
+      "rpcs": 33000000,
+      "nsPerRequest": 330,
+      "cpu": {
+        "system": 80.0,
+        "process": 72.0
+      }
+    }
+  ]
+}

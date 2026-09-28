@@ -1,0 +1,74 @@
+{
+  "mode": "kestrel-async",
+  "machine": "AMD EPYC 7R13 Processor, 4 cores of 64 host CPUs, cgroup quota, Linux 6.1.0 #1 SMP, .NET 10.0.0, Release, Server GC",
+  "runtime": ".NET 10.0.0, Release, Server GC",
+  "serializer": "jsmn",
+  "date": "2026-09-27",
+  "seconds": 3,
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "run": 1,
+  "cores": 4,
+  "clients": 4,
+  "pipeline": 256,
+  "batchSize": 100,
+  "asyncMethods": true,
+  "rows": [
+    {
+      "id": "kestrel-async-inproc-1",
+      "rpcPerSec": 2700000,
+      "rpcs": 8100000,
+      "cpu": {
+        "system": 30.0,
+        "process": 25.0
+      }
+    },
+    {
+      "id": "kestrel-async-inproc-n",
+      "rpcPerSec": 11000000,
+      "rpcs": 33000000,
+      "cpu": {
+        "system": 99.0,
+        "process": 95.0
+      }
+    },
+    {
+      "id": "kestrel-async-http-1",
+      "rpcPerSec": 39000,
+      "rpcs": 117000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0
+      },
+      "usPerRequest": 102.4
+    },
+    {
+      "id": "kestrel-async-http-100",
+      "rpcPerSec": 2900000,
+      "rpcs": 8700000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0
+      }
+    },
+    {
+      "id": "ours-tcp-async-inline",
+      "rpcPerSec": 3300000,
+      "rpcs": 9900000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0,
+        "clients": 8.0
+      }
+    },
+    {
+      "id": "ours-tcp-async-yield",
+      "rpcPerSec": 1500000,
+      "rpcs": 4500000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0,
+        "clients": 8.0
+      }
+    }
+  ]
+}

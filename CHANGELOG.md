@@ -50,6 +50,7 @@ behaviour: a breaking change to either means a new major version.
 - Notifications never get a wire response, whatever their outcome.
 - Dates and non-finite numbers are written the same way by every serializer (fraction only when non-zero, `Z`/offset/nothing by `Kind`; `NaN` and the infinities as quoted strings).
 - Clarified that the WebAssembly sample is not a Native AOT or full-trimming compatibility guarantee.
+- The published benchmarks are measured on a Hugging Face Jobs `cpu-performance` host (AMD EPYC 7R13, 32 cores) and regenerated from the job's data (`benchmarks/hf/`, `ingest.py`, `render.py`); the desktop figures are gone from the README except the browser table.
 
 ### Deprecated
 

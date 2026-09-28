@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AustinHarris.JsonRpc;
@@ -47,6 +48,7 @@ internal static class AsyncBenchmark
     {
         if (seconds <= 0 || workers <= 0) throw new ArgumentOutOfRangeException(nameof(seconds));
         var summary = new List<BenchmarkRunner.ChartRow>();
+        var resultRows = new JsonArray();
         foreach (var (shape, flow) in Rows)
         {
             string session = "async-benchmark-" + shape + "-" + flow;
@@ -54,26 +56,45 @@ internal static class AsyncBenchmark
             {
                 Register(session, shape, flow);
                 var rowInputs = Inputs(shape);
-                await ValidateAndReportAllocations(print, session, shape, flow, rowInputs);
+                var perShape = await ValidateAndReportAllocations(print, session, shape, flow, rowInputs);
                 bool yield = shape == "yield";
                 var m = await Measure(session, rowInputs, workers, seconds, processWide: yield);
                 string label = yield ? "one request (yieldsOnce)" : "equal-weight mix of five requests";
                 print($"{shape} / {flow}: {m.Count:N0} RPCs, {workers} workers, {m.Seconds:F3} s, {m.RpcPerSec:N0} RPC/s; worker startup {m.StartupSeconds * 1000:F1} ms; " +
                       $"{(yield ? "process-wide" : "worker-thread")} allocation total {m.AllocatedBytes:N0} B ({m.BytesPerRpc:F0} B/RPC, including method and harness allocations); {label}; {m.Cpu.TrailingText}.");
                 summary.Add(new BenchmarkRunner.ChartRow($"{shape} / {flow}", m.RpcPerSec, $"{m.Count,12:N0} RPCs  {m.BytesPerRpc,6:F0} B/RPC  {m.Cpu.TrailingText}"));
+                var resultRow = BenchResults.Row(RowId(workers == 1 ? "async1" : "asyncn", shape, flow), m.RpcPerSec, m.Count, m.Cpu);
+                resultRow.Insert(1, "shape", shape);
+                resultRow.Insert(2, "flow", flow.ToString());
+                resultRow.Insert(5, "bytesPerRpc", Math.Round(m.BytesPerRpc));
+                resultRow.Insert(6, "startupMs", Math.Round(m.StartupSeconds * 1000, 1));
+                if (perShape != null) resultRow["bytesPerShape"] = BenchResults.Numbers(perShape);
+                resultRows.Add(resultRow);
             }
             finally { Handler.DestroySession(session); }
         }
         BenchmarkRunner.PrintBarChart($"ProcessAsync(bytes), awaited workers - {Config.Serializer.Name} - {workers} worker{(workers == 1 ? "" : "s")} - RPC/s by registration", "Registration", summary);
+
+        if (BenchResults.Enabled)
+        {
+            var doc = BenchResults.Document("async", seconds);
+            doc["workers"] = workers;
+            doc["rows"] = resultRows;
+            BenchResults.Write($"async-w{workers}", doc, print);
+        }
     }
+
+    /// <summary>The results id of a registration row: <c>&lt;prefix&gt;-&lt;shape&gt;-&lt;flow&gt;</c> in lower case, as benchmarks.json names the series.</summary>
+    internal static string RowId(string prefix, string shape, RpcContextFlow flow) => $"{prefix}-{shape.ToLowerInvariant()}-{flow.ToString().ToLowerInvariant()}";
 
     /// <summary>
     /// The scaling gate: the inline None rows at 1, 2 and <paramref name="workers"/> workers, <paramref name="runs"/>
     /// paired runs, medians, and the 2/1 and N/1 ratios. Returns false when any N/1 ratio is below
     /// <paramref name="threshold"/>. A process-wide serialization point on the async path holds the ratio near 1.3
-    /// on any core count; the per-thread cache measured about 6.8 on 16 threads.
+    /// on any core count; the per-thread cache measured about 6.8 on 16 threads. When <paramref name="report"/> is given,
+    /// the gate cells (median, the paired runs, CPU), the ratios and the verdict are added to it for the results file.
     /// </summary>
-    internal static async Task<bool> ScaleAsync(Action<string> print, double seconds, int workers, double threshold, int runs = 3)
+    internal static async Task<bool> ScaleAsync(Action<string> print, double seconds, int workers, double threshold, int runs = 3, JsonObject report = null)
     {
         if (workers < 2) throw new ArgumentOutOfRangeException(nameof(workers));
         var counts = new[] { 1, 2, workers }.Distinct().ToArray();
@@ -101,6 +122,8 @@ internal static class AsyncBenchmark
         }
 
         bool pass = true;
+        var cells = new JsonArray();
+        var gate = new JsonArray();
         print("");
         print($"| Registration | 1 worker | 2 workers | {workers} workers | 2/1 | {workers}/1 | gate | CPU at {workers} workers |");
         print("| --- | ---: | ---: | ---: | ---: | ---: | --- | --- |");
@@ -113,11 +136,32 @@ internal static class AsyncBenchmark
             bool ok = many / one >= threshold;
             pass &= ok;
             print($"| {shape} / {flow} | {one:N0} | {two:N0} | {many:N0} | {two / one:F2} | {many / one:F2} | {(ok ? "pass" : "FAIL")} | {cpu.TrailingText} |");
+            foreach (int w in counts)
+            {
+                var list = results[(shape, flow, w)];
+                var cell = BenchResults.Row(RowId("scale", shape, flow), Median(list.Select(m => m.RpcPerSec).ToList()), list.Sum(m => m.Count), MedianCpu(list));
+                cell.Insert(1, "shape", shape);
+                cell.Insert(2, "flow", flow.ToString());
+                cell.Insert(3, "workers", w);
+                cell.Insert(5, "values", BenchResults.Numbers(list.Select(m => Math.Round(m.RpcPerSec))));
+                cells.Add(cell);
+            }
+            gate.Add(new JsonObject { ["shape"] = shape, ["flow"] = flow.ToString(), ["twoOverOne"] = Math.Round(two / one, 2), ["nOverOne"] = Math.Round(many / one, 2), ["pass"] = ok });
         }
         print("");
         print(pass ? $"Scaling check passed: every inline row scales at least {threshold:0.0#}x from 1 to {workers} workers."
                    : $"Scaling check FAILED: an inline row scales less than {threshold:0.0#}x from 1 to {workers} workers; look for a process-wide serialization point on the ProcessAsync path.");
         print("The 2/1 ratio is diagnostic (the lock was already visible at two workers, about 1.3); it is not gated.");
+        if (report != null)
+        {
+            report["workers"] = workers;
+            report["threshold"] = threshold;
+            report["runs"] = runs;
+            report["counts"] = BenchResults.Numbers(counts.Select(c => (double)c));
+            report["rows"] = cells;
+            report["gate"] = gate;
+            report["verdict"] = pass ? "pass" : "fail";
+        }
         return pass;
     }
 
@@ -128,12 +172,14 @@ internal static class AsyncBenchmark
     /// per request at one worker as <see cref="RunAsync"/> reports them, so a regression in one serializer's path or in the
     /// suspending path shows up on its own. The process-wide serializer is switched with
     /// <see cref="Config.SetSerializer(JsonRpcSerializer)"/> for each block and restored afterwards. A failure is printed
-    /// after the rows measured so far and is not thrown, so it cannot change the gate's exit code.
+    /// after the rows measured so far and is not thrown, so it cannot change the gate's exit code. When
+    /// <paramref name="report"/> is given, the rows measured and any failure are added to it for the results file.
     /// </summary>
-    internal static async Task ScaleDiagnosticsAsync(Action<string> print, double seconds, int workers)
+    internal static async Task ScaleDiagnosticsAsync(Action<string> print, double seconds, int workers, JsonObject report = null)
     {
         var serializers = new Func<JsonRpcSerializer>[] { () => JsmnSerializer.Instance, () => new SystemTextJsonRpcSerializer(), () => new NewtonsoftJsonRpcSerializer() };
         var rows = new List<string>();
+        var diagnostics = new JsonArray();
         string where = "start";
         Exception failure = null;
         var previous = Config.Serializer;
@@ -164,6 +210,12 @@ internal static class AsyncBenchmark
                         var many = await Measure(session, rowInputs, workers, seconds, processWide: yield);
                         print($"  {where}, {workers,2} workers: {many.RpcPerSec,14:N0} RPC/s  ({many.Count:N0} RPCs in {many.Seconds:F3} s); {many.Cpu.TrailingText}");
                         rows.Add($"| {shape} / {flow} | {one.RpcPerSec:N0} | {many.RpcPerSec:N0} | {many.RpcPerSec / one.RpcPerSec:F2} | {one.BytesPerRpc:F0} | {many.Cpu.TrailingText} |");
+                        diagnostics.Add(new JsonObject
+                        {
+                            ["id"] = RowId("scale-diag-" + name, shape, flow), ["serializer"] = name, ["shape"] = shape, ["flow"] = flow.ToString(),
+                            ["one"] = Math.Round(one.RpcPerSec), ["many"] = Math.Round(many.RpcPerSec), ["ratio"] = Math.Round(many.RpcPerSec / one.RpcPerSec, 2),
+                            ["bytesPerRpc"] = Math.Round(one.BytesPerRpc), ["cpu"] = BenchResults.Cpu(many.Cpu),
+                        });
                     }
                     finally { Handler.DestroySession(session); }
                 }
@@ -179,6 +231,11 @@ internal static class AsyncBenchmark
         print("");
         if (failure != null)
             print($"Diagnostics stopped at {where}: {failure.GetType().Name}: {failure.Message}. The gate result above stands; the diagnostics are not part of it.");
+        if (report != null)
+        {
+            report["diagnostics"] = diagnostics;
+            if (failure != null) report["diagnosticsError"] = $"{where}: {failure.GetType().Name}: {failure.Message}";
+        }
     }
 
     private static double Median(List<double> values)
@@ -204,8 +261,10 @@ internal static class AsyncBenchmark
 
     /// <summary>Checks every response, warms the row, and prints the per-shape allocation of an inline document.</summary>
     /// <param name="report">False checks, warms and asserts inline completion without printing the per-shape lines.</param>
-    private static async Task ValidateAndReportAllocations(Action<string> print, string session, string shape, RpcContextFlow flow, ReadOnlyMemory<byte>[] rowInputs, bool report = true)
+    /// <returns>Bytes per request for each input, as printed; null for the <c>yield</c> row, which is not measured per shape.</returns>
+    private static async Task<double[]> ValidateAndReportAllocations(Action<string> print, string session, string shape, RpcContextFlow flow, ReadOnlyMemory<byte>[] rowInputs, bool report = true)
     {
+        var perShape = shape == "yield" ? null : new double[rowInputs.Length];
         var expected = shape == "yield"
             ? new[] { "{\"jsonrpc\":\"2.0\",\"result\":7,\"id\":6}" }
             : BenchmarkRunner.taskInputs.Select(t => JsonRpcProcessor.ProcessSync(t)).ToArray();
@@ -227,7 +286,9 @@ internal static class AsyncBenchmark
             }
             long totalBytes = GC.GetAllocatedBytesForCurrentThread() - before;
             if (report) print($"{shape} / {flow} / shape {i + 1}: {totalBytes} B total over 2000 requests ({totalBytes / 2000.0:F1} B/RPC), including method allocations.");
+            perShape[i] = Math.Round(totalBytes / 2000.0, 1);
         }
+        return perShape;
     }
 
     /// <summary>

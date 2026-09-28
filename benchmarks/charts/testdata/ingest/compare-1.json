@@ -1,0 +1,106 @@
+{
+  "mode": "compare",
+  "machine": "AMD EPYC 7R13 Processor, 4 cores of 64 host CPUs, cgroup quota, Linux 6.1.0 #1 SMP, .NET 10.0.0, Release, Server GC",
+  "runtime": ".NET 10.0.0, Release, Server GC",
+  "serializer": "jsmn",
+  "date": "2026-09-27",
+  "seconds": 3,
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "run": 1,
+  "cores": 4,
+  "clients": 4,
+  "pipeline": 256,
+  "versions": {
+    "jsonrpc": "2.0.0.0",
+    "streamJsonRpc": "2.22.11",
+    "grpc": "2.71.0"
+  },
+  "rows": [
+    {
+      "id": "ours-direct-1",
+      "rpcPerSec": 2500000,
+      "rpcs": 7500000,
+      "cpu": {
+        "system": 30.0,
+        "process": 25.0
+      }
+    },
+    {
+      "id": "sjr-pipe",
+      "rpcPerSec": 150000,
+      "rpcs": 450000,
+      "cpu": {
+        "system": 40.0,
+        "process": 30.0
+      }
+    },
+    {
+      "id": "sjr-proxy",
+      "rpcPerSec": 90000,
+      "rpcs": 270000,
+      "cpu": {
+        "system": 40.0,
+        "process": 30.0
+      },
+      "usPerRequest": 11.1
+    },
+    {
+      "id": "ours-tcp-jsonrpc",
+      "rpcPerSec": 3400000,
+      "rpcs": 10200000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0,
+        "clients": 8.0
+      }
+    },
+    {
+      "id": "sjr-newline-stj",
+      "rpcPerSec": 300000,
+      "rpcs": 900000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0,
+        "clients": 8.0
+      }
+    },
+    {
+      "id": "sjr-cl-stj",
+      "rpcPerSec": 280000,
+      "rpcs": 840000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0,
+        "clients": 8.0
+      }
+    },
+    {
+      "id": "sjr-cl-newtonsoft",
+      "rpcPerSec": 200000,
+      "rpcs": 600000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0,
+        "clients": 8.0
+      }
+    },
+    {
+      "id": "grpc-unary",
+      "rpcPerSec": 100000,
+      "rpcs": 300000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0
+      }
+    },
+    {
+      "id": "grpc-stream",
+      "rpcPerSec": 400000,
+      "rpcs": 1200000,
+      "cpu": {
+        "system": 99.0,
+        "process": 80.0
+      }
+    }
+  ]
+}
