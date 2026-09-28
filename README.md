@@ -1,6 +1,6 @@
 # JSON-RPC.Net
 
-![Build Master](https://github.com/Astn/JSON-RPC.NET/workflows/Build%20Master/badge.svg) ![NuGet](https://img.shields.io/nuget/v/AustinHarris.JsonRpc) ![NuGet preview](https://img.shields.io/nuget/vpre/AustinHarris.JsonRpc?label=preview)
+![Build Master](https://github.com/Astn/JSON-RPC.NET/workflows/Build%20Master/badge.svg) ![NuGet](https://img.shields.io/nuget/v/AustinHarris.JsonRpc)
 
 A JSON-RPC server has a short job description: read a request, call a method, write a response. The work around that call can be considerably larger. JSON-RPC.Net 2.0 keeps the core at the document boundary: UTF-8 bytes go in, UTF-8 bytes come out, and your application chooses how they travel. The same service can sit behind Kestrel, a pipe, a socket, or a browser page.
 
@@ -33,7 +33,7 @@ Here is a server you can put in one file. Save it as `server.cs`; the `#:` direc
 
 ```csharp
 #:sdk Microsoft.NET.Sdk.Web
-#:package AustinHarris.JsonRpc.AspNetCore@2.0.0-preview.3
+#:package AustinHarris.JsonRpc.AspNetCore@2.0.0
 
 using AustinHarris.JsonRpc;
 using AustinHarris.JsonRpc.AspNetCore;
@@ -59,7 +59,7 @@ curl -s -X POST http://127.0.0.1:5077/rpc -H "Content-Type: application/json" -d
 {"jsonrpc":"2.0","result":3.0,"id":1}
 ```
 
-That is the whole round trip. A request without an `id` is a notification and gets no response; a batch is an array of requests and gets an array of responses, omitting notifications. On .NET 8, put the same C# code in an ASP.NET Core `Program.cs`, remove the two `#:` lines, and install `AustinHarris.JsonRpc.AspNetCore` with `--prerelease`.
+That is the whole round trip. A request without an `id` is a notification and gets no response; a batch is an array of requests and gets an array of responses, omitting notifications. On .NET 8, put the same C# code in an ASP.NET Core `Program.cs`, remove the two `#:` lines, and install `AustinHarris.JsonRpc.AspNetCore`.
 
 ### Calling the core directly
 
@@ -92,7 +92,7 @@ The core has no JSON-library dependency. Its built-in serializer is the default;
 | `AustinHarris.JsonRpc.Newtonsoft` | Json.NET settings, converters, attributes or lenient input. |
 | `AustinHarris.JsonRpc.SystemTextJson` | System.Text.Json options and converters. |
 
-2.0 is currently `2.0.0-preview.3`. For an existing project, install the core with `dotnet add package AustinHarris.JsonRpc --prerelease`, then add the serializer or ASP.NET Core package you need. Without `--prerelease`, NuGet selects the last 1.x release.
+For an existing project, install the core with `dotnet add package AustinHarris.JsonRpc`, then add the serializer or ASP.NET Core package you need.
 
 ## Defining methods
 
@@ -391,7 +391,7 @@ Most 1.x services run unchanged. [Upgrading from 1.x](docs/upgrading.md) lists t
 
 ## Versioning and support
 
-The four 2.x packages are released together at one version; use matching versions. Public API and documented wire behavior follow [Semantic Versioning](https://semver.org/). There is no fixed release cadence. Previews such as `2.0.0-preview.N` are tested but may change API before the stable release; 1.x receives no further releases.
+The four 2.x packages are released together at one version; use matching versions. Public API and documented wire behavior follow [Semantic Versioning](https://semver.org/). There is no fixed release cadence. A preview (`2.0.0-preview.N`) is tested but may change API before the stable release it precedes; 1.x receives no further releases.
 
 Obsolete members warn with a `JSONRPC0xxx` diagnostic and a link to the [replacement](docs/obsoletions.md). They remain warnings through 2.x and are removed in the next major version. [CHANGELOG.md](CHANGELOG.md) records changes. Report vulnerabilities privately through [SECURITY.md](SECURITY.md); use [GitHub issues](https://github.com/Astn/JSON-RPC.NET/issues) for questions and bugs.
 

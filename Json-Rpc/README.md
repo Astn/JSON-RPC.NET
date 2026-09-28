@@ -14,10 +14,8 @@ This is a server library, with no client proxies or server-to-client calls.
 
 ## Install
 
-2.0 is a prerelease. Include `--prerelease` when installing:
-
 ```sh
-dotnet add package AustinHarris.JsonRpc --prerelease
+dotnet add package AustinHarris.JsonRpc
 ```
 
 Coming from 1.x? Read [What is new in 2.0](https://astn.github.io/JSON-RPC.NET/changelog.html) and [Upgrading from 1.x](https://astn.github.io/JSON-RPC.NET/upgrading.html) first.
@@ -32,7 +30,7 @@ The `#:sdk` and `#:package` directives select the web SDK and package.
 
 ```csharp
 #:sdk Microsoft.NET.Sdk.Web
-#:package AustinHarris.JsonRpc.AspNetCore@2.0.0-preview.3
+#:package AustinHarris.JsonRpc.AspNetCore@2.0.0
 
 using AustinHarris.JsonRpc;
 using AustinHarris.JsonRpc.AspNetCore;
@@ -59,7 +57,7 @@ curl -s -X POST http://127.0.0.1:5077/rpc -H "Content-Type: application/json" -d
 {"jsonrpc":"2.0","result":3.0,"id":1}
 ```
 
-On .NET 8, use the same code in `Program.cs` in an ordinary ASP.NET Core project, install with `dotnet add package AustinHarris.JsonRpc.AspNetCore --prerelease`, and drop the two `#:` lines.
+On .NET 8, use the same code in `Program.cs` in an ordinary ASP.NET Core project, install with `dotnet add package AustinHarris.JsonRpc.AspNetCore`, and drop the two `#:` lines.
 
 For a service class, create `CalculatorService.cs`.
 Derive from `JsonRpcService` and mark exposed methods with `[JsonRpcMethod]`.

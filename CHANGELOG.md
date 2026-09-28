@@ -8,7 +8,7 @@ the package pages on NuGet link here.
 Versions follow [Semantic Versioning](https://semver.org/) for the public API and the documented wire
 behaviour: a breaking change to either means a new major version.
 
-## 2.0.0 (in preview: `2.0.0-preview.3`)
+## 2.0.0 (2026-09-28)
 
 ### Added
 
@@ -34,8 +34,8 @@ behaviour: a breaking change to either means a new major version.
 
 ### Changed
 
-- The four assemblies are strong-named (preview.3). One key, `AustinHarris.JsonRpc.snk` at the repository root, signs the packages and the friend assemblies, and stays the same from here on: changing a strong-name key changes the assembly identity. Public key token `e6819c02cf4aec44`. A signed caller can now reference the packages without CS8002, and .NET Framework loads them from a signed assembly.
-- An error handler receives the exception the method threw (preview.3). Previously the library replaced an exception that had an `InnerException` with that inner exception, and promoted an inner `JsonRpcException` to the response, so a handler saw the cause instead of the error and an authored outer error lost its message. Now only the wrappers the invocation machinery adds are stripped, a `TargetInvocationException` and a single-inner `AggregateException`, on the synchronous and asynchronous paths alike; everything else, inner exception included, reaches the handler as thrown.
+- The four assemblies are strong-named. One key, `AustinHarris.JsonRpc.snk` at the repository root, signs the packages and the friend assemblies, and stays the same from here on: changing a strong-name key changes the assembly identity. Public key token `e6819c02cf4aec44`. A signed caller can now reference the packages without CS8002, and .NET Framework loads them from a signed assembly.
+- An error handler receives the exception the method threw. Previously the library replaced an exception that had an `InnerException` with that inner exception, and promoted an inner `JsonRpcException` to the response, so a handler saw the cause instead of the error and an authored outer error lost its message. Now only the wrappers the invocation machinery adds are stripped, a `TargetInvocationException` and a single-inner `AggregateException`, on the synchronous and asynchronous paths alike; everything else, inner exception included, reaches the handler as thrown.
 - `RpcMethod.FromMethod` is `RpcMethod.FromMethodInfo`; `RpcInterfaceMethod.Method` is `RpcInterfaceMethod.MethodInfo`. A `MethodInfo` is always spelled out; "method" means the JSON-RPC method.
 - The session parameter is spelled `sessionId` on every overload (`BindService`, `Handler.RegisterInstance` and the `JsonRpcService` constructor used `sessionID`).
 - `Handler.RegisterFuction` and `UnRegisterFunction` are obsolete; use `ServiceBinder.BindMethod` and `UnbindMethod` (which throw on a duplicate name instead of replacing it).
