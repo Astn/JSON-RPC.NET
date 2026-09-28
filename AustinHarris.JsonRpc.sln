@@ -23,6 +23,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{5D20
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WasmHost", "samples\WasmHost\WasmHost.csproj", "{293EB57E-ED38-4127-879C-34FD73820127}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmbeddedHost", "samples\EmbeddedHost\EmbeddedHost.csproj", "{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -175,12 +177,33 @@ Global
 		{293EB57E-ED38-4127-879C-34FD73820127}.Release|x86.Build.0 = Release|Any CPU
 		{293EB57E-ED38-4127-879C-34FD73820127}.Release|x64.ActiveCfg = Release|Any CPU
 		{293EB57E-ED38-4127-879C-34FD73820127}.Release|x64.Build.0 = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|ARM.Build.0 = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|x86.Build.0 = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Debug|x64.Build.0 = Debug|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|ARM.ActiveCfg = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|ARM.Build.0 = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|x86.ActiveCfg = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|x86.Build.0 = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|x64.ActiveCfg = Release|Any CPU
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{293EB57E-ED38-4127-879C-34FD73820127} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
+		{7A4C1E52-9B3D-4F61-8E2A-5C0D7B9F3A11} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = AustinHarris.JsonRpc.vsmdi

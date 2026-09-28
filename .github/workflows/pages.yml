@@ -11,6 +11,7 @@ on:
       - "AustinHarris.JsonRpc.Newtonsoft/README.md"
       - "AustinHarris.JsonRpc.SystemTextJson/README.md"
       - "samples/WasmHost/README.md"
+      - "samples/EmbeddedHost/README.md"
       - "benchmarks/Micro/README.md"
       - "benchmarks/charts/**"
       - ".github/workflows/pages.yml"

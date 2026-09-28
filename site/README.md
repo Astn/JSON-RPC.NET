@@ -10,6 +10,7 @@ The pages at https://astn.github.io/JSON-RPC.NET/ are built from the Markdown fi
 | Json.NET serializer | `AustinHarris.JsonRpc.Newtonsoft/README.md` |
 | System.Text.Json serializer | `AustinHarris.JsonRpc.SystemTextJson/README.md` |
 | WebAssembly sample | `samples/WasmHost/README.md` |
+| Embedded host sample | `samples/EmbeddedHost/README.md` |
 | Micro-benchmarks | `benchmarks/Micro/README.md` |
 | Benchmark explorer | `benchmarks/charts/explorer.html`, copied as is |
 
