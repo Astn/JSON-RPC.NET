@@ -36,6 +36,7 @@
 
     <ItemGroup>
         <None Include="README.md" Pack="true" PackagePath="\" />
+        <None Include="..\THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="\" />
         <None Include="..\icon.png" Pack="true" PackagePath="\" />
         <InternalsVisibleTo Include="AustinHarris.JsonRpcTestN" Key="$(JsonRpcPublicKey)" />
         <InternalsVisibleTo Include="AustinHarris.JsonRpc.Micro" Key="$(JsonRpcPublicKey)" />

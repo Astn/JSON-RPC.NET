@@ -414,4 +414,4 @@ The tables and charts are generated from [benchmarks/charts/benchmarks.json](ben
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). The built-in serializer's tokenizer is a C# port of [jsmn](https://github.com/zserge/jsmn), copyright Serge A. Zaitsev, under the MIT license; its notice is in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt), which also ships in the `AustinHarris.JsonRpc` package.
