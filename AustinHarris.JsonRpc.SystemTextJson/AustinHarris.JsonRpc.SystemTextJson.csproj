@@ -6,8 +6,7 @@
         <Product>Json-Rpc.Net System.Text.Json serializer</Product>
         <Description>System.Text.Json serializer for AustinHarris.JsonRpc. Reads UTF-8 parameters and writes results directly to the response buffer, configured with JsonSerializerOptions.</Description>
         <VersionPrefix>2.0.0</VersionPrefix>
-        <VersionSuffix>preview.3</VersionSuffix>
-        <PackageReleaseNotes>2.0.0-preview.3, released with the core package: strong-named assemblies and the error-handler change. What is new: https://astn.github.io/JSON-RPC.NET/changelog.html. Upgrading from 1.x: https://astn.github.io/JSON-RPC.NET/upgrading.html</PackageReleaseNotes>
+        <PackageReleaseNotes>2.0.0, released with the core package. What is new: https://astn.github.io/JSON-RPC.NET/changelog.html. Upgrading from 1.x: https://astn.github.io/JSON-RPC.NET/upgrading.html</PackageReleaseNotes>
         <Copyright>Austin Harris</Copyright>
         <PackageProjectUrl>https://astn.github.io/JSON-RPC.NET/systemtextjson.html</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Astn/JSON-RPC.NET</RepositoryUrl>

@@ -35,10 +35,10 @@ The core uses no reflection emit. The WebAssembly sample runs under the configur
 ## Installation
 
 ```
-dotnet add package AustinHarris.JsonRpc --prerelease
+dotnet add package AustinHarris.JsonRpc
 ```
 
-2.0 is published as `2.0.0-preview.3`; without `--prerelease`, NuGet resolves to the last 1.x release. The four assemblies are strong-named with one key (public key token `e6819c02cf4aec44`) that is checked into the repository and does not change between releases, so a signed caller can reference them and .NET Framework loads them.
+The four assemblies are strong-named with one key (public key token `e6819c02cf4aec44`) that is checked into the repository and does not change between releases, so a signed caller can reference them and .NET Framework loads them.
 
 The packages are not annotated for trimming or Native AOT: a project that sets `IsAotCompatible` or `PublishTrimmed` gets trim warnings from the reflection binder, and a trimmed application can lose the methods it binds. Hosts with that constraint wait for the source generator planned for 2.8; see [Versioning and support](../README.md#versioning-and-support).
 

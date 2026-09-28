@@ -10,7 +10,7 @@ Configure parameter and result conversion with `JsonSerializerSettings`.
 ## Install
 
 ```sh
-dotnet add package AustinHarris.JsonRpc.Newtonsoft --prerelease
+dotnet add package AustinHarris.JsonRpc.Newtonsoft
 ```
 
 Targets `netstandard2.0`, `netstandard2.1`, `net8.0` and `net10.0`; depends on Newtonsoft.Json 13.0.4 and the

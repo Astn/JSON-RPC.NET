@@ -11,7 +11,7 @@ response buffer.
 ## Install
 
 ```sh
-dotnet add package AustinHarris.JsonRpc.SystemTextJson --prerelease
+dotnet add package AustinHarris.JsonRpc.SystemTextJson
 ```
 
 Targets `netstandard2.0`, `netstandard2.1`, `net8.0` and `net10.0`; depends on System.Text.Json 10.0.3 and the

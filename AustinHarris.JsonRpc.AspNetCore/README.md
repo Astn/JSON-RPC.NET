@@ -11,7 +11,7 @@ without converting the document to a string.
 ## Install
 
 ```sh
-dotnet add package AustinHarris.JsonRpc.AspNetCore --prerelease
+dotnet add package AustinHarris.JsonRpc.AspNetCore
 ```
 
 Targets `net8.0` and `net10.0`; depends on the `AustinHarris.JsonRpc` core package and the ASP.NET Core shared
