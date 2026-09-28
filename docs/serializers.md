@@ -9,7 +9,7 @@ the same slot and each ships as its own package.
 
 | Package | Serializer | Default? | Notes |
 |---|---|---|---|
-| `AustinHarris.JsonRpc` | `Jsmn.JsmnSerializer` | yes | no JSON library; span port of the jsmn tokenizer plus a reflection mapper with cached type plans; primitives and `Nullable<T>` bind without boxing |
+| `AustinHarris.JsonRpc` | `Jsmn.JsmnSerializer` | yes | no JSON library; span port of the [jsmn](https://github.com/zserge/jsmn) tokenizer (MIT, Serge A. Zaitsev) plus a reflection mapper with cached type plans; primitives and `Nullable<T>` bind without boxing |
 | `AustinHarris.JsonRpc.Newtonsoft` | `Newtonsoft.NewtonsoftJsonRpcSerializer` | | Json.NET 13; lenient input; honours `JsonSerializerSettings`; the compatibility choice for code that relied on Json.NET behaviour |
 | `AustinHarris.JsonRpc.SystemTextJson` | `SystemTextJson.SystemTextJsonRpcSerializer` | | `Utf8JsonReader`/`Utf8JsonWriter` directly on the request bytes; honours `JsonSerializerOptions` |
 

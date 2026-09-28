@@ -8,6 +8,7 @@ You supply the transport.
 The core has no JSON library dependency.
 Its built-in serializer works on its own; companion packages add Json.NET,
 `System.Text.Json` or ASP.NET Core hosting.
+The built-in tokenizer is a port of [jsmn](https://github.com/zserge/jsmn) by Serge A. Zaitsev (MIT); the notice ships in the package as `THIRD-PARTY-NOTICES.txt`.
 
 Targets `netstandard2.0`, `netstandard2.1`, `net8.0` and `net10.0`.
 This is a server library, with no client proxies or server-to-client calls.
@@ -30,7 +31,7 @@ The `#:sdk` and `#:package` directives select the web SDK and package.
 
 ```csharp
 #:sdk Microsoft.NET.Sdk.Web
-#:package AustinHarris.JsonRpc.AspNetCore@2.0.0
+#:package AustinHarris.JsonRpc.AspNetCore@2.0.1
 
 using AustinHarris.JsonRpc;
 using AustinHarris.JsonRpc.AspNetCore;
@@ -192,3 +193,4 @@ Most service methods can stay as they are. Review these changes before switching
 - [Upgrading from 1.x](https://astn.github.io/JSON-RPC.NET/upgrading.html)
 - [Source repository](https://github.com/Astn/JSON-RPC.NET)
 - [MIT license](https://github.com/Astn/JSON-RPC.NET/blob/master/LICENSE)
+- [Third-party notices](https://github.com/Astn/JSON-RPC.NET/blob/master/THIRD-PARTY-NOTICES.txt)

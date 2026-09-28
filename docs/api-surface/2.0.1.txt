@@ -1,0 +1,612 @@
+## AustinHarris.JsonRpc 2.0.1.0 PublicKeyToken=e6819c02cf4aec44
+   informational=2.0.1
+static class AustinHarris.JsonRpc.Config
+    public method static System.Void SetBeforeProcessHandler(System.String sessionId, AustinHarris.JsonRpc.PreProcessHandler handler)
+    public method static System.Void SetErrorHandler(System.Func<AustinHarris.JsonRpc.JsonRequest, AustinHarris.JsonRpc.JsonRpcException, AustinHarris.JsonRpc.JsonRpcException> handler)
+    public method static System.Void SetErrorHandler(System.String sessionId, System.Func<AustinHarris.JsonRpc.JsonRequest, AustinHarris.JsonRpc.JsonRpcException, AustinHarris.JsonRpc.JsonRpcException> handler)
+    public method static System.Void SetLimits(AustinHarris.JsonRpc.JsonRpcLimits limits)
+    public method static System.Void SetLimits(System.String sessionId, AustinHarris.JsonRpc.JsonRpcLimits limits)
+    public method static System.Void SetParseErrorHandler(System.Func<System.String, AustinHarris.JsonRpc.JsonRpcException, AustinHarris.JsonRpc.JsonRpcException> handler)
+    public method static System.Void SetParseErrorHandler(System.String sessionId, System.Func<System.String, AustinHarris.JsonRpc.JsonRpcException, AustinHarris.JsonRpc.JsonRpcException> handler)
+    public method static System.Void SetPostProcessHandler(AustinHarris.JsonRpc.PostProcessHandler handler)
+    public method static System.Void SetPostProcessHandler(System.String sessionId, AustinHarris.JsonRpc.PostProcessHandler handler)
+    public method static System.Void SetPreProcessHandler(AustinHarris.JsonRpc.PreProcessHandler handler)
+    public method static System.Void SetPreProcessHandler(System.String sessionId, AustinHarris.JsonRpc.PreProcessHandler handler)
+    public method static System.Void SetSerializer(AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer)
+    public method static System.Void SetSerializer(System.String sessionId, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer)
+    public method static System.Void SetVersionPolicy(System.String sessionId, System.Nullable<AustinHarris.JsonRpc.JsonRpcVersionPolicy> policy)
+    public property AustinHarris.JsonRpc.JsonRpcLimits Limits { get; }
+    public property AustinHarris.JsonRpc.JsonRpcVersionPolicy VersionPolicy { get; set; }
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcSerializer Serializer { get; set; }
+    public property System.Boolean IncludeExceptionDetails { get; set; }
+sealed class AustinHarris.JsonRpc.Handler
+    public method AustinHarris.JsonRpc.JsonResponse Handle(AustinHarris.JsonRpc.JsonRequest Rpc, System.Object RpcContext = null)
+    public method System.Void Destroy()
+    public method System.Void RegisterFuction(System.String methodName, System.Collections.Generic.Dictionary<System.String, System.Type> parameterNameTypeMapping, System.Collections.Generic.Dictionary<System.String, System.Object> parameterNameDefaultValueMapping, System.Delegate implementation)
+    public method System.Void SetPostProcessHandler(AustinHarris.JsonRpc.PostProcessHandler handler)
+    public method System.Void SetPreProcessHandler(AustinHarris.JsonRpc.PreProcessHandler handler)
+    public method System.Void UnRegisterFunction(System.String methodName)
+    public method static AustinHarris.JsonRpc.Handler GetSessionHandler()
+    public method static AustinHarris.JsonRpc.Handler GetSessionHandler(System.String sessionId)
+    public method static AustinHarris.JsonRpc.JsonRpcException RpcGetAndRemoveRpcException()
+    public method static AustinHarris.JsonRpc.JsonRpcRequestId RpcRequestId()
+    public method static AustinHarris.JsonRpc.Serialization.JsonRpcIdKind RpcRequestIdKind()
+    public method static System.Object RpcContext()
+    public method static System.ReadOnlySpan<System.Byte> RpcRequestIdRaw()
+    public method static System.String DefaultSessionId()
+    public method static System.Void DestroySession(System.String sessionId)
+    public method static System.Void RegisterInstance(System.String sessionId, System.Object instance)
+    public method static System.Void RpcSetException(AustinHarris.JsonRpc.JsonRpcException exception)
+    public property AustinHarris.JsonRpc.Handler DefaultHandler { get; }
+    public property AustinHarris.JsonRpc.JsonRpcLimits Limits { get; set; }
+    public property AustinHarris.JsonRpc.SMD MetaData { get; set; }
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcSerializer Serializer { get; set; }
+    public property System.Nullable<AustinHarris.JsonRpc.JsonRpcVersionPolicy> VersionPolicy { get; set; }
+    public property System.String SessionId { get; }
+delegate AustinHarris.JsonRpc.Invocation.BoxedInvoker : System.ICloneable, System.Runtime.Serialization.ISerializable
+    public ctor BoxedInvoker(System.Object object, System.IntPtr method)
+    public method virtual System.IAsyncResult BeginInvoke(AustinHarris.JsonRpc.Serialization.JsonRpcRequestReader reader, System.Int32[] map, System.AsyncCallback callback, System.Object object)
+    public method virtual System.Object EndInvoke(System.IAsyncResult result)
+    public method virtual System.Object Invoke(AustinHarris.JsonRpc.Serialization.JsonRpcRequestReader reader, System.Int32[] map)
+sealed class AustinHarris.JsonRpc.Invocation.RpcMethod
+    public ctor RpcMethod()
+    public method static AustinHarris.JsonRpc.Invocation.RpcMethod FromDelegate(System.String name, System.Delegate implementation, System.String[] parameterNames = null, System.Collections.Generic.IDictionary<System.String, System.Object> defaults = null, AustinHarris.JsonRpc.RpcContextFlow contextFlow = None)
+    public method static AustinHarris.JsonRpc.Invocation.RpcMethod FromDelegate(System.String name, System.Delegate implementation, System.String[] parameterNames, System.Collections.Generic.IDictionary<System.String, System.Object> defaults)
+    public method static AustinHarris.JsonRpc.Invocation.RpcMethod FromMethodInfo(System.String name, System.Reflection.MethodInfo method, System.Object target, System.String[] parameterNames = null, AustinHarris.JsonRpc.RpcContextFlow contextFlow = None)
+    public method static AustinHarris.JsonRpc.Invocation.RpcMethod FromMethodInfo(System.String name, System.Reflection.MethodInfo method, System.Object target, System.String[] parameterNames)
+    public method static AustinHarris.JsonRpc.Invocation.RpcMethod FromMethodInfo(System.String name, System.Reflection.MethodInfo method, System.Type serviceType, System.Func<System.Object, System.Object> resolve, System.String[] parameterNames = null, AustinHarris.JsonRpc.RpcContextFlow contextFlow = None)
+    public property AustinHarris.JsonRpc.Invocation.BoxedInvoker InvokeBoxed { get; }
+    public property AustinHarris.JsonRpc.Invocation.RpcParameter[] Parameters { get; }
+    public property AustinHarris.JsonRpc.Invocation.StreamingInvoker Invoke { get; }
+    public property AustinHarris.JsonRpc.RpcContextFlow ContextFlow { get; }
+    public property System.Boolean ExpectsRefException { get; }
+    public property System.Boolean IsAsync { get; }
+    public property System.Int32 DefaultCount { get; }
+    public property System.String Name { get; }
+    public property System.Type ResultType { get; }
+    public property System.Type ReturnType { get; }
+sealed class AustinHarris.JsonRpc.Invocation.RpcParameter
+    public property System.Boolean HasDefault { get; }
+    public property System.Object DefaultValue { get; }
+    public property System.String Name { get; }
+    public property System.Type Type { get; }
+delegate AustinHarris.JsonRpc.Invocation.StreamingInvoker : System.ICloneable, System.Runtime.Serialization.ISerializable
+    public ctor StreamingInvoker(System.Object object, System.IntPtr method)
+    public method virtual System.IAsyncResult BeginInvoke(AustinHarris.JsonRpc.Serialization.JsonRpcRequestReader reader, System.Int32[] map, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer, System.Buffers.IBufferWriter<System.Byte> output, System.AsyncCallback callback, System.Object object)
+    public method virtual System.Void EndInvoke(System.IAsyncResult result)
+    public method virtual System.Void Invoke(AustinHarris.JsonRpc.Serialization.JsonRpcRequestReader reader, System.Int32[] map, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer, System.Buffers.IBufferWriter<System.Byte> output)
+struct AustinHarris.JsonRpc.Jsmn.JsmnCursor
+    public ctor JsmnCursor(System.ReadOnlySpan<System.Byte> doc, AustinHarris.JsonRpc.Jsmn.JsmnToken[] tokens, System.Int32 index)
+    public field AustinHarris.JsonRpc.Jsmn.JsmnToken[] Tokens
+    public field System.Int32 Index
+    public field System.ReadOnlySpan<System.Byte> Doc
+    public method System.Int32 Next()
+    public property System.Boolean IsNull { get; }
+    public property System.ReadOnlySpan<System.Byte> Text { get; }
+    public property ref AustinHarris.JsonRpc.Jsmn.JsmnToken Token { get; }
+static class AustinHarris.JsonRpc.Jsmn.JsmnMapper
+    public method static System.Boolean ReadBoolean(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.Char ReadChar(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.DateTime ReadDateTime(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.Decimal ReadDecimal(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.Double ReadDouble(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.Int32 ReadInt32(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.Int64 ReadInt64(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.Object ReadObject(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c, System.Type type)
+    public method static System.Single ReadSingle(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.String ReadString(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.UInt64 ReadUInt64(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor c)
+    public method static System.Void WriteObject(System.Buffers.IBufferWriter<System.Byte> w, System.Object value, System.Type declaredType, System.Int32 depth)
+static class AustinHarris.JsonRpc.Jsmn.JsmnReader`1
+    public field static readonly AustinHarris.JsonRpc.Jsmn.JsmnTokenReader<T> Read
+sealed class AustinHarris.JsonRpc.Jsmn.JsmnRequestReader : AustinHarris.JsonRpc.Serialization.JsonRpcRequestReader
+    public ctor JsmnRequestReader(AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer)
+    public method virtual System.Boolean ParamIsNull(System.Int32 i)
+    public method virtual System.Boolean Select(System.Int32 index)
+    public method virtual System.Boolean TryParse(System.ReadOnlyMemory<System.Byte> utf8Document, out ref System.String error)
+    public method virtual System.Object ReadParam(System.Int32 i, System.Type type)
+    public method virtual System.ReadOnlySpan<System.Byte> ParamNameUtf8(System.Int32 i)
+    public method virtual System.ReadOnlySpan<System.Byte> ParamRaw(System.Int32 i)
+    public method virtual System.Void Release()
+    public method virtual T ReadParam<T>(System.Int32 i)
+    public property AustinHarris.JsonRpc.Jsmn.JsmnTokenizer Tokenizer { get; }
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcIdKind IdKind { get; }
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcParamsKind ParamsKind { get; }
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcVersionKind VersionKind { get; }
+    public property System.Boolean HasMethod { get; }
+    public property System.Boolean IsBatch { get; }
+    public property System.Int32 Count { get; }
+    public property System.Int32 ParamCount { get; }
+    public property System.Object IdValue { get; }
+    public property System.Object ParamsValue { get; }
+    public property System.ReadOnlyMemory<System.Byte> Document { get; }
+    public property System.ReadOnlySpan<System.Byte> IdRaw { get; }
+    public property System.ReadOnlySpan<System.Byte> MethodUtf8 { get; }
+    public property System.String Method { get; }
+sealed class AustinHarris.JsonRpc.Jsmn.JsmnSerializer : AustinHarris.JsonRpc.Serialization.JsonRpcSerializer
+    public ctor JsmnSerializer()
+    public ctor JsmnSerializer(System.Boolean lenient)
+    public ctor JsmnSerializer(System.Boolean lenient, System.Int32 maxDepth)
+    public field static readonly AustinHarris.JsonRpc.Jsmn.JsmnSerializer Instance
+    public method virtual System.Object Read(System.ReadOnlySpan<System.Byte> utf8Json, System.Type type)
+    public method virtual System.Void Write(System.Buffers.IBufferWriter<System.Byte> output, System.Object value, System.Type type)
+    public method virtual System.Void Write<T>(System.Buffers.IBufferWriter<System.Byte> output, T value)
+    public method virtual T Read<T>(System.ReadOnlySpan<System.Byte> utf8Json)
+    public property System.Boolean Lenient { get; }
+    public property System.Int32 MaxDepth { get; }
+    public property System.String Name { get; }
+struct AustinHarris.JsonRpc.Jsmn.JsmnToken
+    public field AustinHarris.JsonRpc.Jsmn.JsmnType Type
+    public field System.Boolean Escaped
+    public field System.Boolean IsKey
+    public field System.Int32 End
+    public field System.Int32 Parent
+    public field System.Int32 Size
+    public field System.Int32 Start
+delegate AustinHarris.JsonRpc.Jsmn.JsmnTokenReader`1 : System.ICloneable, System.Runtime.Serialization.ISerializable
+    public ctor JsmnTokenReader`1(System.Object object, System.IntPtr method)
+    public method virtual System.IAsyncResult BeginInvoke(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor cursor, System.AsyncCallback callback, System.Object object)
+    public method virtual T EndInvoke(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor cursor, System.IAsyncResult result)
+    public method virtual T Invoke(ref AustinHarris.JsonRpc.Jsmn.JsmnCursor cursor)
+sealed class AustinHarris.JsonRpc.Jsmn.JsmnTokenizer
+    public ctor JsmnTokenizer()
+    public field System.Boolean Lenient
+    public field static const System.Int32 DefaultMaxDepth
+    public field static const System.Int32 ErrorDepth
+    public field static const System.Int32 ErrorInvalid
+    public field static const System.Int32 ErrorNoMemory
+    public field static const System.Int32 ErrorPartial
+    public method System.Int32 Parse(System.ReadOnlySpan<System.Byte> js)
+    public method System.Int32 Skip(System.Int32 index)
+    public method System.Void Release()
+    public method static System.Boolean IsNull(System.ReadOnlySpan<System.Byte> js, in ref AustinHarris.JsonRpc.Jsmn.JsmnToken tok)
+    public method static System.ReadOnlySpan<System.Byte> RawJson(System.ReadOnlySpan<System.Byte> js, in ref AustinHarris.JsonRpc.Jsmn.JsmnToken tok)
+    public method static System.ReadOnlySpan<System.Byte> Slice(System.ReadOnlySpan<System.Byte> js, in ref AustinHarris.JsonRpc.Jsmn.JsmnToken tok)
+    public property AustinHarris.JsonRpc.Jsmn.JsmnToken[] Tokens { get; }
+    public property System.Int32 MaxDepth { get; set; }
+    public property System.Int32 Position { get; }
+    public property System.Int32 TokenCount { get; }
+enum AustinHarris.JsonRpc.Jsmn.JsmnType : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+    Undefined = 0
+    Object = 1
+    Array = 2
+    String = 3
+    Primitive = 4
+static class AustinHarris.JsonRpc.Jsmn.JsmnWriter`1
+    public field static readonly System.Action<System.Buffers.IBufferWriter<System.Byte>, T> Write
+class AustinHarris.JsonRpc.JsonRequest
+    public ctor JsonRequest()
+    public ctor JsonRequest(System.String method, System.Object pars, System.Object id)
+    public property System.Object Id { get; set; }
+    public property System.Object Params { get; set; }
+    public property System.String JsonRpc { get; }
+    public property System.String Method { get; set; }
+class AustinHarris.JsonRpc.JsonResponse
+    public ctor JsonResponse()
+    public property AustinHarris.JsonRpc.JsonRpcException Error { get; set; }
+    public property System.Object Id { get; set; }
+    public property System.Object Result { get; set; }
+    public property System.String JsonRpc { get; set; }
+class AustinHarris.JsonRpc.JsonResponse`1
+    public ctor JsonResponse`1()
+    public property AustinHarris.JsonRpc.JsonRpcException Error { get; set; }
+    public property System.Object Id { get; set; }
+    public property System.String JsonRpc { get; set; }
+    public property T Result { get; set; }
+sealed class AustinHarris.JsonRpc.JsonRpcCancellationAttribute : System.Attribute
+    public ctor JsonRpcCancellationAttribute()
+sealed class AustinHarris.JsonRpc.JsonRpcContext
+    public method static AustinHarris.JsonRpc.JsonRpcContext Current()
+    public method static AustinHarris.JsonRpc.JsonRpcRequestId CurrentRequestId()
+    public method static System.Void SetException(AustinHarris.JsonRpc.JsonRpcException exception)
+    public property System.Object Value { get; }
+class AustinHarris.JsonRpc.JsonRpcException : System.ApplicationException, System.Runtime.Serialization.ISerializable
+    public ctor JsonRpcException(System.Int32 code, System.String message, System.Object data)
+    public property System.Int32 code { get; set; }
+    public property System.Object data { get; set; }
+    public property System.String message { get; set; }
+sealed class AustinHarris.JsonRpc.JsonRpcLimits
+    public ctor JsonRpcLimits(System.Int64 maxDocumentBytes = 4194304, System.Int32 maxBatchCount = 1024)
+    public property AustinHarris.JsonRpc.JsonRpcLimits Default { get; }
+    public property AustinHarris.JsonRpc.JsonRpcLimits Unlimited { get; }
+    public property System.Int32 MaxBatchCount { get; }
+    public property System.Int64 MaxDocumentBytes { get; }
+sealed class AustinHarris.JsonRpc.JsonRpcMethodAttribute : System.Attribute
+    public ctor JsonRpcMethodAttribute(System.String jsonMethodName = )
+    public property AustinHarris.JsonRpc.RpcContextFlow ContextFlow { get; set; }
+    public property System.String JsonMethodName { get; }
+sealed class AustinHarris.JsonRpc.JsonRpcParamAttribute : System.Attribute
+    public ctor JsonRpcParamAttribute(System.String jsonParamName = )
+    public property System.String JsonParamName { get; }
+static class AustinHarris.JsonRpc.JsonRpcProcessor
+    public method static System.Byte[] ProcessBytes(System.String sessionId, System.ReadOnlySpan<System.Byte> request, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null)
+    public method static System.String ProcessSync(AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer, System.String jsonRpc, System.Object context = null)
+    public method static System.String ProcessSync(System.String jsonRpc, System.Object context = null)
+    public method static System.String ProcessSync(System.String sessionId, System.String jsonRpc, System.Object jsonRpcContext, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null)
+    public method static System.Threading.Tasks.Task ProcessAsync(System.String sessionId, System.Buffers.ReadOnlySequence<System.Byte> request, System.Buffers.IBufferWriter<System.Byte> output, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null, System.Threading.CancellationToken cancellationToken = null)
+    public method static System.Threading.Tasks.Task ProcessAsync(System.String sessionId, System.ReadOnlyMemory<System.Byte> request, System.Buffers.IBufferWriter<System.Byte> output, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null, System.Threading.CancellationToken cancellationToken = null)
+    public method static System.Threading.Tasks.Task ProcessAsync(System.String sessionId, System.ReadOnlySpan<System.Byte> request, System.Buffers.IBufferWriter<System.Byte> output, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null, System.Threading.CancellationToken cancellationToken = null)
+    public method static System.Threading.Tasks.Task<System.String> Process(AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer, System.String jsonRpc, System.Object context = null)
+    public method static System.Threading.Tasks.Task<System.String> Process(System.String jsonRpc, System.Object context = null)
+    public method static System.Threading.Tasks.Task<System.String> Process(System.String sessionId, System.String jsonRpc, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null)
+    public method static System.Threading.Tasks.Task<System.String> ProcessAsync(System.String jsonRpc, System.Object context = null, System.Threading.CancellationToken cancellationToken = null)
+    public method static System.Threading.Tasks.Task<System.String> ProcessAsync(System.String sessionId, System.String jsonRpc, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null, System.Threading.CancellationToken cancellationToken = null)
+    public method static System.Void Process(AustinHarris.JsonRpc.JsonRpcStateAsync async, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null)
+    public method static System.Void Process(System.String sessionId, AustinHarris.JsonRpc.JsonRpcStateAsync async, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null)
+    public method static System.Void Process(System.String sessionId, System.ReadOnlyMemory<System.Byte> request, System.Buffers.IBufferWriter<System.Byte> output, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null)
+    public method static System.Void Process(System.String sessionId, System.ReadOnlySpan<System.Byte> request, System.Buffers.IBufferWriter<System.Byte> output, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null)
+    public method static System.Void Process(System.String sessionId, in ref System.Buffers.ReadOnlySequence<System.Byte> request, System.Buffers.IBufferWriter<System.Byte> output, System.Object context = null, AustinHarris.JsonRpc.Serialization.JsonRpcSerializer serializer = null)
+struct AustinHarris.JsonRpc.JsonRpcRequestId : System.IEquatable`1[[AustinHarris.JsonRpc.JsonRpcRequestId, AustinHarris.JsonRpc, Version=2.0.1.0, Culture=neutral, PublicKeyToken=e6819c02cf4aec44]]
+    public method System.Boolean Equals(AustinHarris.JsonRpc.JsonRpcRequestId other)
+    public method System.Boolean TryGetInt64(out ref System.Int64 value)
+    public method System.Object ToObject()
+    public method System.String GetIntegerText()
+    public method System.String GetString()
+    public method System.Void WriteTo(System.Buffers.IBufferWriter<System.Byte> output)
+    public method static AustinHarris.JsonRpc.JsonRpcRequestId FromInt64(System.Int64 value)
+    public method static AustinHarris.JsonRpc.JsonRpcRequestId FromObject(System.Object id)
+    public method static AustinHarris.JsonRpc.JsonRpcRequestId FromRaw(System.ReadOnlySpan<System.Byte> raw)
+    public method static AustinHarris.JsonRpc.JsonRpcRequestId FromString(System.String value)
+    public method virtual System.Boolean Equals(System.Object obj)
+    public method virtual System.Int32 GetHashCode()
+    public method virtual System.String ToString()
+    public property AustinHarris.JsonRpc.JsonRpcRequestId Absent { get; }
+    public property AustinHarris.JsonRpc.JsonRpcRequestId Null { get; }
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcIdKind Kind { get; }
+    public property System.Boolean IsAbsent { get; }
+    public property System.Boolean IsInteger { get; }
+    public property System.Boolean IsNull { get; }
+    public property System.Boolean IsString { get; }
+abstract class AustinHarris.JsonRpc.JsonRpcService
+    protected ctor JsonRpcService()
+    protected ctor JsonRpcService(System.Boolean autoBind)
+    protected ctor JsonRpcService(System.String sessionId)
+class AustinHarris.JsonRpc.JsonRpcStateAsync : System.IAsyncResult
+    public ctor JsonRpcStateAsync(System.AsyncCallback cb, System.Object extraData)
+    public property System.Boolean CompletedSynchronously { get; }
+    public property System.Boolean IsCompleted { get; }
+    public property System.Object AsyncState { get; }
+    public property System.String JsonRpc { get; set; }
+    public property System.String Result { get; set; }
+    public property System.Threading.WaitHandle AsyncWaitHandle { get; }
+enum AustinHarris.JsonRpc.JsonRpcVersionPolicy : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+    Lenient = 0
+    Ignore = 1
+    Strict = 2
+class AustinHarris.JsonRpc.ParameterDefaultValue
+    public ctor ParameterDefaultValue(System.String name, System.Object value)
+    public property System.Object Value { get; }
+    public property System.String Name { get; }
+delegate AustinHarris.JsonRpc.PostProcessHandler : System.ICloneable, System.Runtime.Serialization.ISerializable
+    public ctor PostProcessHandler(System.Object object, System.IntPtr method)
+    public method virtual AustinHarris.JsonRpc.JsonRpcException EndInvoke(System.IAsyncResult result)
+    public method virtual AustinHarris.JsonRpc.JsonRpcException Invoke(AustinHarris.JsonRpc.JsonRequest request, AustinHarris.JsonRpc.JsonResponse response, System.Object context)
+    public method virtual System.IAsyncResult BeginInvoke(AustinHarris.JsonRpc.JsonRequest request, AustinHarris.JsonRpc.JsonResponse response, System.Object context, System.AsyncCallback callback, System.Object object)
+delegate AustinHarris.JsonRpc.PreProcessHandler : System.ICloneable, System.Runtime.Serialization.ISerializable
+    public ctor PreProcessHandler(System.Object object, System.IntPtr method)
+    public method virtual AustinHarris.JsonRpc.JsonRpcException EndInvoke(System.IAsyncResult result)
+    public method virtual AustinHarris.JsonRpc.JsonRpcException Invoke(AustinHarris.JsonRpc.JsonRequest request, System.Object context)
+    public method virtual System.IAsyncResult BeginInvoke(AustinHarris.JsonRpc.JsonRequest request, System.Object context, System.AsyncCallback callback, System.Object object)
+sealed class AustinHarris.JsonRpc.RpcBinding : System.IDisposable
+    public method System.Void Dispose()
+    public property System.Collections.Generic.IReadOnlyList<System.String> Methods { get; }
+    public property System.String SessionId { get; }
+enum AustinHarris.JsonRpc.RpcContextFlow : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+    None = 0
+    Flow = 1
+sealed class AustinHarris.JsonRpc.RpcInterfaceBindingOptions
+    public ctor RpcInterfaceBindingOptions()
+    public property AustinHarris.JsonRpc.RpcNameCasing Casing { get; set; }
+    public property System.Boolean Recursive { get; set; }
+    public property System.Func<AustinHarris.JsonRpc.RpcInterfaceMethod, System.Boolean> Include { get; set; }
+    public property System.Func<AustinHarris.JsonRpc.RpcInterfaceMethod, System.String> NameRule { get; set; }
+    public property System.String Prefix { get; set; }
+    public property System.String Separator { get; set; }
+sealed class AustinHarris.JsonRpc.RpcInterfaceMethod
+    public property System.Reflection.MethodInfo MethodInfo { get; }
+    public property System.String DefaultName { get; }
+    public property System.String Leaf { get; }
+    public property System.String[] Path { get; }
+    public property System.Type Interface { get; }
+enum AustinHarris.JsonRpc.RpcNameCasing : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+    Preserve = 0
+    CamelCase = 1
+class AustinHarris.JsonRpc.SMD
+    public ctor SMD()
+    public method static System.Boolean ContainsType(System.Collections.Generic.Dictionary<System.String, System.Object> jo)
+    public method static System.Int32 AddType(System.Collections.Generic.Dictionary<System.String, System.Object> jo)
+    public property AustinHarris.JsonRpc.SMDAdditionalParameters[] parameters { get; set; }
+    public property AustinHarris.JsonRpc.SMDServiceCollection Services { get; }
+    public property System.Boolean additonalParameters { get; set; }
+    public property System.Collections.Generic.Dictionary<System.Int32, System.Collections.Generic.Dictionary<System.String, System.Object>> Types { get; }
+    public property System.String envelope { get; set; }
+    public property System.String target { get; set; }
+    public property System.String transport { get; set; }
+class AustinHarris.JsonRpc.SMDAdditionalParameters
+    public ctor SMDAdditionalParameters(System.String parametername, System.Type type)
+    public property System.Int32 Type { get; set; }
+    public property System.Int32 __type { get; }
+    public property System.String Name { get; set; }
+    public property System.String __name { get; }
+    public property System.Type ObjectType { get; set; }
+class AustinHarris.JsonRpc.SMDResult
+    public ctor SMDResult(System.Type type)
+    public property System.Int32 Type { get; }
+    public property System.Int32 __type { get; }
+class AustinHarris.JsonRpc.SMDService
+    public ctor SMDService(System.String transport, System.String envelope, System.Collections.Generic.Dictionary<System.String, System.Type> parameters, System.Collections.Generic.Dictionary<System.String, System.Object> defaultValues, System.Delegate dele)
+    public field System.Delegate dele
+    public property AustinHarris.JsonRpc.Invocation.RpcMethod Method { get; }
+    public property AustinHarris.JsonRpc.ParameterDefaultValue[] defaultValues { get; }
+    public property AustinHarris.JsonRpc.SMDAdditionalParameters[] parameters { get; }
+    public property AustinHarris.JsonRpc.SMDResult returns { get; }
+    public property System.String envelope { get; }
+    public property System.String transport { get; }
+sealed class AustinHarris.JsonRpc.SMDServiceCollection : System.Collections.Generic.ICollection`1[[System.Collections.Generic.KeyValuePair`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[AustinHarris.JsonRpc.SMDService, AustinHarris.JsonRpc, Version=2.0.1.0, Culture=neutral, PublicKeyToken=e6819c02cf4aec44]], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Collections.Generic.IDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[AustinHarris.JsonRpc.SMDService, AustinHarris.JsonRpc, Version=2.0.1.0, Culture=neutral, PublicKeyToken=e6819c02cf4aec44]], System.Collections.Generic.IEnumerable`1[[System.Collections.Generic.KeyValuePair`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[AustinHarris.JsonRpc.SMDService, AustinHarris.JsonRpc, Version=2.0.1.0, Culture=neutral, PublicKeyToken=e6819c02cf4aec44]], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Collections.Generic.IReadOnlyCollection`1[[System.Collections.Generic.KeyValuePair`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[AustinHarris.JsonRpc.SMDService, AustinHarris.JsonRpc, Version=2.0.1.0, Culture=neutral, PublicKeyToken=e6819c02cf4aec44]], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Collections.Generic.IReadOnlyDictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[AustinHarris.JsonRpc.SMDService, AustinHarris.JsonRpc, Version=2.0.1.0, Culture=neutral, PublicKeyToken=e6819c02cf4aec44]], System.Collections.IEnumerable
+    public ctor SMDServiceCollection()
+    public method System.Boolean Contains(System.Collections.Generic.KeyValuePair<System.String, AustinHarris.JsonRpc.SMDService> item)
+    public method System.Boolean ContainsKey(System.String key)
+    public method System.Boolean Remove(System.Collections.Generic.KeyValuePair<System.String, AustinHarris.JsonRpc.SMDService> item)
+    public method System.Boolean Remove(System.String key)
+    public method System.Boolean TryGetValue(System.String key, out ref AustinHarris.JsonRpc.SMDService value)
+    public method System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<System.String, AustinHarris.JsonRpc.SMDService>> GetEnumerator()
+    public method System.Void Add(System.Collections.Generic.KeyValuePair<System.String, AustinHarris.JsonRpc.SMDService> item)
+    public method System.Void Add(System.String key, AustinHarris.JsonRpc.SMDService value)
+    public method System.Void Clear()
+    public method System.Void CopyTo(System.Collections.Generic.KeyValuePair<System.String, AustinHarris.JsonRpc.SMDService>[] array, System.Int32 arrayIndex)
+    public property AustinHarris.JsonRpc.SMDService Item[System.String key] { get; set; }
+    public property System.Boolean IsReadOnly { get; }
+    public property System.Collections.Generic.ICollection<AustinHarris.JsonRpc.SMDService> Values { get; }
+    public property System.Collections.Generic.ICollection<System.String> Keys { get; }
+    public property System.Int32 Count { get; }
+sealed class AustinHarris.JsonRpc.Serialization.ExceptionInfo
+    public ctor ExceptionInfo()
+    public method static AustinHarris.JsonRpc.Serialization.ExceptionInfo ForResponse(System.Exception ex)
+    public method static AustinHarris.JsonRpc.Serialization.ExceptionInfo From(System.Exception ex)
+    public method static AustinHarris.JsonRpc.Serialization.ExceptionInfo From(System.Exception ex, System.Boolean includeDetails)
+    public property AustinHarris.JsonRpc.Serialization.ExceptionInfo InnerException { get; set; }
+    public property System.Int32 HResult { get; set; }
+    public property System.String ClassName { get; set; }
+    public property System.String Message { get; set; }
+    public property System.String Source { get; set; }
+    public property System.String StackTraceString { get; set; }
+static class AustinHarris.JsonRpc.Serialization.JsonFramer
+    public method static System.Boolean TryReadDocument(ref System.Buffers.ReadOnlySequence<System.Byte> buffer, out ref System.Buffers.ReadOnlySequence<System.Byte> document)
+    public method static System.Int32 FindDocumentEnd(System.ReadOnlySpan<System.Byte> buffer)
+class AustinHarris.JsonRpc.Serialization.JsonRpcBindException : System.Exception, System.Runtime.Serialization.ISerializable
+    public ctor JsonRpcBindException(System.String message)
+    public ctor JsonRpcBindException(System.String message, System.Exception inner)
+enum AustinHarris.JsonRpc.Serialization.JsonRpcIdKind : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+    Absent = 0
+    Null = 1
+    Integer = 2
+    String = 3
+    Invalid = 4
+enum AustinHarris.JsonRpc.Serialization.JsonRpcParamsKind : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+    Absent = 0
+    Array = 1
+    Object = 2
+    Invalid = 3
+abstract class AustinHarris.JsonRpc.Serialization.JsonRpcRequestReader
+    protected ctor JsonRpcRequestReader()
+    public method abstract System.Boolean ParamIsNull(System.Int32 i)
+    public method abstract System.Boolean Select(System.Int32 index)
+    public method abstract System.Boolean TryParse(System.ReadOnlyMemory<System.Byte> utf8Document, out ref System.String error)
+    public method abstract System.Object ReadParam(System.Int32 i, System.Type type)
+    public method abstract System.ReadOnlySpan<System.Byte> ParamNameUtf8(System.Int32 i)
+    public method abstract System.ReadOnlySpan<System.Byte> ParamRaw(System.Int32 i)
+    public method abstract System.Void Release()
+    public method abstract T ReadParam<T>(System.Int32 i)
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcIdKind IdKind { get; }
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcParamsKind ParamsKind { get; }
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcVersionKind VersionKind { get; }
+    public property System.Boolean HasMethod { get; }
+    public property System.Boolean IsBatch { get; }
+    public property System.Int32 Count { get; }
+    public property System.Int32 ParamCount { get; }
+    public property System.Object IdValue { get; }
+    public property System.Object ParamsValue { get; }
+    public property System.ReadOnlyMemory<System.Byte> Document { get; }
+    public property System.ReadOnlySpan<System.Byte> IdRaw { get; }
+    public property System.ReadOnlySpan<System.Byte> MethodUtf8 { get; }
+    public property System.String Method { get; }
+abstract class AustinHarris.JsonRpc.Serialization.JsonRpcSerializer
+    protected ctor JsonRpcSerializer()
+    public method System.Object Deserialize(System.String json, System.Type type)
+    public method System.String Serialize(System.Object value, System.Type type)
+    public method System.String Serialize<T>(T value)
+    public method T Deserialize<T>(System.String json)
+    public method abstract System.Object Read(System.ReadOnlySpan<System.Byte> utf8Json, System.Type type)
+    public method abstract System.Void Write(System.Buffers.IBufferWriter<System.Byte> output, System.Object value, System.Type type)
+    public method abstract System.Void Write<T>(System.Buffers.IBufferWriter<System.Byte> output, T value)
+    public method abstract T Read<T>(System.ReadOnlySpan<System.Byte> utf8Json)
+    public method virtual AustinHarris.JsonRpc.Serialization.JsonRpcRequestReader CreateReader()
+    public property System.Boolean Lenient { get; }
+    public property System.Int32 MaxDepth { get; }
+    public property System.String Name { get; }
+enum AustinHarris.JsonRpc.Serialization.JsonRpcVersionKind : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+    Absent = 0
+    V2 = 1
+    Other = 2
+sealed class AustinHarris.JsonRpc.Serialization.LimitExceededInfo
+    public ctor LimitExceededInfo(System.String limit, System.Int64 maximum)
+    public method System.Void WriteTo(System.Buffers.IBufferWriter<System.Byte> output)
+    public property System.Int64 Maximum { get; }
+    public property System.String Limit { get; }
+sealed class AustinHarris.JsonRpc.Serialization.MethodNotFoundInfo
+    public ctor MethodNotFoundInfo(System.String method)
+    public method System.Void WriteTo(System.Buffers.IBufferWriter<System.Byte> output)
+    public method virtual System.String ToString()
+    public property System.String Method { get; }
+sealed class AustinHarris.JsonRpc.Serialization.ParameterErrorInfo
+    public ctor ParameterErrorInfo(AustinHarris.JsonRpc.Invocation.RpcParameter parameter, System.Int32 index, System.Exception cause)
+    public ctor ParameterErrorInfo(System.String parameter, System.Int32 index, System.Type expectedType, System.Exception cause)
+    public method System.Void WriteTo(System.Buffers.IBufferWriter<System.Byte> output)
+    public method static System.Boolean IsConversionFailure(System.Exception cause)
+    public method static System.String Describe(System.Type type)
+    public method virtual System.String ToString()
+    public property System.Exception Cause { get; }
+    public property System.Int32 Index { get; }
+    public property System.String ExpectedType { get; }
+    public property System.String Message { get; }
+    public property System.String Parameter { get; }
+    public property System.String Reason { get; }
+sealed class AustinHarris.JsonRpc.Serialization.PooledByteBufferWriter : System.Buffers.IBufferWriter`1[[System.Byte, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.IDisposable
+    public ctor PooledByteBufferWriter(System.Int32 initialCapacity = 4096)
+    public method System.Byte[] ToArray()
+    public method System.Memory<System.Byte> GetMemory(System.Int32 sizeHint = 0)
+    public method System.Span<System.Byte> GetSpan(System.Int32 sizeHint = 0)
+    public method System.Void Advance(System.Int32 count)
+    public method System.Void Clear()
+    public method System.Void CopyTo(System.Buffers.IBufferWriter<System.Byte> destination)
+    public method System.Void Dispose()
+    public method System.Void RemoveAt(System.Int32 position)
+    public method System.Void Rewind(System.Int32 position)
+    public method System.Void Write(System.Byte b)
+    public method System.Void Write(System.ReadOnlySpan<System.Byte> bytes)
+    public method virtual System.String ToString()
+    public property System.ArraySegment<System.Byte> WrittenSegment { get; }
+    public property System.Int32 WrittenCount { get; }
+    public property System.ReadOnlyMemory<System.Byte> WrittenMemory { get; }
+    public property System.ReadOnlySpan<System.Byte> WrittenSpan { get; }
+static class AustinHarris.JsonRpc.Serialization.Utf8Json
+    public field static const System.Int32 MaxDateTimeLength
+    public field static const System.String NaNText
+    public field static const System.String NegativeInfinityText
+    public field static const System.String PositiveInfinityText
+    public method static AustinHarris.JsonRpc.Serialization.JsonRpcIdKind ClassifyId(System.ReadOnlySpan<System.Byte> raw)
+    public method static System.Boolean EqualsIgnoreAsciiCase(System.ReadOnlySpan<System.Byte> a, System.ReadOnlySpan<System.Byte> b)
+    public method static System.Boolean TryParseNonFinite(System.ReadOnlySpan<System.Byte> text, out ref System.Double value)
+    public method static System.Boolean TryParseNonFinite(System.String text, out ref System.Double value)
+    public method static System.Int32 FormatDateTime(System.Span<System.Byte> dest, System.DateTime value)
+    public method static System.Int32 FormatDateTimeOffset(System.Span<System.Byte> dest, System.DateTimeOffset value)
+    public method static System.Int32 Hash(System.ReadOnlySpan<System.Byte> bytes)
+    public method static System.Int32 Unescape(System.ReadOnlySpan<System.Byte> contents, System.Span<System.Byte> dest)
+    public method static System.Object IdToObject(System.ReadOnlySpan<System.Byte> raw, AustinHarris.JsonRpc.Serialization.JsonRpcIdKind kind)
+    public method static System.String DecodeString(System.ReadOnlySpan<System.Byte> contents)
+    public method static System.String NonFiniteText(System.Double value)
+    public method static System.String ToStringUtf8(System.ReadOnlySpan<System.Byte> utf8)
+    public method static System.Void WriteAscii(System.Buffers.IBufferWriter<System.Byte> w, System.ReadOnlySpan<System.Char> chars)
+    public method static System.Void WriteBool(AustinHarris.JsonRpc.Serialization.PooledByteBufferWriter w, System.Boolean value)
+    public method static System.Void WriteBool(System.Buffers.IBufferWriter<System.Byte> w, System.Boolean value)
+    public method static System.Void WriteByte(System.Buffers.IBufferWriter<System.Byte> w, System.Byte b)
+    public method static System.Void WriteChar(System.Buffers.IBufferWriter<System.Byte> w, System.Char value)
+    public method static System.Void WriteDateTime(System.Buffers.IBufferWriter<System.Byte> w, System.DateTime value)
+    public method static System.Void WriteDateTimeOffset(System.Buffers.IBufferWriter<System.Byte> w, System.DateTimeOffset value)
+    public method static System.Void WriteDecimal(AustinHarris.JsonRpc.Serialization.PooledByteBufferWriter w, System.Decimal value)
+    public method static System.Void WriteDecimal(System.Buffers.IBufferWriter<System.Byte> w, System.Decimal value)
+    public method static System.Void WriteDouble(AustinHarris.JsonRpc.Serialization.PooledByteBufferWriter w, System.Double value)
+    public method static System.Void WriteDouble(System.Buffers.IBufferWriter<System.Byte> w, System.Double value)
+    public method static System.Void WriteId(System.Buffers.IBufferWriter<System.Byte> w, System.Object id)
+    public method static System.Void WriteInt64(AustinHarris.JsonRpc.Serialization.PooledByteBufferWriter w, System.Int64 value)
+    public method static System.Void WriteInt64(System.Buffers.IBufferWriter<System.Byte> w, System.Int64 value)
+    public method static System.Void WriteNull(AustinHarris.JsonRpc.Serialization.PooledByteBufferWriter w)
+    public method static System.Void WriteNull(System.Buffers.IBufferWriter<System.Byte> w)
+    public method static System.Void WritePropertyName(System.Buffers.IBufferWriter<System.Byte> w, System.String name)
+    public method static System.Void WriteQuotedAscii(System.Buffers.IBufferWriter<System.Byte> w, System.String text)
+    public method static System.Void WriteRaw(System.Buffers.IBufferWriter<System.Byte> w, System.ReadOnlySpan<System.Byte> raw)
+    public method static System.Void WriteSingle(AustinHarris.JsonRpc.Serialization.PooledByteBufferWriter w, System.Single value)
+    public method static System.Void WriteSingle(System.Buffers.IBufferWriter<System.Byte> w, System.Single value)
+    public method static System.Void WriteString(AustinHarris.JsonRpc.Serialization.PooledByteBufferWriter w, System.String value)
+    public method static System.Void WriteString(System.Buffers.IBufferWriter<System.Byte> w, System.ReadOnlySpan<System.Char> value)
+    public method static System.Void WriteString(System.Buffers.IBufferWriter<System.Byte> w, System.String value)
+    public method static System.Void WriteUInt64(System.Buffers.IBufferWriter<System.Byte> w, System.UInt64 value)
+static class AustinHarris.JsonRpc.ServiceBinder
+    public method static AustinHarris.JsonRpc.RpcBinding BindInterface<TInterface>(System.String sessionId, TInterface implementation, AustinHarris.JsonRpc.RpcInterfaceBindingOptions options = null)
+    public method static AustinHarris.JsonRpc.RpcBinding BindInterface<TInterface>(TInterface implementation, AustinHarris.JsonRpc.RpcInterfaceBindingOptions options = null)
+    public method static System.Boolean UnbindMethod(System.String name)
+    public method static System.Boolean UnbindMethod(System.String sessionId, System.String name)
+    public method static System.Void BindMethod(System.String name, System.Delegate implementation, System.String[] parameterNames = null, System.Collections.Generic.IDictionary<System.String, System.Object> defaults = null, AustinHarris.JsonRpc.RpcContextFlow contextFlow = None)
+    public method static System.Void BindMethod(System.String name, System.Delegate implementation, System.String[] parameterNames, System.Collections.Generic.IDictionary<System.String, System.Object> defaults)
+    public method static System.Void BindMethod(System.String sessionId, System.String name, System.Delegate implementation, System.String[] parameterNames = null, System.Collections.Generic.IDictionary<System.String, System.Object> defaults = null, AustinHarris.JsonRpc.RpcContextFlow contextFlow = None)
+    public method static System.Void BindMethod(System.String sessionId, System.String name, System.Delegate implementation, System.String[] parameterNames, System.Collections.Generic.IDictionary<System.String, System.Object> defaults)
+    public method static System.Void BindService(System.String sessionId, System.Object instance)
+    public method static System.Void BindService(System.String sessionId, System.Type serviceType, System.Func<System.Object, System.Object> resolve)
+    public method static System.Void BindService<T>()
+    public method static System.Void BindService<T>(System.String sessionId)
+## AustinHarris.JsonRpc.AspNetCore 2.0.1.0 PublicKeyToken=e6819c02cf4aec44
+   informational=2.0.1
+class AustinHarris.JsonRpc.AspNetCore.JsonRpcConnectionHandler : Microsoft.AspNetCore.Connections.ConnectionHandler
+    public ctor JsonRpcConnectionHandler(Microsoft.Extensions.Options.IOptions<AustinHarris.JsonRpc.AspNetCore.JsonRpcOptions> options, System.IServiceProvider services = null)
+    public method virtual System.Threading.Tasks.Task OnConnectedAsync(Microsoft.AspNetCore.Connections.ConnectionContext connection)
+static class AustinHarris.JsonRpc.AspNetCore.JsonRpcEndpoint
+    public method static System.Threading.Tasks.Task HandleAsync(Microsoft.AspNetCore.Http.HttpContext http, AustinHarris.JsonRpc.AspNetCore.JsonRpcOptions options)
+class AustinHarris.JsonRpc.AspNetCore.JsonRpcOptions
+    public ctor JsonRpcOptions()
+    public property AustinHarris.JsonRpc.Serialization.JsonRpcSerializer Serializer { get; set; }
+    public property System.Boolean EnableAsyncMethods { get; set; }
+    public property System.Boolean NoContentForNotifications { get; set; }
+    public property System.Func<Microsoft.AspNetCore.Http.HttpContext, System.Object> ContextFactory { get; set; }
+    public property System.Func<Microsoft.AspNetCore.Http.HttpContext, System.String> SessionSelector { get; set; }
+    public property System.Func<System.Object, System.IServiceProvider> ServiceProviderSelector { get; set; }
+    public property System.Int64 MaxRequestBytes { get; set; }
+    public property System.String ResponseContentType { get; set; }
+    public property System.String SessionId { get; set; }
+static class AustinHarris.JsonRpc.AspNetCore.JsonRpcServiceCollectionExtensions
+    public method static Microsoft.AspNetCore.Builder.IEndpointConventionBuilder MapJsonRpc(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, System.String pattern = /jsonrpc, AustinHarris.JsonRpc.AspNetCore.JsonRpcOptions options = null)
+    public method static Microsoft.Extensions.DependencyInjection.IServiceCollection AddJsonRpc(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<AustinHarris.JsonRpc.AspNetCore.JsonRpcOptions> configure = null)
+    public method static Microsoft.Extensions.DependencyInjection.IServiceCollection AddJsonRpcService<TService>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime, System.String sessionId = null)
+    public method static Microsoft.Extensions.DependencyInjection.IServiceCollection AddJsonRpcService<TService>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.String sessionId = null)
+    public method static Microsoft.Extensions.DependencyInjection.IServiceCollection AddJsonRpcServicesFromAssembly(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Reflection.Assembly assembly, Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime, System.String sessionId = null)
+    public method static Microsoft.Extensions.DependencyInjection.IServiceCollection AddJsonRpcServicesFromAssembly(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Reflection.Assembly assembly, System.String sessionId = null)
+## AustinHarris.JsonRpc.SystemTextJson 2.0.1.0 PublicKeyToken=e6819c02cf4aec44
+   informational=2.0.1
+sealed class AustinHarris.JsonRpc.SystemTextJson.JsonRpcBooleanConverter : System.Text.Json.Serialization.JsonConverter`1[[System.Boolean, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]
+    public ctor JsonRpcBooleanConverter()
+    public method virtual System.Boolean Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+    public method virtual System.Void Write(System.Text.Json.Utf8JsonWriter writer, System.Boolean value, System.Text.Json.JsonSerializerOptions options)
+sealed class AustinHarris.JsonRpc.SystemTextJson.JsonRpcCharConverter : System.Text.Json.Serialization.JsonConverter`1[[System.Char, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]
+    public ctor JsonRpcCharConverter()
+    public method virtual System.Char Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+    public method virtual System.Void Write(System.Text.Json.Utf8JsonWriter writer, System.Char value, System.Text.Json.JsonSerializerOptions options)
+static class AustinHarris.JsonRpc.SystemTextJson.JsonRpcConverters
+    public method static System.Boolean ContainsAll(System.Text.Json.JsonSerializerOptions options)
+    public method static System.Collections.Generic.IEnumerable<System.Text.Json.Serialization.JsonConverter> Create()
+    public method static System.Void AddMissing(System.Text.Json.JsonSerializerOptions options)
+sealed class AustinHarris.JsonRpc.SystemTextJson.JsonRpcDateTimeConverter : System.Text.Json.Serialization.JsonConverter`1[[System.DateTime, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]
+    public ctor JsonRpcDateTimeConverter()
+    public method virtual System.DateTime Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+    public method virtual System.Void Write(System.Text.Json.Utf8JsonWriter writer, System.DateTime value, System.Text.Json.JsonSerializerOptions options)
+sealed class AustinHarris.JsonRpc.SystemTextJson.JsonRpcDateTimeOffsetConverter : System.Text.Json.Serialization.JsonConverter`1[[System.DateTimeOffset, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]
+    public ctor JsonRpcDateTimeOffsetConverter()
+    public method virtual System.DateTimeOffset Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+    public method virtual System.Void Write(System.Text.Json.Utf8JsonWriter writer, System.DateTimeOffset value, System.Text.Json.JsonSerializerOptions options)
+sealed class AustinHarris.JsonRpc.SystemTextJson.JsonRpcNumberConverterFactory : System.Text.Json.Serialization.JsonConverterFactory
+    public ctor JsonRpcNumberConverterFactory()
+    public method virtual System.Boolean CanConvert(System.Type typeToConvert)
+    public method virtual System.Text.Json.Serialization.JsonConverter CreateConverter(System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+sealed class AustinHarris.JsonRpc.SystemTextJson.SystemTextJsonRpcSerializer : AustinHarris.JsonRpc.Serialization.JsonRpcSerializer
+    public ctor SystemTextJsonRpcSerializer()
+    public ctor SystemTextJsonRpcSerializer(System.Text.Json.JsonSerializerOptions options)
+    public method static System.Text.Json.JsonSerializerOptions CreateDefaultOptions()
+    public method virtual System.Object Read(System.ReadOnlySpan<System.Byte> utf8Json, System.Type type)
+    public method virtual System.Void Write(System.Buffers.IBufferWriter<System.Byte> output, System.Object value, System.Type type)
+    public method virtual System.Void Write<T>(System.Buffers.IBufferWriter<System.Byte> output, T value)
+    public method virtual T Read<T>(System.ReadOnlySpan<System.Byte> utf8Json)
+    public property System.Int32 MaxDepth { get; }
+    public property System.String Name { get; }
+    public property System.Text.Json.JsonSerializerOptions DefaultOptions { get; }
+    public property System.Text.Json.JsonSerializerOptions EffectiveOptions { get; }
+    public property System.Text.Json.JsonSerializerOptions Options { get; }
+## AustinHarris.JsonRpc.Newtonsoft 2.0.1.0 PublicKeyToken=e6819c02cf4aec44
+   informational=2.0.1
+static class AustinHarris.JsonRpc.Newtonsoft.NewtonsoftJsonRpc
+    public method static AustinHarris.JsonRpc.Newtonsoft.NewtonsoftJsonRpcSerializer SerializerFor(Newtonsoft.Json.JsonSerializerSettings settings)
+    public method static System.String ProcessSync(System.String jsonRpc, System.Object context, Newtonsoft.Json.JsonSerializerSettings settings)
+    public method static System.String ProcessSync(System.String sessionId, System.String jsonRpc, System.Object context, Newtonsoft.Json.JsonSerializerSettings settings)
+    public method static System.Threading.Tasks.Task<System.String> Process(System.String jsonRpc, System.Object context, Newtonsoft.Json.JsonSerializerSettings settings)
+    public method static System.Threading.Tasks.Task<System.String> Process(System.String sessionId, System.String jsonRpc, System.Object context, Newtonsoft.Json.JsonSerializerSettings settings)
+    public method static System.Void Process(AustinHarris.JsonRpc.JsonRpcStateAsync async, System.Object context, Newtonsoft.Json.JsonSerializerSettings settings)
+    public method static System.Void Process(System.String sessionId, AustinHarris.JsonRpc.JsonRpcStateAsync async, System.Object context, Newtonsoft.Json.JsonSerializerSettings settings)
+sealed class AustinHarris.JsonRpc.Newtonsoft.NewtonsoftJsonRpcSerializer : AustinHarris.JsonRpc.Serialization.JsonRpcSerializer
+    public ctor NewtonsoftJsonRpcSerializer()
+    public ctor NewtonsoftJsonRpcSerializer(Newtonsoft.Json.JsonSerializerSettings settings)
+    public method virtual System.Object Read(System.ReadOnlySpan<System.Byte> utf8Json, System.Type type)
+    public method virtual System.Void Write(System.Buffers.IBufferWriter<System.Byte> output, System.Object value, System.Type type)
+    public method virtual System.Void Write<T>(System.Buffers.IBufferWriter<System.Byte> output, T value)
+    public method virtual T Read<T>(System.ReadOnlySpan<System.Byte> utf8Json)
+    public property Newtonsoft.Json.JsonSerializer Serializer { get; }
+    public property Newtonsoft.Json.JsonSerializerSettings Settings { get; }
+    public property System.Boolean Lenient { get; }
+    public property System.Int32 MaxDepth { get; }
+    public property System.String Name { get; }

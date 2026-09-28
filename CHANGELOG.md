@@ -8,6 +8,12 @@ the package pages on NuGet link here.
 Versions follow [Semantic Versioning](https://semver.org/) for the public API and the documented wire
 behaviour: a breaking change to either means a new major version.
 
+## 2.0.1 (2026-09-28)
+
+### Fixed
+
+- The built-in serializer's tokenizer is a port of [jsmn](https://github.com/zserge/jsmn) (MIT, copyright Serge A. Zaitsev), whose copyright and permission notice was missing from the tree and the package. `THIRD-PARTY-NOTICES.txt` at the repository root now carries it, ships in the `AustinHarris.JsonRpc` package, and `JsmnTokenizer.cs` opens with the notice; the READMEs and the reference name the origin.
+
 ## 2.0.0 (2026-09-28)
 
 ### Added
