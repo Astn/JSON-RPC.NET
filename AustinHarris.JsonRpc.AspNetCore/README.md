@@ -138,7 +138,10 @@ builder.WebHost.ConfigureKestrel(k =>
 
 Clients write JSON documents back to back (whitespace or newlines between them are fine) and read the responses
 in the same order, also back to back with no newline or `Content-Length` prefix, so the client must parse one
-complete JSON value at a time. Notifications produce nothing. The `ConnectionContext` is the RPC context.
+complete JSON value at a time. A client that expects newline-delimited or `Content-Length`-framed replies (an LSP
+or MCP stdio client) is not served by this handler; a host that adds the framing over any `Stream` is in
+[samples/EmbeddedHost](../samples/EmbeddedHost). Notifications produce nothing. The `ConnectionContext` is the RPC
+context.
 
 The framer accepts strict JSON only, even with the Json.NET serializer or a lenient `JsmnSerializer` selected.
 A document larger than `MaxRequestBytes` aborts the connection. Documents on one connection are processed one at

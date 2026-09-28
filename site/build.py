@@ -61,6 +61,8 @@ PAGES = [
      "The System.Text.Json serializer package: options, source generation and UTF-8 readers on the request bytes."),
     ("wasm.html", "samples/WasmHost/README.md", "WebAssembly sample", "WebAssembly sample", "More",
      "The server running inside the browser as Blazor WebAssembly, with a benchmark against plain interop."),
+    ("embedded.html", "samples/EmbeddedHost/README.md", "Embedded host sample", "Embedded host sample", "More",
+     "The server hosted without ASP.NET Core: HttpListener, a named pipe with newline-delimited documents, and a thread that owns the state."),
     ("micro.html", "benchmarks/Micro/README.md", "Micro-benchmarks", "Micro-benchmarks", "More",
      "BenchmarkDotNet timings of one request per shape, with allocation columns."),
 ]

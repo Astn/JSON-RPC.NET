@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Hosting the core in a process that is not an ASP.NET Core application: a plugin, an add-in, a desktop or
+       editor process, a daemon. Three hosts over the same methods, each a page of code: HttpListener, a named pipe
+       with newline-delimited documents and separate read and write loops, and a single thread that owns the state.
+       `dotnet run - - check` runs all three against a client and reports. Not packed, not shipped. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>EmbeddedHost</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Json-Rpc\AustinHarris.JsonRpc.csproj" />
+  </ItemGroup>
+
+</Project>
