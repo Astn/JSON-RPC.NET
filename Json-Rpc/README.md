@@ -135,25 +135,26 @@ The synchronous entry points do not await those methods.
 
 ## Performance
 
-These results compare 1.2.3 and 2.0 with the same five requests on the same machine in one session.
-The 2.0 runs used the built-in serializer on an AMD Ryzen 7 7800X3D with .NET 10, Release and Server GC.
+These results compare 1.2.3 and 2.0 with the same five requests on the same machine in one benchmark job.
+The 2.0 runs used the built-in serializer on a Hugging Face Jobs `cpu-performance` host (AMD EPYC 7R13, 32 cores) with .NET 10, Release and Server GC.
+Each range is the low and high over the job's runs; the ratios are of the medians.
 
 ![JSON-RPC.Net 1.2.3 and 2.0 throughput through the string and byte entry points](https://raw.githubusercontent.com/Astn/JSON-RPC.NET/master/benchmarks/charts/headline-1x-vs-2.svg)
 
 <!-- benchmarks:headline -->
 | Path | RPC/s | Against 1.2.3 |
 | --- | ---: | ---: |
-| 1.2.3, `Task<string> Process(string)`, thread pool, best batch size | 3.08 M | |
-| 2.0, the same string API and the same loop | 13.3 M | 4.3× |
-| 2.0, `Process(bytes)`, 16 dedicated threads | 31.7 M | 10.3× |
-| 2.0, `ProcessAsync(bytes)`, 16 awaited workers | 32.1 M | 10.4× |
+| 1.2.3, `Task<string> Process(string)`, thread pool, best batch size | 1.29 M to 2.41 M | |
+| 2.0, the same string API and the same loop | 9.83 M to 11.1 M | 6.0× |
+| 2.0, `Process(bytes)`, 32 dedicated threads | 44.2 M to 45.7 M | 24.3× |
+| 2.0, `ProcessAsync(bytes)`, 32 awaited workers | 36.3 M to 40.5 M | 20.7× |
 
 <!-- /benchmarks:headline -->
 
 These measurements cover the library without a transport.
 The asynchronous byte row uses methods that complete inline.
 For Kestrel TCP with 256 requests in flight per connection and `EnableAsyncMethods = false`,
-the measured range is 14.3 M to 16.5 M RPC/s on loopback, with clients and server on the same machine.
+the measured figure is 18.5 M RPC/s on loopback, with clients and server on the same machine.
 
 See the [benchmark tables](https://astn.github.io/JSON-RPC.NET/#benchmarks) for conditions
 and the [benchmark explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) for the data.

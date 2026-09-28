@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "machine": "AMD Ryzen 7 7800X3D (8 cores / 16 threads, 4.2 GHz), 64 GB, Windows 11",
-  "runtime": ".NET 10, Release, Server GC, built-in serializer",
+  "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+  "runtime": ".NET 10.0.12, Release, Server GC, built-in serializer",
   "summary": [
     { "what": "Library alone, {workers} threads", "api": "`Process(bytes)`, dedicated threads", "source": "sync:ours-sync:last", "details": "[Sync](#sync-the-library-alone)" },
     { "what": "Library alone, {workers} workers", "api": "`ProcessAsync(bytes)`, awaited workers, methods that complete inline", "source": "asyncn:asyncn-sync-none,asyncn-task-flow,asyncn-task-none,asyncn-valuetask-flow,asyncn-valuetask-none:range", "details": "[Async](#async-processasync-awaited-workers); the spread is across registrations, not runs" },
@@ -16,39 +16,43 @@
   "sets": {
     "headline": {
       "title": "JSON-RPC.Net 1.2.3 and 2.0 on one machine",
-      "date": "2026-09-25",
-      "source": "README.md, Performance table; branch async-scratch-cache",
-      "harness": "benchmarks/Baseline (1.2.3 from NuGet), then TestServer_Console menu entry t, --sync 3 16 and --async 3 16, one session",
+      "date": "2026-09-28",
+      "source": "Hugging Face job 6ab9b3936b030d633f69b0fb, commit 6c3c272",
+      "harness": "benchmarks/Baseline (1.2.3 from NuGet), TestServer_Console menu entry t, --sync 3 and --async 3 32",
       "workload": "the five benchmark requests; the string rows are the best batch size of the thread-pool loop, the byte rows a loop on {workers} dedicated threads or {workers} awaited workers",
-      "conditions": "idle box; one run per row",
-      "policy": "one run per row, all in one session; the day-to-day ranges are the sync, async, legacy and kestrel sets",
-      "workers": 16,
-      "subtitle": ["The same five requests on one machine in one session, {date}: Ryzen 7 7800X3D, .NET 10, Server GC, idle box.", "String rows: the best batch size of the thread-pool loop. Byte rows: {workers} dedicated threads or {workers} awaited workers in a loop."],
-      "alt": "JSON-RPC.Net 1.2.3 and 2.0 on one machine, one run per row on {date}: {p:headline-123-string} requests per second through the 1.2.3 string API, {p:headline-20-string} through the same API on 2.0, and {p:headline-20-sync} and {p:headline-20-async} through the 2.0 byte entry points",
+      "conditions": "Hugging Face Jobs cpu-performance, the whole 32-core host (cgroup quota 32 of 32 CPUs), one job on 2026-09-28",
+      "policy": "2 runs of benchmarks/Baseline and 3 runs of the t entry, each at its best batch size by median; 2 runs of --sync and 2 runs of --async at 32; low to high over the runs",
+      "workers": 32,
+      "subtitle": ["The same five requests on one machine in one job, {date}: {host}, .NET 10, Server GC.", "String rows: the best batch size of the thread-pool loop. Byte rows: {workers} dedicated threads or {workers} awaited workers in a loop."],
+      "alt": "JSON-RPC.Net 1.2.3 and 2.0 on one machine, low to high over the runs of one job on {date}: {p:headline-123-string} requests per second through the 1.2.3 string API, {p:headline-20-string} through the same API on 2.0, and {p:headline-20-sync} and {p:headline-20-async} through the 2.0 byte entry points",
       "groups": [
         { "heading": "1.2.3, the last 1.x release on NuGet", "rule": false, "series": ["headline-123-string"] },
         { "heading": "2.0, the same string API and the same loop", "rule": false, "series": ["headline-20-string"] },
         { "heading": "2.0, the byte entry points", "rule": false, "series": ["headline-20-sync", "headline-20-async"] }
       ],
       "series": [
-        { "id": "headline-123-string", "label": "Task<string> Process(string), thread pool", "note": "best batch size, {batch}; Json.NET on every request", "family": "scale", "low": 3080000, "high": 3080000, "status": "single", "published": "3.08 M", "row": "1.2.3, `Task<string> Process(string)`, thread pool, best batch size", "batch": 1200 },
-        { "id": "headline-20-string", "label": "Task<string> Process(string), thread pool", "note": "best batch size, {batch}; the 1.x overloads, kept for compatibility", "family": "ours", "low": 13300000, "high": 13300000, "status": "single", "published": "13.3 M", "row": "2.0, the same string API and the same loop", "batch": 36000, "against": "4.3×" },
-        { "id": "headline-20-sync", "label": "Process(bytes), {workers} dedicated threads", "note": "the library alone; 0 B per numeric request", "family": "ours", "low": 31700000, "high": 31700000, "status": "single", "published": "31.7 M", "row": "2.0, `Process(bytes)`, {workers} dedicated threads", "against": "10.3×" },
-        { "id": "headline-20-async", "label": "ProcessAsync(bytes), {workers} awaited workers", "note": "ValueTask<T> methods, RpcContextFlow.None; {bytes} B per request", "family": "ours", "low": 32100000, "high": 32100000, "status": "single", "published": "32.1 M", "row": "2.0, `ProcessAsync(bytes)`, {workers} awaited workers", "bytes": 6, "against": "10.4×" }
-      ]
+        { "id": "headline-123-string", "label": "Task<string> Process(string), thread pool", "note": "best batch size, {batch}; Json.NET on every request", "family": "scale", "low": 1289438, "high": 2412083, "status": "range", "published": "1.29 M to 2.41 M", "row": "1.2.3, `Task<string> Process(string)`, thread pool, best batch size", "batch": 6000, "median": 1850760.5, "values": [1289438, 2412083], "n": 2, "cpu": { "system": 68.5, "process": 68.5 } },
+        { "id": "headline-20-string", "label": "Task<string> Process(string), thread pool", "note": "best batch size, {batch}; the 1.x overloads, kept for compatibility", "family": "ours", "low": 9825595, "high": 11144579, "status": "range", "published": "9.83 M to 11.1 M", "row": "2.0, the same string API and the same loop", "batch": 6000, "median": 11110511, "values": [11110511, 11144579, 9825595], "n": 3, "cpu": { "system": 87.5, "process": 87.5 }, "against": "6.0×" },
+        { "id": "headline-20-sync", "label": "Process(bytes), {workers} dedicated threads", "note": "the library alone; 0 B per numeric request", "family": "ours", "low": 44239898, "high": 45671189, "status": "range", "published": "44.2 M to 45.7 M", "row": "2.0, `Process(bytes)`, {workers} dedicated threads", "median": 44955543.5, "values": [44239898, 45671189], "n": 2, "cpu": { "system": 91.4, "process": 91.4 }, "against": "24.3×" },
+        { "id": "headline-20-async", "label": "ProcessAsync(bytes), {workers} awaited workers", "note": "ValueTask<T> methods, RpcContextFlow.None; {bytes} B per request", "family": "ours", "low": 36255749, "high": 40521407, "status": "range", "published": "36.3 M to 40.5 M", "row": "2.0, `ProcessAsync(bytes)`, {workers} awaited workers", "bytes": 6, "median": 38388578, "values": [36255749, 40521407], "n": 2, "cpu": { "system": 96.9, "process": 96.9 }, "against": "20.7×" }
+      ],
+      "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+      "runtime": ".NET 10.0.12, Release, Server GC",
+      "cores": 32,
+      "run_count": 9
     },
     "sync": {
       "title": "JSON-RPC.Net alone, by worker threads",
-      "date": "2026-09-25",
-      "source": "README.md, Sync table; branch async-scratch-cache",
-      "harness": "TestServer_Console --sync 3, and --sync 2 <n> for single rows",
+      "date": "2026-09-28",
+      "source": "Hugging Face job 6ab9b3936b030d633f69b0fb, commit 6c3c272",
+      "harness": "TestServer_Console --sync 3 (1, 2, 4, ... threads up to 32)",
       "workload": "the five benchmark requests through the byte-level JsonRpcProcessor.Process in a loop; no scheduler, no transport",
-      "conditions": "idle box; three 3 s runs of --sync 3 in one session",
-      "policy": "low and high over three runs; ns per request is the harness's reported figure for one of them",
-      "workers": 16,
-      "subtitle": ["Byte entry point in a loop, no scheduler, no transport. Ryzen 7 7800X3D, .NET 10, Server GC, two sweeps on an idle box."],
+      "conditions": "Hugging Face Jobs cpu-performance, the whole 32-core host (cgroup quota 32 of 32 CPUs), one job on 2026-09-28",
+      "policy": "low, high and median over 2 runs; ns per request per thread is the median of the runs' reported figures",
+      "workers": 32,
+      "subtitle": ["Byte entry point in a loop, no scheduler, no transport. {host}, .NET 10, Server GC, {runs_word} runs."],
       "alt": "JSON-RPC.Net alone, by worker threads: aggregate requests per second as a low-to-high band, and the reported ns per request per thread",
-      "x": { "name": "worker threads", "values": [1, 2, 4, 8, 16], "caption": "worker threads (each step doubles; 8 physical cores, 16 with SMT)" },
+      "x": { "name": "worker threads", "values": [1, 2, 4, 8, 16, 32], "caption": "worker threads (each step doubles; {cores} cores)" },
       "series": [
         {
           "id": "ours-sync",
@@ -56,97 +60,117 @@
           "family": "ours",
           "note": "0 bytes for numeric shapes, one string for `StringMe`",
           "points": [
-            { "low": 4570000, "high": 5000000, "status": "range", "published": "4.6 M to 5.0 M", "ns": 214 },
-            { "low": 8500000, "high": 9100000, "status": "range", "published": "8.5 M to 9.1 M", "ns": 235 },
-            { "low": 16600000, "high": 17100000, "status": "range", "published": "16.6 M to 17.1 M", "ns": 234 },
-            { "low": 22800000, "high": 27700000, "status": "range", "published": "22.8 M to 27.7 M", "ns": 292 },
-            { "low": 31700000, "high": 36400000, "status": "range", "published": "31.7 M to 36.4 M", "ns": 439 }
+            { "low": 3174372, "high": 3175966, "median": 3175169, "values": [3175966, 3174372], "n": 2, "status": "range", "published": "3.17 M to 3.18 M", "cpu": { "system": 3.2, "process": 3.2 }, "ns": 315 },
+            { "low": 4310687, "high": 4660256, "median": 4485471.5, "values": [4660256, 4310687], "n": 2, "status": "range", "published": "4.31 M to 4.66 M", "cpu": { "system": 6.3, "process": 6.3 }, "ns": 446 },
+            { "low": 10665149, "high": 11951987, "median": 11308568, "values": [11951987, 10665149], "n": 2, "status": "range", "published": "10.7 M to 12 M", "cpu": { "system": 12.4, "process": 12.4 }, "ns": 355 },
+            { "low": 18372188, "high": 19841401, "median": 19106794.5, "values": [19841401, 18372188], "n": 2, "status": "range", "published": "18.4 M to 19.8 M", "cpu": { "system": 24.6, "process": 24.6 }, "ns": 419 },
+            { "low": 34467034, "high": 35823680, "median": 35145357, "values": [34467034, 35823680], "n": 2, "status": "range", "published": "34.5 M to 35.8 M", "cpu": { "system": 47.9, "process": 47.9 }, "ns": 456 },
+            { "low": 44239898, "high": 45671189, "median": 44955543.5, "values": [44239898, 45671189], "n": 2, "status": "range", "published": "44.2 M to 45.7 M", "cpu": { "system": 91.4, "process": 91.4 }, "ns": 712 }
           ]
         }
-      ]
+      ],
+      "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+      "runtime": ".NET 10.0.12, Release, Server GC",
+      "cores": 32,
+      "run_count": 2
     },
     "asyncn": {
       "title": "ProcessAsync, {workers} awaited workers, by registration",
-      "date": "2026-09-25",
-      "source": "README.md, Async table, 16-worker column; branch async-scratch-cache",
-      "harness": "TestServer_Console --async 3 16",
+      "date": "2026-09-28",
+      "source": "Hugging Face job 6ab9b3936b030d633f69b0fb, commit 6c3c272",
+      "harness": "TestServer_Console --async 3 32",
       "workload": "the five benchmark requests (yieldsOnce: one request) through the byte-level JsonRpcProcessor.ProcessAsync from Task.Run workers that await each call",
-      "conditions": "idle box; one 3 s run per row",
-      "policy": "one run per row",
-      "workers": 16,
+      "conditions": "Hugging Face Jobs cpu-performance, the whole 32-core host (cgroup quota 32 of 32 CPUs), one job on 2026-09-28",
+      "policy": "low, high and median over 2 runs of each row",
+      "workers": 32,
       "groups": [
         { "heading": "methods that complete inline, RpcContextFlow.None", "rule": false, "series": ["asyncn-sync-none", "asyncn-task-none", "asyncn-valuetask-none"] },
         { "heading": "methods that complete inline, RpcContextFlow.Flow", "rule": false, "series": ["asyncn-task-flow", "asyncn-valuetask-flow"] },
         { "heading": "one real suspension per request (yieldsOnce)", "rule": true, "series": ["asyncn-yield-none", "asyncn-yield-flow"] }
       ],
       "series": [
-        { "id": "asyncn-sync-none", "label": "synchronous methods, None", "note": "{bytes} B per request, the StringMe result string", "family": "ours", "low": 24600000, "high": 24600000, "status": "single", "published": "24.6 M", "bytes": 6 },
-        { "id": "asyncn-task-flow", "label": "Task<T>, Flow", "note": "{bytes} B per request", "family": "ours", "low": 22200000, "high": 22200000, "status": "single", "published": "22.2 M", "row": "`Task<T>`, Flow", "bytes": 251 },
-        { "id": "asyncn-task-none", "label": "Task<T>, None", "note": "{bytes} B per request, the service's own Task.FromResult", "family": "ours", "low": 30000000, "high": 30000000, "status": "single", "published": "30.0 M", "row": "`Task<T>`, None", "bytes": 67 },
-        { "id": "asyncn-valuetask-flow", "label": "ValueTask<T>, Flow", "note": "{bytes} B per request", "family": "ours", "low": 23400000, "high": 23400000, "status": "single", "published": "23.4 M", "row": "`ValueTask<T>`, Flow", "bytes": 190 },
-        { "id": "asyncn-valuetask-none", "label": "ValueTask<T>, None", "note": "{bytes} B per request", "family": "ours", "low": 32100000, "high": 32100000, "status": "single", "published": "32.1 M", "row": "`ValueTask<T>`, None", "bytes": 6 },
-        { "id": "asyncn-yield-flow", "label": "yieldsOnce, Flow", "note": "{bytes} B per request", "family": "ours", "low": 6890000, "high": 6890000, "status": "single", "published": "6.89 M", "row": "`yieldsOnce`, Flow", "bytes": 741 },
-        { "id": "asyncn-yield-none", "label": "yieldsOnce, None", "note": "{bytes} B per request", "family": "ours", "low": 8960000, "high": 8960000, "status": "single", "published": "8.96 M", "row": "`yieldsOnce`, None", "bytes": 559 }
-      ]
+        { "id": "asyncn-sync-none", "label": "synchronous methods, None", "note": "{bytes} B per request, the StringMe result string", "family": "ours", "low": 26710958, "high": 28656762, "status": "range", "published": "26.7 M to 28.7 M", "bytes": 6, "median": 27683860, "values": [26710958, 28656762], "n": 2, "cpu": { "system": 93.4, "process": 93.4 } },
+        { "id": "asyncn-task-flow", "label": "Task<T>, Flow", "note": "{bytes} B per request", "family": "ours", "low": 27004517, "high": 27572270, "status": "range", "published": "27 M to 27.6 M", "row": "`Task<T>`, Flow", "bytes": 251, "median": 27288393.5, "values": [27004517, 27572270], "n": 2, "cpu": { "system": 79.8, "process": 79.8 } },
+        { "id": "asyncn-task-none", "label": "Task<T>, None", "note": "{bytes} B per request, the service's own Task.FromResult", "family": "ours", "low": 34390026, "high": 35453995, "status": "range", "published": "34.4 M to 35.5 M", "row": "`Task<T>`, None", "bytes": 67, "median": 34922010.5, "values": [35453995, 34390026], "n": 2, "cpu": { "system": 93, "process": 93 } },
+        { "id": "asyncn-valuetask-flow", "label": "ValueTask<T>, Flow", "note": "{bytes} B per request", "family": "ours", "low": 28613257, "high": 31438045, "status": "range", "published": "28.6 M to 31.4 M", "row": "`ValueTask<T>`, Flow", "bytes": 190, "median": 30025651, "values": [28613257, 31438045], "n": 2, "cpu": { "system": 84.7, "process": 84.7 } },
+        { "id": "asyncn-valuetask-none", "label": "ValueTask<T>, None", "note": "{bytes} B per request", "family": "ours", "low": 36255749, "high": 40521407, "status": "range", "published": "36.3 M to 40.5 M", "row": "`ValueTask<T>`, None", "bytes": 6, "median": 38388578, "values": [36255749, 40521407], "n": 2, "cpu": { "system": 96.9, "process": 96.9 } },
+        { "id": "asyncn-yield-flow", "label": "yieldsOnce, Flow", "note": "{bytes} B per request", "family": "ours", "low": 2739377, "high": 2775513, "status": "range", "published": "2.74 M to 2.78 M", "row": "`yieldsOnce`, Flow", "bytes": 377, "median": 2757445, "values": [2775513, 2739377], "n": 2, "cpu": { "system": 89.8, "process": 89.8 } },
+        { "id": "asyncn-yield-none", "label": "yieldsOnce, None", "note": "{bytes} B per request", "family": "ours", "low": 2548190, "high": 2552560, "status": "range", "published": "2.55 M", "row": "`yieldsOnce`, None", "bytes": 802, "median": 2550375, "values": [2552560, 2548190], "n": 2, "cpu": { "system": 91.5, "process": 91.5 } }
+      ],
+      "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+      "runtime": ".NET 10.0.12, Release, Server GC",
+      "cores": 32,
+      "run_count": 2
     },
     "async1": {
       "title": "ProcessAsync, one awaited worker, by registration",
-      "date": "2026-09-25",
-      "source": "README.md, Async table, 1-worker column; branch async-scratch-cache",
+      "date": "2026-09-28",
+      "source": "Hugging Face job 6ab9b3936b030d633f69b0fb, commit 6c3c272",
       "harness": "TestServer_Console --async 3 1",
       "workload": "as asyncn, one worker",
-      "conditions": "idle box; one 3 s run per row",
-      "policy": "one run per row",
+      "conditions": "Hugging Face Jobs cpu-performance, the whole 32-core host (cgroup quota 32 of 32 CPUs), one job on 2026-09-28",
+      "policy": "low, high and median over 2 runs of each row",
       "groups": [
         { "heading": "methods that complete inline, RpcContextFlow.None", "rule": false, "series": ["async1-sync-none", "async1-task-none", "async1-valuetask-none"] },
         { "heading": "methods that complete inline, RpcContextFlow.Flow", "rule": false, "series": ["async1-task-flow", "async1-valuetask-flow"] },
         { "heading": "one real suspension per request (yieldsOnce)", "rule": true, "series": ["async1-yield-none", "async1-yield-flow"] }
       ],
       "series": [
-        { "id": "async1-sync-none", "label": "synchronous methods, None", "family": "ours", "low": 3470000, "high": 3470000, "status": "single", "published": "3.47 M", "bytes": 6 },
-        { "id": "async1-task-flow", "label": "Task<T>, Flow", "family": "ours", "low": 2940000, "high": 2940000, "status": "single", "published": "2.94 M", "row": "`Task<T>`, Flow", "bytes": 251 },
-        { "id": "async1-task-none", "label": "Task<T>, None", "family": "ours", "low": 3470000, "high": 3470000, "status": "single", "published": "3.47 M", "row": "`Task<T>`, None", "bytes": 67 },
-        { "id": "async1-valuetask-flow", "label": "ValueTask<T>, Flow", "family": "ours", "low": 3110000, "high": 3110000, "status": "single", "published": "3.11 M", "row": "`ValueTask<T>`, Flow", "bytes": 190 },
-        { "id": "async1-valuetask-none", "label": "ValueTask<T>, None", "family": "ours", "low": 3760000, "high": 3760000, "status": "single", "published": "3.76 M", "row": "`ValueTask<T>`, None", "bytes": 6 },
-        { "id": "async1-yield-flow", "label": "yieldsOnce, Flow", "family": "ours", "low": 915000, "high": 915000, "status": "single", "published": "915 k", "row": "`yieldsOnce`, Flow", "bytes": 741 },
-        { "id": "async1-yield-none", "label": "yieldsOnce, None", "family": "ours", "low": 1140000, "high": 1140000, "status": "single", "published": "1.14 M", "row": "`yieldsOnce`, None", "bytes": 559 }
-      ]
+        { "id": "async1-sync-none", "label": "synchronous methods, None", "family": "ours", "low": 2513106, "high": 2520838, "status": "range", "published": "2.51 M to 2.52 M", "bytes": 6, "median": 2516972, "values": [2520838, 2513106], "n": 2, "cpu": { "system": 3.3, "process": 3.3 } },
+        { "id": "async1-task-flow", "label": "Task<T>, Flow", "family": "ours", "low": 1978020, "high": 1981182, "status": "range", "published": "1.98 M", "row": "`Task<T>`, Flow", "bytes": 251, "median": 1979601, "values": [1981182, 1978020], "n": 2, "cpu": { "system": 3.3, "process": 3.3 } },
+        { "id": "async1-task-none", "label": "Task<T>, None", "family": "ours", "low": 2629355, "high": 2655947, "status": "range", "published": "2.63 M to 2.66 M", "row": "`Task<T>`, None", "bytes": 67, "median": 2642651, "values": [2655947, 2629355], "n": 2, "cpu": { "system": 3.4, "process": 3.4 } },
+        { "id": "async1-valuetask-flow", "label": "ValueTask<T>, Flow", "family": "ours", "low": 2047241, "high": 2059920, "status": "range", "published": "2.05 M to 2.06 M", "row": "`ValueTask<T>`, Flow", "bytes": 190, "median": 2053580.5, "values": [2059920, 2047241], "n": 2, "cpu": { "system": 3.2, "process": 3.2 } },
+        { "id": "async1-valuetask-none", "label": "ValueTask<T>, None", "family": "ours", "low": 2769948, "high": 2818163, "status": "range", "published": "2.77 M to 2.82 M", "row": "`ValueTask<T>`, None", "bytes": 6, "median": 2794055.5, "values": [2818163, 2769948], "n": 2, "cpu": { "system": 3.3, "process": 3.3 } },
+        { "id": "async1-yield-flow", "label": "yieldsOnce, Flow", "family": "ours", "low": 563130, "high": 589434, "status": "range", "published": "563 k to 589 k", "row": "`yieldsOnce`, Flow", "bytes": 740, "median": 576282, "values": [563130, 589434], "n": 2, "cpu": { "system": 18.1, "process": 18.1 } },
+        { "id": "async1-yield-none", "label": "yieldsOnce, None", "family": "ours", "low": 543546, "high": 565206, "status": "range", "published": "544 k to 565 k", "row": "`yieldsOnce`, None", "bytes": 548, "median": 554376, "values": [543546, 565206], "n": 2, "cpu": { "system": 21.2, "process": 21.2 } }
+      ],
+      "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+      "runtime": ".NET 10.0.12, Release, Server GC",
+      "workers": 1,
+      "cores": 32,
+      "run_count": 2
     },
     "legacy": {
       "title": "Legacy string API through the thread pool, by batch size",
-      "date": "2026-09-25",
-      "source": "README.md, Legacy table; branch async-scratch-cache",
-      "harness": "TestServer_Console, menu entry t",
+      "date": "2026-09-28",
+      "source": "Hugging Face job 6ab9b3936b030d633f69b0fb, commit 6c3c272",
+      "harness": "TestServer_Console, menu entry t with stdout redirected (BenchmarkRunner.Benchmark)",
       "workload": "the five benchmark requests through the 1.x Task<string> Process(string) overload, submitted in batches from every core through Parallel.For",
-      "conditions": "idle box; three runs of the t entry in one session",
-      "policy": "low and high over three runs",
-      "x": { "name": "batch size", "values": [50, 300, 6000, 36000, 252000, 2016000] },
+      "conditions": "Hugging Face Jobs cpu-performance, the whole 32-core host (cgroup quota 32 of 32 CPUs), one job on 2026-09-28",
+      "policy": "low, high and median over 3 runs",
+      "x": { "name": "batch size", "values": [50, 100, 300, 1200, 6000, 36000, 252000, 2016000] },
       "series": [
         {
           "id": "legacy-string",
           "label": "JSON-RPC.Net, 1.x string overloads",
           "family": "ours",
           "points": [
-            { "low": 1570000, "high": 2030000, "status": "range", "published": "1.6 M to 2.0 M" },
-            { "low": 7990000, "high": 9190000, "status": "range", "published": "8.0 M to 9.2 M" },
-            { "low": 12360000, "high": 13260000, "status": "range", "published": "12.4 M to 13.3 M" },
-            { "low": 11570000, "high": 13290000, "status": "range", "published": "11.6 M to 13.3 M" },
-            { "low": 7470000, "high": 7800000, "status": "range", "published": "7.5 M to 7.8 M" },
-            { "low": 7490000, "high": 8030000, "status": "range", "published": "7.5 M to 8.0 M" }
+            { "low": 1078909, "high": 1435139, "median": 1086828, "values": [1086828, 1435139, 1078909], "n": 3, "status": "range", "published": "1.08 M to 1.44 M", "cpu": { "system": 76.7, "process": 76.7 } },
+            { "low": 1434129, "high": 1512488, "median": 1501647, "values": [1512488, 1434129, 1501647], "n": 3, "status": "range", "published": "1.43 M to 1.51 M", "cpu": { "system": 89.7, "process": 89.7 } },
+            { "low": 3724002, "high": 4103938, "median": 3922107, "values": [3922107, 4103938, 3724002], "n": 3, "status": "range", "published": "3.72 M to 4.1 M", "cpu": { "system": 85.9, "process": 85.9 } },
+            { "low": 7551462, "high": 7803867, "median": 7615069, "values": [7551462, 7803867, 7615069], "n": 3, "status": "range", "published": "7.55 M to 7.8 M", "cpu": { "system": 86.4, "process": 86.2 } },
+            { "low": 9825595, "high": 11144579, "median": 11110511, "values": [11110511, 11144579, 9825595], "n": 3, "status": "range", "published": "9.83 M to 11.1 M", "cpu": { "system": 87.5, "process": 87.5 } },
+            { "low": 10284576, "high": 10782349, "median": 10416737, "values": [10782349, 10284576, 10416737], "n": 3, "status": "range", "published": "10.3 M to 10.8 M", "cpu": { "system": 81.9, "process": 81.9 } },
+            { "low": 5958403, "high": 6778844, "median": 5963409, "values": [5958403, 5963409, 6778844], "n": 3, "status": "range", "published": "5.96 M to 6.78 M", "cpu": { "system": 71, "process": 70.9 } },
+            { "low": 3397534, "high": 6145911, "median": 5607426, "values": [6145911, 3397534, 5607426], "n": 3, "status": "range", "published": "3.4 M to 6.15 M", "cpu": { "system": 76, "process": 76 } }
           ]
         }
-      ]
+      ],
+      "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+      "runtime": ".NET 10.0.12, Release, Server GC",
+      "cores": 32,
+      "run_count": 3
     },
     "kestrel": {
       "title": "JSON-RPC.Net by transport",
-      "date": "2026-09-25",
-      "source": "README.md, Kestrel table; branch async-scratch-cache",
-      "harness": "TestServer_Console --kestrel 3",
-      "workload": "AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, {workers} clients on the server's 8 cores",
-      "conditions": "idle box; three 3 s runs of --kestrel 3 and two of --kestrel 3 async, one session",
-      "policy": "low and high over the runs: three for the default rows, two for the EnableAsyncMethods = true rows",
-      "workers": 16,
-      "subtitle": ["AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, {workers} clients on the server's 8 cores; three 3 s runs, two for the async rows.", "HTTP clients await one POST at a time; TCP keeps 256 requests in flight per connection."],
+      "date": "2026-09-28",
+      "source": "Hugging Face job 6ab9b3936b030d633f69b0fb, commit 6c3c272",
+      "harness": "TestServer_Console --kestrel 3 and --kestrel 3 async (32 clients)",
+      "workload": "AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, {workers} clients on the server's {cores} cores",
+      "conditions": "Hugging Face Jobs cpu-performance, the whole 32-core host (cgroup quota 32 of 32 CPUs), one job on 2026-09-28",
+      "policy": "low, high and median over the runs: 2 runs of --kestrel for the EnableAsyncMethods = false rows, 2 runs of --kestrel async for the EnableAsyncMethods = true rows",
+      "workers": 32,
+      "subtitle": ["AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, {workers} clients on the server's {cores} cores; 3 s runs, intervals span them.", "HTTP clients await one POST at a time; TCP keeps 256 requests in flight per connection."],
       "alt": "JSON-RPC.Net by transport: HTTP single, HTTP batch of 100 and TCP pipelined, as low-to-high intervals on a log axis, with the in-process figure for scale",
       "groups": [
         { "heading": "EnableAsyncMethods = false (the default)", "rule": false, "series": ["ours-http-1", "ours-http-100", "ours-tcp"] },
@@ -154,24 +178,28 @@
         { "heading": "Reference: no transport", "rule": true, "series": ["ours-inproc-n"] }
       ],
       "series": [
-        { "id": "ours-inproc-n", "label": "in-process, {workers} threads", "note": "the same requests through the byte entry point", "family": "scale", "low": 33800000, "high": 37100000, "status": "range", "published": "33.8 M to 37.1 M" },
-        { "id": "ours-http-1", "label": "HTTP, 1 request per POST", "note": "each client awaits one POST at a time; {us} µs per round trip", "family": "ours", "low": 123000, "high": 182000, "status": "range", "published": "123 k to 182 k", "latency_us": [88, 130], "row_note": "{us} µs per round trip per client depending on the run; HTTP/1.1 request-response is the cost, not the server" },
-        { "id": "ours-http-100", "label": "HTTP, batch of 100 per POST", "note": "one POST outstanding per client, 100 RPCs in it", "family": "ours", "low": 12800000, "high": 14500000, "status": "range", "published": "12.8 M to 14.5 M" },
-        { "id": "ours-tcp", "label": "TCP, 256 pipelined", "note": "JsonRpcConnectionHandler, 256 requests in flight per connection", "family": "ours", "low": 14300000, "high": 16500000, "status": "range", "published": "14.3 M to 16.5 M", "row_note": "ring-buffer clients, one thread each, streaming framer" },
-        { "id": "ours-tcp-async-inline", "label": "TCP, 256 pipelined, methods that complete inline", "note": "--kestrel 3 async", "family": "ours", "low": 15000000, "high": 15400000, "status": "range", "published": "15.0 M to 15.4 M", "row": "TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that complete inline", "n": 2, "row_note": "`--kestrel 3 async`, {runs_word} runs; inside the spread of the `false` row" },
-        { "id": "ours-tcp-async-yield", "label": "TCP, 256 pipelined, methods that suspend once", "note": "five async Task<T> methods awaiting Task.Yield(); documents are sequential per connection", "family": "ours", "low": 1250000, "high": 1290000, "status": "range", "published": "1.25 M to 1.29 M", "row": "TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that suspend once", "row_note": "five `async Task<T>` methods awaiting `Task.Yield()`" }
-      ]
+        { "id": "ours-inproc-n", "label": "in-process, {workers} threads", "note": "the same requests through the byte entry point", "family": "scale", "low": 47335159, "high": 49559560, "status": "range", "published": "47.3 M to 49.6 M", "median": 48447359.5, "values": [49559560, 47335159], "n": 2, "cpu": { "system": 92.8, "process": 92.8 } },
+        { "id": "ours-http-1", "label": "HTTP, 1 request per POST", "note": "each client awaits one POST at a time; {us} µs per round trip", "family": "ours", "low": 155808, "high": 162103, "status": "range", "published": "156 k to 162 k", "latency_us": [197, 205], "row_note": "{us} µs per round trip per client depending on the run; HTTP/1.1 request-response is the cost, not the server", "median": 158955.5, "values": [162103, 155808], "n": 2, "cpu": { "system": 90.6, "process": 90.5 } },
+        { "id": "ours-http-100", "label": "HTTP, batch of 100 per POST", "note": "one POST outstanding per client, 100 RPCs in it", "family": "ours", "low": 14356502, "high": 14757580, "status": "range", "published": "14.4 M to 14.8 M", "median": 14557041, "values": [14757580, 14356502], "n": 2, "cpu": { "system": 91.6, "process": 91.6 } },
+        { "id": "ours-tcp", "label": "TCP, 256 pipelined", "note": "JsonRpcConnectionHandler, 256 requests in flight per connection", "family": "ours", "low": 18454461, "high": 18506274, "status": "range", "published": "18.5 M", "row_note": "ring-buffer clients, one thread each, streaming framer", "median": 18480367.5, "values": [18454461, 18506274], "n": 2, "cpu": { "system": 95.3, "process": 95.3, "clients": 19 } },
+        { "id": "ours-tcp-async-inline", "label": "TCP, 256 pipelined, methods that complete inline", "note": "--kestrel 3 async", "family": "ours", "low": 17024435, "high": 17080213, "status": "range", "published": "17 M to 17.1 M", "row": "TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that complete inline", "n": 2, "row_note": "`--kestrel 3 async`, {runs_word} runs", "median": 17052324, "values": [17024435, 17080213], "cpu": { "system": 95.4, "process": 95.4, "clients": 17.9 } },
+        { "id": "ours-tcp-async-yield", "label": "TCP, 256 pipelined, methods that suspend once", "note": "five async Task<T> methods awaiting Task.Yield(); documents are sequential per connection", "family": "ours", "low": 2863591, "high": 2867023, "status": "range", "published": "2.86 M to 2.87 M", "row": "TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that suspend once", "row_note": "five `async Task<T>` methods awaiting `Task.Yield()`", "median": 2865307, "values": [2867023, 2863591], "n": 2, "cpu": { "system": 94.8, "process": 94.8, "clients": 12.1 } }
+      ],
+      "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+      "runtime": ".NET 10.0.12, Release, Server GC",
+      "cores": 32,
+      "run_count": 4
     },
     "compare": {
       "title": "JSON-RPC.Net vs StreamJsonRpc vs gRPC for .NET, {workers} connections",
-      "date": "2026-09-23",
-      "source": "README.md, comparison table; commit 192a97f",
-      "harness": "TestServer_Console --compare 3",
+      "date": "2026-09-28",
+      "source": "Hugging Face job 6ab9b3936b030d633f69b0fb, commit 6c3c272",
+      "harness": "TestServer_Console --compare 3 (32 connections)",
       "workload": "the same five calls on the same Kestrel; {workers} connections or channels with 256 requests in flight each; every request carries \"jsonrpc\":\"2.0\"",
-      "conditions": "WSL VM shut down; two 3 s runs",
-      "policy": "observed low and high over two runs; a single figure is one value that both runs rounded to",
-      "workers": 16,
-      "subtitle": ["Same five calls, same Kestrel, {workers} connections or channels with 256 requests in flight each, two 3 s runs.", "Every request carries \"jsonrpc\":\"2.0\" (StreamJsonRpc requires it). Intervals span the runs; a dot is a single value."],
+      "conditions": "Hugging Face Jobs cpu-performance, the whole 32-core host (cgroup quota 32 of 32 CPUs), one job on 2026-09-28",
+      "policy": "low, high and median over 2 runs; a single figure is one value that every run rounded to",
+      "workers": 32,
+      "subtitle": ["Same five calls, same Kestrel, {workers} connections or channels with 256 requests in flight each, {runs_word} 3 s runs.", "Every request carries \"jsonrpc\":\"2.0\" (StreamJsonRpc requires it). Intervals span the runs; a dot is a single value."],
       "alt": "JSON-RPC.Net vs StreamJsonRpc vs gRPC for .NET at {workers} connections: low-to-high intervals on a log axis, grouped by library, with the in-process paths under a rule",
       "versions": "StreamJsonRpc 2.25.29, gRPC for .NET 2.84.0",
       "groups": [
@@ -180,53 +208,191 @@
         { "heading": "gRPC for .NET 2.84: its .NET client shares the server's cores", "rule": false, "series": ["grpc-unary", "grpc-stream"] }
       ],
       "series": [
-        { "id": "ours-tcp-jsonrpc", "label": "over Kestrel TCP", "note": "raw documents", "family": "ours", "low": 13700000, "high": 14600000, "status": "range", "published": "13.7 M to 14.6 M", "row": "JSON-RPC.Net over Kestrel TCP, raw documents" },
-        { "id": "sjr-newline-stj", "label": "over Kestrel TCP", "note": "newline framing, System.Text.Json formatter", "family": "theirs", "low": 1380000, "high": 1440000, "status": "range", "published": "1.38 M to 1.44 M", "row": "StreamJsonRpc over Kestrel TCP, newline framing, System.Text.Json formatter" },
-        { "id": "sjr-cl-stj", "label": "over Kestrel TCP", "note": "Content-Length framing, System.Text.Json formatter", "family": "theirs", "low": 1410000, "high": 1450000, "status": "range", "published": "1.41 M to 1.45 M", "row": "StreamJsonRpc over Kestrel TCP, `Content-Length` framing, System.Text.Json formatter" },
-        { "id": "sjr-cl-newtonsoft", "label": "over Kestrel TCP", "note": "Content-Length framing, Json.NET formatter (default)", "family": "theirs", "low": 625000, "high": 625000, "status": "single", "published": "625 k", "row": "StreamJsonRpc over Kestrel TCP, `Content-Length` framing, Json.NET formatter (its default)" },
-        { "id": "grpc-unary", "label": "unary calls", "note": "HTTP/2 + protobuf, {workers} channels × 256 in flight", "family": "grpc", "low": 192000, "high": 198000, "status": "range", "published": "192 k to 198 k", "row": "gRPC for .NET, unary calls over HTTP/2 (Grpc.Net.Client, {workers} channels × 256 in flight)" },
-        { "id": "grpc-stream", "label": "bidirectional stream", "note": "one stream per channel, 256 in flight, batched writes", "family": "grpc", "low": 200000, "high": 209000, "status": "range", "published": "200 k to 209 k", "row": "gRPC for .NET, one bidirectional stream per channel, 256 in flight, batched writes" }
-      ]
+        { "id": "ours-tcp-jsonrpc", "label": "over Kestrel TCP", "note": "raw documents", "family": "ours", "low": 16438116, "high": 16778975, "status": "range", "published": "16.4 M to 16.8 M", "row": "JSON-RPC.Net over Kestrel TCP, raw documents", "median": 16608545.5, "values": [16778975, 16438116], "n": 2, "cpu": { "system": 94.7, "process": 94.6, "clients": 17 } },
+        { "id": "sjr-newline-stj", "label": "over Kestrel TCP", "note": "newline framing, System.Text.Json formatter", "family": "theirs", "low": 846928, "high": 878656, "status": "range", "published": "847 k to 879 k", "row": "StreamJsonRpc over Kestrel TCP, newline framing, System.Text.Json formatter", "median": 862792, "values": [846928, 878656], "n": 2, "cpu": { "system": 86.8, "process": 86.8, "clients": 10.1 } },
+        { "id": "sjr-cl-stj", "label": "over Kestrel TCP", "note": "Content-Length framing, System.Text.Json formatter", "family": "theirs", "low": 1060037, "high": 1151116, "status": "range", "published": "1.06 M to 1.15 M", "row": "StreamJsonRpc over Kestrel TCP, `Content-Length` framing, System.Text.Json formatter", "median": 1105576.5, "values": [1060037, 1151116], "n": 2, "cpu": { "system": 89.4, "process": 89.4, "clients": 10.1 } },
+        { "id": "sjr-cl-newtonsoft", "label": "over Kestrel TCP", "note": "Content-Length framing, Json.NET formatter (default)", "family": "theirs", "low": 560352, "high": 583191, "status": "range", "published": "560 k to 583 k", "row": "StreamJsonRpc over Kestrel TCP, `Content-Length` framing, Json.NET formatter (its default)", "median": 571771.5, "values": [560352, 583191], "n": 2, "cpu": { "system": 82, "process": 82, "clients": 7.8 } },
+        { "id": "grpc-unary", "label": "unary calls", "note": "HTTP/2 + protobuf, {workers} channels × 256 in flight", "family": "grpc", "low": 157574, "high": 166452, "status": "range", "published": "158 k to 166 k", "row": "gRPC for .NET, unary calls over HTTP/2 (Grpc.Net.Client, {workers} channels × 256 in flight)", "median": 162013, "values": [157574, 166452], "n": 2, "cpu": { "system": 92.7, "process": 92.7 } },
+        { "id": "grpc-stream", "label": "bidirectional stream", "note": "one stream per channel, 256 in flight, batched writes", "family": "grpc", "low": 703425, "high": 732602, "status": "range", "published": "703 k to 733 k", "row": "gRPC for .NET, one bidirectional stream per channel, 256 in flight, batched writes", "median": 718013.5, "values": [703425, 732602], "n": 2, "cpu": { "system": 96.5, "process": 96.5 } }
+      ],
+      "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+      "runtime": ".NET 10.0.12, Release, Server GC",
+      "cores": 32,
+      "run_count": 2
     },
     "inprocess": {
       "title": "In-process paths: different execution boundaries",
-      "date": "2026-09-23",
-      "source": "README.md, comparison table; commit 192a97f",
-      "harness": "TestServer_Console --compare 3",
+      "date": "2026-09-28",
+      "source": "Hugging Face job 6ab9b3936b030d633f69b0fb, commit 6c3c272",
+      "harness": "TestServer_Console --compare 3 (32 connections)",
       "workload": "the same five calls with no network: a direct call, a Pipe pair, a typed proxy",
-      "conditions": "WSL VM shut down; two 3 s runs",
-      "policy": "observed low and high over two runs",
-      "subtitle": ["No network. A direct call, a Pipe pair and a typed proxy cross different boundaries, so these rows are not a", "like-for-like comparison with each other or with the transport rows. Two 3 s runs; intervals span them."],
+      "conditions": "Hugging Face Jobs cpu-performance, the whole 32-core host (cgroup quota 32 of 32 CPUs), one job on 2026-09-28",
+      "policy": "low, high and median over 2 runs; a single figure is one value that every run rounded to",
+      "subtitle": ["No network. A direct call, a Pipe pair and a typed proxy cross different boundaries, so these rows are not a", "like-for-like comparison with each other or with the transport rows. Intervals span {runs_word} 3 s runs."],
       "alt": "In-process paths: JSON-RPC.Net direct call, StreamJsonRpc Pipe pair and StreamJsonRpc typed proxy, as low-to-high intervals on a log axis",
       "groups": [
         { "heading": "", "rule": false, "series": ["ours-direct-1", "sjr-pipe", "sjr-proxy"] }
       ],
       "series": [
-        { "id": "ours-direct-1", "label": "JSON-RPC.Net, direct call, 1 thread", "note": "bytes in, bytes out, no transport", "family": "ours", "low": 2600000, "high": 3600000, "status": "range", "published": "2.6 M to 3.6 M", "row": "JSON-RPC.Net in-process, 1 thread (direct call, bytes in, bytes out)" },
-        { "id": "sjr-pipe", "label": "StreamJsonRpc, Pipe pair, 1 client", "note": "newline framing, System.Text.Json, 256 pipelined", "family": "theirs", "low": 117000, "high": 142000, "status": "range", "published": "117 k to 142 k", "row": "StreamJsonRpc in-process, 1 client over a `Pipe` pair, newline framing, System.Text.Json formatter, 256 pipelined" },
-        { "id": "sjr-proxy", "label": "StreamJsonRpc, typed proxy", "note": "sequential await per call, {us} µs per round trip", "family": "theirs", "low": 96000, "high": 97000, "status": "range", "published": "96 k to 97 k", "latency_us": [10, 10], "row": "StreamJsonRpc typed proxy, sequential `await` per call, in-process pipes", "rpc_note": "{us} µs per round trip" }
-      ]
+        { "id": "ours-direct-1", "label": "JSON-RPC.Net, direct call, 1 thread", "note": "bytes in, bytes out, no transport", "family": "ours", "low": 2974336, "high": 3008500, "status": "range", "published": "2.97 M to 3.01 M", "row": "JSON-RPC.Net in-process, 1 thread (direct call, bytes in, bytes out)", "median": 2991418, "values": [3008500, 2974336], "n": 2, "cpu": { "system": 3.1, "process": 3.1 } },
+        { "id": "sjr-pipe", "label": "StreamJsonRpc, Pipe pair, 1 client", "note": "newline framing, System.Text.Json, 256 pipelined", "family": "theirs", "low": 133143, "high": 153717, "status": "range", "published": "133 k to 154 k", "row": "StreamJsonRpc in-process, 1 client over a `Pipe` pair, newline framing, System.Text.Json formatter, 256 pipelined", "median": 143430, "values": [153717, 133143], "n": 2, "cpu": { "system": 19.8, "process": 19.8 } },
+        { "id": "sjr-proxy", "label": "StreamJsonRpc, typed proxy", "note": "sequential await per call, {us} µs per round trip", "family": "theirs", "low": 53734, "high": 56199, "status": "range", "published": "53.7 k to 56.2 k", "latency_us": [18, 19], "row": "StreamJsonRpc typed proxy, sequential `await` per call, in-process pipes", "rpc_note": "{us} µs per round trip", "median": 54966.5, "values": [56199, 53734], "n": 2, "cpu": { "system": 12.8, "process": 12.8 } }
+      ],
+      "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+      "runtime": ".NET 10.0.12, Release, Server GC",
+      "workers": 32,
+      "cores": 32,
+      "run_count": 2
     },
     "sweep": {
       "title": "Every library and transport, by client connections",
-      "source": "TestServer_Console --sweep 2 <file>; one file per run, matched by the pattern below",
+      "source": "Hugging Face job 6ab9b3936b030d633f69b0fb, commit 6c3c272",
       "runs": "sweep*.json",
-      "workload": "the same five calls on the same Kestrel, clients on the server's 8 cores; each cell warmed for 2 s, then timed",
-      "conditions": "WSL VM running and other sessions active: a separate session from the tables, so its absolute figures are not comparable with them",
-      "policy": "observed low, high and median over the runs; each run contributes one observation per cell",
-      "subtitle": ["Same five calls, same Kestrel, clients on the server's 8 cores, {date}. TCP and gRPC keep {pipeline} requests in flight", "per connection; HTTP clients await one POST at a time (1 or 100 RPCs). {runs_text}."],
+      "workload": "the same five calls on the same Kestrel, clients on the server's {cores} cores; each cell warmed for 2 s, then timed",
+      "conditions": "Hugging Face Jobs cpu-performance, the whole 32-core host (cgroup quota 32 of 32 CPUs), one job on 2026-09-28",
+      "policy": "low, high and median over 5 runs; each run contributes one observation per cell",
+      "subtitle": ["Same five calls, same Kestrel, clients on the server's {cores} cores, {date}. TCP and gRPC keep {pipeline} requests in flight", "per connection; HTTP clients await one POST at a time (1 or 100 RPCs). {runs_text}."],
       "alt": "Every library and transport by client connections, 1 to {x_max}: three panels on a shared log axis, one per library, with a marker shape and dash per setting and whiskers spanning {runs_word} runs",
-      "x": { "name": "client connections (gRPC: channels)" },
+      "x": { "name": "client connections (gRPC: channels)", "values": [1, 2, 4, 8, 16, 32] },
       "series": [
-        { "id": "sweep-ours-tcp", "name": "JSON-RPC.Net, TCP", "label": "TCP", "family": "ours", "style": 0, "concurrency": "256 requests in flight per connection" },
-        { "id": "sweep-ours-http-100", "name": "JSON-RPC.Net, HTTP, batch of 100 per POST", "label": "HTTP, batch of 100 per POST", "family": "ours", "style": 1, "concurrency": "one POST outstanding per connection, 100 RPCs in it" },
-        { "id": "sweep-ours-http-1", "name": "JSON-RPC.Net, HTTP, 1 request per POST", "label": "HTTP, 1 request per POST", "family": "ours", "style": 2, "concurrency": "one POST outstanding per connection" },
-        { "id": "sweep-sjr-newline-stj", "name": "StreamJsonRpc, TCP, newline + System.Text.Json", "label": "TCP, newline + System.Text.Json", "family": "theirs", "style": 0, "concurrency": "256 requests in flight per connection" },
-        { "id": "sweep-sjr-cl-stj", "name": "StreamJsonRpc, TCP, Content-Length + System.Text.Json", "label": "TCP, Content-Length + System.Text.Json", "family": "theirs", "style": 1, "concurrency": "256 requests in flight per connection" },
-        { "id": "sweep-sjr-cl-newtonsoft", "name": "StreamJsonRpc, TCP, Content-Length + Json.NET", "label": "TCP, Content-Length + Json.NET", "family": "theirs", "style": 2, "concurrency": "256 requests in flight per connection" },
-        { "id": "sweep-grpc-unary", "name": "gRPC for .NET, unary", "label": "unary", "family": "grpc", "style": 0, "concurrency": "256 calls in flight per channel" },
-        { "id": "sweep-grpc-stream", "name": "gRPC for .NET, bidirectional stream", "label": "bidirectional stream", "family": "grpc", "style": 1, "concurrency": "one stream per channel, 256 in flight, batched writes" }
-      ]
+        {
+          "id": "sweep-ours-tcp",
+          "name": "JSON-RPC.Net, TCP",
+          "label": "TCP",
+          "family": "ours",
+          "style": 0,
+          "concurrency": "256 requests in flight per connection",
+          "points": [
+            { "low": 1504315, "high": 1663416, "median": 1582632, "n": 5, "values": [1504315, 1581792, 1582632, 1663416, 1597854], "status": "range", "cpu": { "system": 10.8, "process": 10.8, "clients": 1.2 }, "published": "1.5 M to 1.66 M" },
+            { "low": 2264852, "high": 2906285, "median": 2864827, "n": 5, "values": [2807580, 2891600, 2864827, 2906285, 2264852], "status": "range", "cpu": { "system": 18.1, "process": 18.1, "clients": 2.4 }, "published": "2.26 M to 2.91 M" },
+            { "low": 4709242, "high": 5123054, "median": 4982397, "n": 5, "values": [5123054, 4728503, 4709242, 5025529, 4982397], "status": "range", "cpu": { "system": 31.4, "process": 31.4, "clients": 4.9 }, "published": "4.71 M to 5.12 M" },
+            { "low": 8355818, "high": 8541684, "median": 8408546, "n": 5, "values": [8436939, 8408546, 8355818, 8382932, 8541684], "status": "range", "cpu": { "system": 53.4, "process": 53.4, "clients": 7.9 }, "published": "8.36 M to 8.54 M" },
+            { "low": 13672167, "high": 13923831, "median": 13838572, "n": 5, "values": [13838572, 13792074, 13672167, 13923831, 13909240], "status": "range", "cpu": { "system": 89.8, "process": 89.8, "clients": 15.1 }, "published": "13.7 M to 13.9 M" },
+            { "low": 17341543, "high": 17762271, "median": 17518939, "n": 5, "values": [17455330, 17518939, 17341543, 17612181, 17762271], "status": "range", "cpu": { "system": 96.7, "process": 96.7, "clients": 17.7 }, "published": "17.3 M to 17.8 M" }
+          ]
+        },
+        {
+          "id": "sweep-ours-http-100",
+          "name": "JSON-RPC.Net, HTTP, batch of 100 per POST",
+          "label": "HTTP, batch of 100 per POST",
+          "family": "ours",
+          "style": 1,
+          "concurrency": "one POST outstanding per connection, 100 RPCs in it",
+          "points": [
+            { "low": 711106, "high": 780521, "median": 743574, "n": 5, "values": [747452, 743574, 780521, 730180, 711106], "status": "range", "cpu": { "system": 10.6, "process": 10.6 }, "published": "711 k to 781 k" },
+            { "low": 1536182, "high": 1575796, "median": 1544718, "n": 5, "values": [1575796, 1544556, 1546103, 1544718, 1536182], "status": "range", "cpu": { "system": 16.7, "process": 16.7 }, "published": "1.54 M to 1.58 M" },
+            { "low": 2998846, "high": 3049007, "median": 3018942, "n": 5, "values": [3018942, 3011600, 3032005, 3049007, 2998846], "status": "range", "cpu": { "system": 28.6, "process": 28.6 }, "published": "3 M to 3.05 M" },
+            { "low": 5444182, "high": 5528558, "median": 5486596, "n": 5, "values": [5528558, 5500819, 5480732, 5486596, 5444182], "status": "range", "cpu": { "system": 48.2, "process": 48.2 }, "published": "5.44 M to 5.53 M" },
+            { "low": 9282494, "high": 9423705, "median": 9347086, "n": 5, "values": [9282494, 9298140, 9347086, 9423705, 9353620], "status": "range", "cpu": { "system": 80.4, "process": 80.4 }, "published": "9.28 M to 9.42 M" },
+            { "low": 14356886, "high": 14604824, "median": 14568739, "n": 5, "values": [14568739, 14559938, 14356886, 14590783, 14604824], "status": "range", "cpu": { "system": 93.3, "process": 93.3 }, "published": "14.4 M to 14.6 M" }
+          ]
+        },
+        {
+          "id": "sweep-ours-http-1",
+          "name": "JSON-RPC.Net, HTTP, 1 request per POST",
+          "label": "HTTP, 1 request per POST",
+          "family": "ours",
+          "style": 2,
+          "concurrency": "one POST outstanding per connection",
+          "points": [
+            { "low": 14258, "high": 15268, "median": 14732, "n": 5, "values": [15268, 14732, 14971, 14549, 14258], "status": "range", "cpu": { "system": 9.8, "process": 9.8 }, "published": "14.3 k to 15.3 k" },
+            { "low": 28591, "high": 29774, "median": 28672, "n": 5, "values": [28672, 28591, 29265, 29774, 28622], "status": "range", "cpu": { "system": 15.4, "process": 15.4 }, "published": "28.6 k to 29.8 k" },
+            { "low": 54512, "high": 55763, "median": 54983, "n": 5, "values": [54983, 54848, 54512, 55003, 55763], "status": "range", "cpu": { "system": 26.1, "process": 26.1 }, "published": "54.5 k to 55.8 k" },
+            { "low": 97476, "high": 98859, "median": 98738, "n": 5, "values": [98843, 98859, 98738, 98651, 97476], "status": "range", "cpu": { "system": 44.3, "process": 44.3 }, "published": "97.5 k to 98.9 k" },
+            { "low": 164467, "high": 168059, "median": 166437, "n": 5, "values": [168059, 166437, 164889, 166932, 164467], "status": "range", "cpu": { "system": 75.1, "process": 75.1 }, "published": "164 k to 168 k" },
+            { "low": 287938, "high": 290499, "median": 289276, "n": 5, "values": [287938, 288711, 289588, 290499, 289276], "status": "range", "cpu": { "system": 94.8, "process": 94.8 }, "published": "288 k to 290 k" }
+          ]
+        },
+        {
+          "id": "sweep-sjr-newline-stj",
+          "name": "StreamJsonRpc, TCP, newline + System.Text.Json",
+          "label": "TCP, newline + System.Text.Json",
+          "family": "theirs",
+          "style": 0,
+          "concurrency": "256 requests in flight per connection",
+          "points": [
+            { "low": 169122, "high": 195042, "median": 181536, "n": 5, "values": [195042, 169122, 181536, 192370, 180901], "status": "range", "cpu": { "system": 20.3, "process": 20.3, "clients": 2.5 }, "published": "169 k to 195 k" },
+            { "low": 290819, "high": 310815, "median": 296378, "n": 5, "values": [302641, 310815, 296378, 290819, 292461], "status": "range", "cpu": { "system": 36.7, "process": 36.6, "clients": 5.1 }, "published": "291 k to 311 k" },
+            { "low": 462815, "high": 481397, "median": 476216, "n": 5, "values": [481397, 476216, 478417, 466228, 462815], "status": "range", "cpu": { "system": 66.7, "process": 66.7, "clients": 10.3 }, "published": "463 k to 481 k" },
+            { "low": 761947, "high": 791998, "median": 768721, "n": 5, "values": [765565, 761947, 791998, 768721, 776653], "status": "range", "cpu": { "system": 85.2, "process": 85.2, "clients": 11.9 }, "published": "762 k to 792 k" },
+            { "low": 858189, "high": 908097, "median": 881160, "n": 5, "values": [908097, 858189, 902865, 866567, 881160], "status": "range", "cpu": { "system": 87.1, "process": 87.1, "clients": 10.9 }, "published": "858 k to 908 k" },
+            { "low": 924264, "high": 1008400, "median": 971720, "n": 5, "values": [991712, 954696, 1008400, 924264, 971720], "status": "range", "cpu": { "system": 89.5, "process": 89.5, "clients": 10.1 }, "published": "924 k to 1.01 M" }
+          ]
+        },
+        {
+          "id": "sweep-sjr-cl-stj",
+          "name": "StreamJsonRpc, TCP, Content-Length + System.Text.Json",
+          "label": "TCP, Content-Length + System.Text.Json",
+          "family": "theirs",
+          "style": 1,
+          "concurrency": "256 requests in flight per connection",
+          "points": [
+            { "low": 196223, "high": 210829, "median": 197636, "n": 5, "values": [197627, 196223, 210829, 197636, 203954], "status": "range", "cpu": { "system": 20.5, "process": 20.5, "clients": 2.5 }, "published": "196 k to 211 k" },
+            { "low": 337259, "high": 352609, "median": 341014, "n": 5, "values": [341343, 339821, 352609, 341014, 337259], "status": "range", "cpu": { "system": 37, "process": 37, "clients": 4.9 }, "published": "337 k to 353 k" },
+            { "low": 552090, "high": 563704, "median": 557259, "n": 5, "values": [552293, 562128, 557259, 563704, 552090], "status": "range", "cpu": { "system": 67.8, "process": 67.8, "clients": 10 }, "published": "552 k to 564 k" },
+            { "low": 943109, "high": 968434, "median": 953507, "n": 5, "values": [953507, 968434, 951676, 943109, 959551], "status": "range", "cpu": { "system": 90.4, "process": 90.4, "clients": 11.5 }, "published": "943 k to 968 k" },
+            { "low": 1117138, "high": 1265533, "median": 1255931, "n": 5, "values": [1265533, 1260862, 1255931, 1117138, 1242741], "status": "range", "cpu": { "system": 92.9, "process": 92.9, "clients": 10.7 }, "published": "1.12 M to 1.27 M" },
+            { "low": 1115974, "high": 1250026, "median": 1233730, "n": 5, "values": [1233730, 1222980, 1249031, 1115974, 1250026], "status": "range", "cpu": { "system": 91.6, "process": 91.6, "clients": 10.1 }, "published": "1.12 M to 1.25 M" }
+          ]
+        },
+        {
+          "id": "sweep-sjr-cl-newtonsoft",
+          "name": "StreamJsonRpc, TCP, Content-Length + Json.NET",
+          "label": "TCP, Content-Length + Json.NET",
+          "family": "theirs",
+          "style": 2,
+          "concurrency": "256 requests in flight per connection",
+          "points": [
+            { "low": 122182, "high": 139087, "median": 133171, "n": 5, "values": [131421, 136732, 122182, 133171, 139087], "status": "range", "cpu": { "system": 19.2, "process": 19.2, "clients": 2.3 }, "published": "122 k to 139 k" },
+            { "low": 204910, "high": 220368, "median": 213573, "n": 5, "values": [210770, 213573, 204910, 217147, 220368], "status": "range", "cpu": { "system": 35, "process": 35, "clients": 4.7 }, "published": "205 k to 220 k" },
+            { "low": 356420, "high": 369044, "median": 363840, "n": 5, "values": [364211, 369044, 356420, 363840, 358624], "status": "range", "cpu": { "system": 64.3, "process": 64.3, "clients": 9.6 }, "published": "356 k to 369 k" },
+            { "low": 616843, "high": 642518, "median": 634055, "n": 5, "values": [642518, 616843, 632229, 634055, 636066], "status": "range", "cpu": { "system": 86.4, "process": 86.4, "clients": 11.8 }, "published": "617 k to 643 k" },
+            { "low": 660979, "high": 733715, "median": 686417, "n": 5, "values": [665977, 725538, 686417, 660979, 733715], "status": "range", "cpu": { "system": 87.2, "process": 87.2, "clients": 10.1 }, "published": "661 k to 734 k" },
+            { "low": 618631, "high": 740627, "median": 668408, "n": 5, "values": [655445, 740627, 668408, 618631, 717800], "status": "range", "cpu": { "system": 84.8, "process": 84.8, "clients": 9.1 }, "published": "619 k to 741 k" }
+          ]
+        },
+        {
+          "id": "sweep-grpc-unary",
+          "name": "gRPC for .NET, unary",
+          "label": "unary",
+          "family": "grpc",
+          "style": 0,
+          "concurrency": "256 calls in flight per channel",
+          "points": [
+            { "low": 136259, "high": 142853, "median": 137954, "n": 5, "values": [137954, 137109, 138886, 142853, 136259], "status": "range", "cpu": { "system": 82.6, "process": 82.5 }, "published": "136 k to 143 k" },
+            { "low": 252190, "high": 255854, "median": 254309, "n": 5, "values": [254309, 255854, 252190, 253783, 255434], "status": "range", "cpu": { "system": 94.1, "process": 94.1 }, "published": "252 k to 256 k" },
+            { "low": 328837, "high": 339254, "median": 336472, "n": 5, "values": [328837, 339254, 336472, 338634, 335192], "status": "range", "cpu": { "system": 93.3, "process": 93.3 }, "published": "329 k to 339 k" },
+            { "low": 337860, "high": 356705, "median": 350513, "n": 5, "values": [350513, 356528, 356705, 346085, 337860], "status": "range", "cpu": { "system": 92.5, "process": 92.5 }, "published": "338 k to 357 k" },
+            { "low": 308571, "high": 323245, "median": 314681, "n": 5, "values": [313991, 308571, 314681, 322720, 323245], "status": "range", "cpu": { "system": 87.9, "process": 87.9 }, "published": "309 k to 323 k" },
+            { "low": 269442, "high": 289596, "median": 274986, "n": 5, "values": [289596, 269442, 275939, 274986, 272509], "status": "range", "cpu": { "system": 88.4, "process": 88.4 }, "published": "269 k to 290 k" }
+          ]
+        },
+        {
+          "id": "sweep-grpc-stream",
+          "name": "gRPC for .NET, bidirectional stream",
+          "label": "bidirectional stream",
+          "family": "grpc",
+          "style": 1,
+          "concurrency": "one stream per channel, 256 in flight, batched writes",
+          "points": [
+            { "low": 35607, "high": 36814, "median": 36543, "n": 5, "values": [36814, 36543, 35607, 36219, 36574], "status": "range", "cpu": { "system": 24.7, "process": 24.7 }, "published": "35.6 k to 36.8 k" },
+            { "low": 69178, "high": 70267, "median": 69901, "n": 5, "values": [70148, 69822, 69178, 69901, 70267], "status": "range", "cpu": { "system": 41.2, "process": 41.2 }, "published": "69.2 k to 70.3 k" },
+            { "low": 125211, "high": 125542, "median": 125414, "n": 5, "values": [125211, 125542, 125256, 125414, 125456], "status": "range", "cpu": { "system": 68.2, "process": 68.2 }, "published": "125 k to 126 k" },
+            { "low": 223925, "high": 228992, "median": 228506, "n": 5, "values": [228992, 228889, 228506, 223925, 227039], "status": "range", "cpu": { "system": 89.8, "process": 89.8 }, "published": "224 k to 229 k" },
+            { "low": 423644, "high": 437574, "median": 434284, "n": 5, "values": [437574, 434284, 436949, 432957, 423644], "status": "range", "cpu": { "system": 96.5, "process": 96.5 }, "published": "424 k to 438 k" },
+            { "low": 893246, "high": 913031, "median": 901600, "n": 5, "values": [893246, 913031, 893936, 901600, 906325], "status": "range", "cpu": { "system": 97.6, "process": 97.6 }, "published": "893 k to 913 k" }
+          ]
+        }
+      ],
+      "run_files": ["sweep.json", "sweep-2.json", "sweep-3.json", "sweep-4.json", "sweep-5.json"],
+      "seconds_per_cell": 2,
+      "pipeline": 256,
+      "date": "2026-09-28",
+      "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+      "cores": 32,
+      "runtime": ".NET 10.0.12, Release, Server GC",
+      "run_count": 5,
+      "harness": "TestServer_Console --sweep 2; one file per run, matched by the pattern in runs"
     },
     "wasm": {
       "title": "In the browser: interpreter vs AOT",
@@ -234,7 +400,7 @@
       "source": "samples/WasmHost/README.md table; commit 41371ec",
       "harness": "samples/WasmHost, Run benchmark in Chrome 152",
       "workload": "add(1, 2) through each interop path, 20,000 RPCs per row",
-      "conditions": "8-core desktop; interpreter from dotnet run, AOT from dotnet publish -c Release with the wasm-tools workload",
+      "conditions": "a browser measurement on an 8-core desktop, not the benchmark job's host; interpreter from dotnet run, AOT from dotnet publish -c Release with the wasm-tools workload",
       "policy": "interpreter: one run; AOT: the better of two runs. The interpreter-to-AOT distance is a deployment difference, not a range",
       "subtitle": ["samples/WasmHost in Chrome 152, .NET 10, 20,000 RPCs per row. Interpreter: one run. AOT: the better of two runs.", "Batches are per RPC. The interpreter-to-AOT distance is a deployment difference, not a range."],
       "modes": [
@@ -261,5 +427,6 @@
         { "id": "wasm-loop", "label": "ProcessMany, the string request N times", "family": "scale", "values": { "interp": 17600, "aot": 169800 }, "published": { "interp": "17,600", "aot": "169,800" } }
       ]
     }
-  }
+  },
+  "host": "AMD EPYC 7R13, 32 cores"
 }

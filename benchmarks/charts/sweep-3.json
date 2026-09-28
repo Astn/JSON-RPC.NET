@@ -1,6 +1,11 @@
 {
-  "machine": "AMD Ryzen 7 7800X3D, 8 cores / 16 threads, Windows 11, .NET 10, Release, Server GC",
-  "date": "2026-09-23",
+  "mode": "sweep",
+  "machine": "AMD EPYC 7R13 Processor, 32 cores of 32 host CPUs, cgroup quota, Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC",
+  "runtime": ".NET 10.0.12, Release, Server GC",
+  "commit": "6c3c2729f8119ed2babe13cf00634d8f05d7db4e",
+  "run": 3,
+  "cores": 32,
+  "date": "2026-09-28",
   "secondsPerCell": 2,
   "pipeline": 256,
   "connections": [
@@ -8,95 +13,304 @@
     2,
     4,
     8,
-    16
+    16,
+    32
   ],
   "series": [
     {
       "name": "JSON-RPC.Net, TCP",
+      "id": "sweep-ours-tcp",
       "kind": "ours",
       "rpcPerSec": [
-        1753461,
-        2864903,
-        5134810,
-        8320994,
-        12342034
+        1582632,
+        2864827,
+        4709242,
+        8355818,
+        13672167,
+        17341543
+      ],
+      "cpuSystem": [
+        10.8,
+        18.5,
+        30.2,
+        53.1,
+        89.2,
+        96.3
+      ],
+      "cpuProcess": [
+        10.8,
+        18.5,
+        30.2,
+        53.1,
+        89.2,
+        96.3
+      ],
+      "cpuClients": [
+        1.2,
+        2.5,
+        4.5,
+        7.8,
+        14.9,
+        17.5
       ]
     },
     {
       "name": "JSON-RPC.Net, HTTP, batch of 100 per POST",
+      "id": "sweep-ours-http-100",
       "kind": "ours",
       "rpcPerSec": [
-        902499,
-        1655066,
-        3251689,
-        5803041,
-        9773010
+        780521,
+        1546103,
+        3032005,
+        5480732,
+        9347086,
+        14356886
+      ],
+      "cpuSystem": [
+        10.6,
+        16.7,
+        28.8,
+        48,
+        80.9,
+        92.3
+      ],
+      "cpuProcess": [
+        10.6,
+        16.7,
+        28.8,
+        48,
+        80.9,
+        92.3
+      ],
+      "cpuClients": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
       ]
     },
     {
       "name": "JSON-RPC.Net, HTTP, 1 request per POST",
+      "id": "sweep-ours-http-1",
       "kind": "ours",
       "rpcPerSec": [
-        16608,
-        34760,
-        68072,
-        136547,
-        194976
+        14971,
+        29265,
+        54512,
+        98738,
+        164889,
+        289588
+      ],
+      "cpuSystem": [
+        9.8,
+        15.4,
+        26.1,
+        44.5,
+        75.2,
+        94.8
+      ],
+      "cpuProcess": [
+        9.8,
+        15.4,
+        26.1,
+        44.5,
+        75.2,
+        94.8
+      ],
+      "cpuClients": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
       ]
     },
     {
       "name": "StreamJsonRpc, TCP, newline \u002B System.Text.Json",
+      "id": "sweep-sjr-newline-stj",
       "kind": "theirs",
       "rpcPerSec": [
-        259099,
-        489920,
-        734867,
-        960889,
-        1063106
+        181536,
+        296378,
+        478417,
+        791998,
+        902865,
+        1008400
+      ],
+      "cpuSystem": [
+        20.5,
+        36.8,
+        66.7,
+        84.9,
+        87.1,
+        90.5
+      ],
+      "cpuProcess": [
+        20.5,
+        36.8,
+        66.7,
+        84.9,
+        87.1,
+        90.5
+      ],
+      "cpuClients": [
+        2.5,
+        5.1,
+        10.2,
+        12,
+        10.7,
+        10.1
       ]
     },
     {
       "name": "StreamJsonRpc, TCP, Content-Length \u002B System.Text.Json",
+      "id": "sweep-sjr-cl-stj",
       "kind": "theirs",
       "rpcPerSec": [
-        270328,
-        476075,
-        657408,
-        1045688,
-        1117102
+        210829,
+        352609,
+        557259,
+        951676,
+        1255931,
+        1249031
+      ],
+      "cpuSystem": [
+        21.4,
+        37.1,
+        68,
+        90,
+        93.3,
+        92.6
+      ],
+      "cpuProcess": [
+        21.4,
+        37.1,
+        67.9,
+        90,
+        93.3,
+        92.6
+      ],
+      "cpuClients": [
+        2.6,
+        5,
+        10,
+        11.5,
+        10.7,
+        10.1
       ]
     },
     {
       "name": "StreamJsonRpc, TCP, Content-Length \u002B Json.NET",
+      "id": "sweep-sjr-cl-newtonsoft",
       "kind": "theirs",
       "rpcPerSec": [
-        182308,
-        255019,
-        396942,
-        582792,
-        544394
+        122182,
+        204910,
+        356420,
+        632229,
+        686417,
+        668408
+      ],
+      "cpuSystem": [
+        18.6,
+        35,
+        63.4,
+        86.5,
+        87,
+        84.4
+      ],
+      "cpuProcess": [
+        18.6,
+        35,
+        63.3,
+        86.5,
+        87,
+        84.4
+      ],
+      "cpuClients": [
+        2.2,
+        4.6,
+        9.3,
+        11.8,
+        10.1,
+        9.1
       ]
     },
     {
       "name": "gRPC for .NET, unary",
+      "id": "sweep-grpc-unary",
       "kind": "grpc",
       "rpcPerSec": [
-        179749,
-        322979,
-        332854,
-        377916,
-        361627
+        138886,
+        252190,
+        336472,
+        356705,
+        314681,
+        275939
+      ],
+      "cpuSystem": [
+        81,
+        94.9,
+        93.3,
+        93.2,
+        88.8,
+        88.4
+      ],
+      "cpuProcess": [
+        81,
+        94.9,
+        93.3,
+        93.2,
+        88.8,
+        88.4
+      ],
+      "cpuClients": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
       ]
     },
     {
       "name": "gRPC for .NET, bidirectional stream",
+      "id": "sweep-grpc-stream",
       "kind": "grpc",
       "rpcPerSec": [
-        62493,
-        113543,
-        204608,
-        246839,
-        265818
+        35607,
+        69178,
+        125256,
+        228506,
+        436949,
+        893936
+      ],
+      "cpuSystem": [
+        24.7,
+        41.4,
+        68.7,
+        90.2,
+        96.6,
+        97.1
+      ],
+      "cpuProcess": [
+        24.7,
+        41.4,
+        68.7,
+        90.2,
+        96.6,
+        97.1
+      ],
+      "cpuClients": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
       ]
     }
   ]

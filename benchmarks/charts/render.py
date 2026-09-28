@@ -117,6 +117,8 @@ def fold_sweep(sweep, runs, names):
         raise DataError("sweep runs disagree on available cores")
     if cores:
         sweep["cores"] = cores.pop()
+    else:
+        sweep.pop("cores", None)  # older run files carry no core count; do not keep one from an earlier fold
     for s in sweep["series"]:
         cols = list(zip(*by_name[s["name"]]))
         s["points"] = [dict(low=min(c), high=max(c), median=statistics.median(c), n=len(c), values=list(c),

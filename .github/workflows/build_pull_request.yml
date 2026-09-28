@@ -46,7 +46,7 @@ jobs:
 
   # The measurement: ProcessAsync must scale from 1 to 4 workers. A process-wide serialization point holds the ratio
   # near 1.3 on any core count. Diagnostic on the shared runner (its core count and isolation are not promised, so
-  # this job is not required and continues on error); the release gate is `--scale 3 16 4.0` on the reference machine.
+  # this job is not required and continues on error); the release gate is `--scale 3 32 4.0` in the cpu-performance publish job.
   # The per-serializer diagnostics after the gate (one run per cell, never part of the exit code) go to their own summary section.
   scaling:
     runs-on: ubuntu-latest
