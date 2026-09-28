@@ -63,7 +63,7 @@ System.Text.Json API next to a lenient Json.NET one for old clients; the AspNetC
 `MapJsonRpc(pattern, options)` overload maps one endpoint per session). Use per-call when the transport
 negotiates it (a header, a route, a protocol version). The process-wide default is for the common case
 of one serializer everywhere. This order applies to the serializer only; error and processing handlers
-are per session, see the main README's [Configuration](../README.md#configuration) table.
+are per session, see the API reference's [Configuration](reference.md#configuration) table.
 
 Construct a serializer once and share it: serializers must be thread-safe. The synchronous fast path
 keeps an envelope reader in per-thread scratch storage, reused while the serializer instance stays the
