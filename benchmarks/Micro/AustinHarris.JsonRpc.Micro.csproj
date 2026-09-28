@@ -15,6 +15,9 @@
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Friend of the signed core assembly (InternalsVisibleTo), so signed with the same key. -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)..\..\\AustinHarris.JsonRpc.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

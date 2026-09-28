@@ -385,14 +385,17 @@ namespace AustinHarris.JsonRpcTestN
             {
                 Config.IncludeExceptionDetails = true;
                 var response = Parse(Run("{\"method\":\"throwsInner\",\"id\":1}", null, serializer));
+                // the exception the method threw, with its whole cause chain: the library does not substitute the cause
                 var data = (JObject)response["error"]["data"];
-                Assert.AreEqual("System.ArgumentException", (string)data["ClassName"]);
-                Assert.AreEqual("inner message", (string)data["Message"]);
+                Assert.AreEqual("System.InvalidOperationException", (string)data["ClassName"]);
+                Assert.AreEqual("outer message", (string)data["Message"]);
                 StringAssert.Contains("ThrowsInner", (string)data["StackTraceString"]);
-                Assert.AreEqual(new ArgumentException().HResult, (int)data["HResult"]);
-                Assert.AreEqual("innermost message", (string)data["InnerException"]["Message"]);
-                Assert.AreEqual("System.Exception", (string)data["InnerException"]["ClassName"]);
+                Assert.AreEqual(new InvalidOperationException().HResult, (int)data["HResult"]);
+                Assert.AreEqual("System.ArgumentException", (string)data["InnerException"]["ClassName"]);
+                Assert.AreEqual("inner message", (string)data["InnerException"]["Message"]);
                 StringAssert.Contains("ThrowsInner", (string)data["InnerException"]["StackTraceString"]);
+                Assert.AreEqual("System.Exception", (string)data["InnerException"]["InnerException"]["ClassName"]);
+                Assert.AreEqual("innermost message", (string)data["InnerException"]["InnerException"]["Message"]);
 
                 response = Parse(Run("{\"method\":\"throws\",\"id\":1}", null, serializer));
                 data = (JObject)response["error"]["data"];

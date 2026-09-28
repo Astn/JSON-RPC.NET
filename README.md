@@ -86,7 +86,7 @@ The core uses no reflection emit. The WebAssembly sample runs under the configur
 dotnet add package AustinHarris.JsonRpc --prerelease
 ```
 
-2.0 is published as `2.0.0-preview.2`; without `--prerelease`, NuGet resolves to the last 1.x release.
+2.0 is published as `2.0.0-preview.3`; without `--prerelease`, NuGet resolves to the last 1.x release. The four assemblies are strong-named with one key (public key token `e6819c02cf4aec44`) that is checked into the repository and does not change between releases, so a signed caller can reference them and .NET Framework loads them.
 
 Add `AustinHarris.JsonRpc.Newtonsoft` or `AustinHarris.JsonRpc.SystemTextJson` if you want that serializer, and `AustinHarris.JsonRpc.AspNetCore` to host in Kestrel.
 
@@ -98,7 +98,7 @@ Save this as `server.cs`. It is a .NET 10 file-based app: one C# file with no pr
 
 ```csharp
 #:sdk Microsoft.NET.Sdk.Web
-#:package AustinHarris.JsonRpc.AspNetCore@2.0.0-preview.2
+#:package AustinHarris.JsonRpc.AspNetCore@2.0.0-preview.3
 
 using AustinHarris.JsonRpc;
 using AustinHarris.JsonRpc.AspNetCore;
@@ -341,6 +341,8 @@ Config.SetErrorHandler((request, error) =>
 Set `Config.IncludeExceptionDetails = true` only for trusted development clients: `data` then carries the full `ExceptionInfo` (`ClassName`, `Message`, `Source`, `StackTraceString`, `HResult` and the `InnerException` chain).
 
 A `JsonRpcException` thrown by the application, or returned by an error handler, keeps the `data` it was given; that data is authored, not redacted.
+
+The exception a handler receives is the one the method threw, with its own `InnerException` still attached; the library never substitutes the cause for the error. Only two wrapper types are stripped first, by type and wherever they came from: a `TargetInvocationException` (what reflection adds) and an `AggregateException` holding exactly one exception (what a faulted task observed through `Result` or `Wait` adds). An aggregate of several exceptions is passed whole. A `JsonRpcException` found only inside another exception's `InnerException` is not promoted: the outer exception is an internal error like any other.
 
 ### Handlers
 

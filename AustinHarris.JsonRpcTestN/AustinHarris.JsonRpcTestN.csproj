@@ -4,6 +4,9 @@
     <Copyright>Austin Harris</Copyright>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
+    <!-- Friend of the signed core assembly (InternalsVisibleTo), so signed with the same key. -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)..\\AustinHarris.JsonRpc.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

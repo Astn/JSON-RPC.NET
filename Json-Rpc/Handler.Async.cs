@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using AustinHarris.JsonRpc.Invocation;
@@ -234,36 +233,11 @@ namespace AustinHarris.JsonRpc
             PooledByteBufferWriter output, Exception ex, bool notification, int envelopeStart)
         {
             output.Rewind(envelopeStart);
-            ex = UnwrapAsyncException(ex);
             var error = BindingFailure(reader, method, map, ex);
-            error = error != null ? ProcessException(reader, error) : MapAsyncException(reader, ex);
+            error = error != null ? ProcessException(reader, error) : MapException(reader, ex);
             if (notification) return false;
             WriteErrorEnvelope(output, serializer, error, reader.IdRaw);
             return true;
-        }
-
-        private static Exception UnwrapAsyncException(Exception ex)
-        {
-            while (true)
-            {
-                if (ex is TargetInvocationException tie && tie.InnerException != null) ex = tie.InnerException;
-                else if (ex is AggregateException aggregate && aggregate.InnerExceptions.Count == 1) ex = aggregate.InnerExceptions[0];
-                else return ex;
-            }
-        }
-
-        private JsonRpcException MapAsyncException(JsonRpcRequestReader reader, Exception ex)
-        {
-            ex = UnwrapAsyncException(ex);
-            return ex is AggregateException
-                ? ProcessException(reader, new JsonRpcException(-32603, "Internal Error", ex)) : MapException(reader, ex);
-        }
-
-        private JsonRpcException MapAsyncException(JsonRequest request, Exception ex)
-        {
-            ex = UnwrapAsyncException(ex);
-            return ex is AggregateException
-                ? ProcessException(request, new JsonRpcException(-32603, "Internal Error", ex)) : MapException(request, ex);
         }
 
         private async ValueTask<bool> HandleHookRequestAsync(JsonRpcRequestReader reader, JsonRpcSerializer serializer,
@@ -298,7 +272,7 @@ namespace AustinHarris.JsonRpc
                 catch (Exception ex)
                 {
                     var failed = new JsonRequest(method, null, id);
-                    return PostProcess(failed, new JsonResponse { Error = MapAsyncException(failed, ex), Id = id }, context);
+                    return PostProcess(failed, new JsonResponse { Error = MapException(failed, ex), Id = id }, context);
                 }
                 var request = new JsonRequest(method, parameters, id);
                 JsonRpcException preError;
@@ -335,7 +309,7 @@ namespace AustinHarris.JsonRpc
                     if (message != null) return new JsonResponse { Error = ProcessException(request, new JsonRpcException(-32600, "Invalid Request", message)), Id = request.Id };
                     return await InvokeBoxedAsync(reader, request, context, token, hookFrame).ConfigureAwait(false);
                 }
-                catch (Exception ex) { return new JsonResponse { Error = MapAsyncException(request, ex), Id = request.Id }; }
+                catch (Exception ex) { return new JsonResponse { Error = MapException(request, ex), Id = request.Id }; }
                 finally { reader?.Release(); }
             }
         }
@@ -390,9 +364,8 @@ namespace AustinHarris.JsonRpc
 
         private JsonResponse BoxedFailure(JsonRpcRequestReader reader, JsonRequest request, RpcMethod method, int[] map, Exception ex)
         {
-            ex = UnwrapAsyncException(ex);
             var error = BindingFailure(reader, method, map, ex);
-            return new JsonResponse { Error = error != null ? ProcessException(request, error) : MapAsyncException(request, ex), Id = request.Id };
+            return new JsonResponse { Error = error != null ? ProcessException(request, error) : MapException(request, ex), Id = request.Id };
         }
     }
 }
