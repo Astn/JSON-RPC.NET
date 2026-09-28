@@ -1,0 +1,47 @@
+{
+  "mode": "baseline",
+  "machine": "AMD EPYC 7R13 Processor, 4 cores of 64 host CPUs, cgroup quota, Linux 6.1.0 #1 SMP, .NET 10.0.0, Release, Server GC",
+  "runtime": ".NET 10.0.0, Release, Server GC",
+  "serializer": "Json.NET (1.2.3)",
+  "date": "2026-09-27",
+  "seconds": 0.5,
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "run": 1,
+  "cores": 4,
+  "version": "1.2.3.0",
+  "rows": [
+    {
+      "id": "headline-123-string",
+      "batch": 50,
+      "rpcPerSec": 900000,
+      "rpcs": 450000,
+      "seconds": 0.51,
+      "cpu": {
+        "system": 90.0,
+        "process": 85.0
+      }
+    },
+    {
+      "id": "headline-123-string",
+      "batch": 100,
+      "rpcPerSec": 1100000,
+      "rpcs": 550000,
+      "seconds": 0.51,
+      "cpu": {
+        "system": 90.0,
+        "process": 85.0
+      }
+    },
+    {
+      "id": "headline-123-string",
+      "batch": 300,
+      "rpcPerSec": 1000000,
+      "rpcs": 500000,
+      "seconds": 0.51,
+      "cpu": {
+        "system": 90.0,
+        "process": 85.0
+      }
+    }
+  ]
+}

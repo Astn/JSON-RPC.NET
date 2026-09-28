@@ -1,0 +1,46 @@
+{
+  "mode": "legacy",
+  "machine": "AMD EPYC 7R13 Processor, 4 cores of 64 host CPUs, cgroup quota, Linux 6.1.0 #1 SMP, .NET 10.0.0, Release, Server GC",
+  "runtime": ".NET 10.0.0, Release, Server GC",
+  "serializer": "jsmn",
+  "date": "2026-09-27",
+  "seconds": 0.5,
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "run": 1,
+  "cores": 4,
+  "rows": [
+    {
+      "id": "legacy-string",
+      "batch": 50,
+      "rpcPerSec": 4000000,
+      "rpcs": 2000000,
+      "seconds": 0.51,
+      "cpu": {
+        "system": 90.0,
+        "process": 85.0
+      }
+    },
+    {
+      "id": "legacy-string",
+      "batch": 100,
+      "rpcPerSec": 5200000,
+      "rpcs": 2600000,
+      "seconds": 0.51,
+      "cpu": {
+        "system": 90.0,
+        "process": 85.0
+      }
+    },
+    {
+      "id": "legacy-string",
+      "batch": 300,
+      "rpcPerSec": 5000000,
+      "rpcs": 2500000,
+      "seconds": 0.51,
+      "cpu": {
+        "system": 90.0,
+        "process": 85.0
+      }
+    }
+  ]
+}

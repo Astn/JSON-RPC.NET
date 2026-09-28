@@ -1,0 +1,218 @@
+{
+  "mode": "sweep",
+  "machine": "AMD EPYC 7R13 Processor, 4 cores of 64 host CPUs, cgroup quota, Linux 6.1.0 #1 SMP, .NET 10.0.0, Release, Server GC",
+  "runtime": ".NET 10.0.0, Release, Server GC",
+  "date": "2026-09-27",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "run": 1,
+  "secondsPerCell": 2,
+  "pipeline": 256,
+  "cores": 4,
+  "connections": [
+    1,
+    2,
+    4
+  ],
+  "series": [
+    {
+      "id": "sweep-ours-tcp",
+      "name": "JSON-RPC.Net, TCP",
+      "kind": "ours",
+      "rpcPerSec": [
+        1000,
+        1800,
+        3000
+      ],
+      "cpuSystem": [
+        30.0,
+        55.0,
+        90.0
+      ],
+      "cpuProcess": [
+        25.0,
+        50.0,
+        80.0
+      ],
+      "cpuClients": [
+        5.0,
+        8.0,
+        10.0
+      ]
+    },
+    {
+      "id": "sweep-ours-http-100",
+      "name": "JSON-RPC.Net, HTTP, batch of 100 per POST",
+      "kind": "ours",
+      "rpcPerSec": [
+        2000,
+        3600,
+        6000
+      ],
+      "cpuSystem": [
+        30.0,
+        55.0,
+        90.0
+      ],
+      "cpuProcess": [
+        25.0,
+        50.0,
+        80.0
+      ],
+      "cpuClients": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "sweep-ours-http-1",
+      "name": "JSON-RPC.Net, HTTP, 1 request per POST",
+      "kind": "ours",
+      "rpcPerSec": [
+        3000,
+        5400,
+        9000
+      ],
+      "cpuSystem": [
+        30.0,
+        55.0,
+        90.0
+      ],
+      "cpuProcess": [
+        25.0,
+        50.0,
+        80.0
+      ],
+      "cpuClients": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "sweep-sjr-newline-stj",
+      "name": "StreamJsonRpc, TCP, newline + System.Text.Json",
+      "kind": "theirs",
+      "rpcPerSec": [
+        4000,
+        7200,
+        12000
+      ],
+      "cpuSystem": [
+        30.0,
+        55.0,
+        90.0
+      ],
+      "cpuProcess": [
+        25.0,
+        50.0,
+        80.0
+      ],
+      "cpuClients": [
+        5.0,
+        8.0,
+        10.0
+      ]
+    },
+    {
+      "id": "sweep-sjr-cl-stj",
+      "name": "StreamJsonRpc, TCP, Content-Length + System.Text.Json",
+      "kind": "theirs",
+      "rpcPerSec": [
+        5000,
+        9000,
+        15000
+      ],
+      "cpuSystem": [
+        30.0,
+        55.0,
+        90.0
+      ],
+      "cpuProcess": [
+        25.0,
+        50.0,
+        80.0
+      ],
+      "cpuClients": [
+        5.0,
+        8.0,
+        10.0
+      ]
+    },
+    {
+      "id": "sweep-sjr-cl-newtonsoft",
+      "name": "StreamJsonRpc, TCP, Content-Length + Json.NET",
+      "kind": "theirs",
+      "rpcPerSec": [
+        6000,
+        10800,
+        18000
+      ],
+      "cpuSystem": [
+        30.0,
+        55.0,
+        90.0
+      ],
+      "cpuProcess": [
+        25.0,
+        50.0,
+        80.0
+      ],
+      "cpuClients": [
+        5.0,
+        8.0,
+        10.0
+      ]
+    },
+    {
+      "id": "sweep-grpc-unary",
+      "name": "gRPC for .NET, unary",
+      "kind": "grpc",
+      "rpcPerSec": [
+        7000,
+        12600,
+        21000
+      ],
+      "cpuSystem": [
+        30.0,
+        55.0,
+        90.0
+      ],
+      "cpuProcess": [
+        25.0,
+        50.0,
+        80.0
+      ],
+      "cpuClients": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "sweep-grpc-stream",
+      "name": "gRPC for .NET, bidirectional stream",
+      "kind": "grpc",
+      "rpcPerSec": [
+        8000,
+        14400,
+        24000
+      ],
+      "cpuSystem": [
+        30.0,
+        55.0,
+        90.0
+      ],
+      "cpuProcess": [
+        25.0,
+        50.0,
+        80.0
+      ],
+      "cpuClients": [
+        null,
+        null,
+        null
+      ]
+    }
+  ]
+}

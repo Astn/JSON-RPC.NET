@@ -15,6 +15,11 @@ namespace TestServer_Console
             services = new object[] { new CalculatorService() };
             // Before any mode runs: the awaited-worker modes (--async, --scale) start their workers on the pool.
             System.Threading.ThreadPool.SetMinThreads(Environment.ProcessorCount * 3, Environment.ProcessorCount * 3);
+            var interactive = !Console.IsOutputRedirected;
+            if (interactive) Console.Clear();
+            Console.WriteLine("Machine: " + MachineDescription.Current());
+            if (interactive) HardwarePrinter.TopRow = Console.CursorTop;
+            if (args.Length > 0 && args[0] == "--machine") return;
 
             // `dotnet run -- --async [seconds] [workers]` drives ProcessAsync from awaited workers (the Async table).
             if (args.Length > 0 && args[0] == "--async")
@@ -28,24 +33,33 @@ namespace TestServer_Console
             // `dotnet run -- --scale [seconds] [workers] [threshold]` is the release gate for the ProcessAsync path:
             // the inline rows at 1, 2 and N workers, three paired runs, medians; exit code 1 when N/1 is below the threshold.
             // After the gate it prints a per-serializer diagnostics table that never changes the exit code; a final
-            // `--no-diagnostics` argument skips it.
+            // `--no-diagnostics` argument skips it. The worker count defaults to the core count.
             if (args.Length > 0 && args[0] == "--scale")
             {
                 double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 3;
-                int workers = args.Length > 2 && int.TryParse(args[2], out var t) ? t : 16;
+                int workers = args.Length > 2 && int.TryParse(args[2], out var t) ? t : Environment.ProcessorCount;
                 double threshold = args.Length > 3 && double.TryParse(args[3], out var r) ? r : 4.0;
                 bool diagnostics = !(args.Length > 1 && args[args.Length - 1] == "--no-diagnostics");
-                bool pass = AsyncBenchmark.ScaleAsync(Console.WriteLine, seconds, workers, threshold).GetAwaiter().GetResult();
+                var report = BenchResults.Enabled ? BenchResults.Document("scale", seconds) : null;
+                bool pass = AsyncBenchmark.ScaleAsync(Console.WriteLine, seconds, workers, threshold, report: report).GetAwaiter().GetResult();
                 Environment.ExitCode = pass ? 0 : 1;
-                if (diagnostics) AsyncBenchmark.ScaleDiagnosticsAsync(Console.WriteLine, seconds, workers).GetAwaiter().GetResult();
+                if (diagnostics) AsyncBenchmark.ScaleDiagnosticsAsync(Console.WriteLine, seconds, workers, report).GetAwaiter().GetResult();
+                if (report != null)
+                {
+                    report["exitCode"] = Environment.ExitCode;
+                    BenchResults.Write("scale", report, Console.WriteLine);
+                }
                 return;
             }
 
-            var interactive = !Console.IsOutputRedirected;
-            if (interactive) Console.Clear();
-            IHardwareInfo hardwareInfo = new HardwareInfo();
-            hardwareInfo.RefreshAll();
-            HardwarePrinter.PrintHardware(hardwareInfo);
+            IHardwareInfo hardwareInfo = null;
+            try
+            {
+                hardwareInfo = new HardwareInfo();
+                hardwareInfo.RefreshAll();
+                HardwarePrinter.PrintHardware(hardwareInfo);
+            }
+            catch (Exception) { hardwareInfo = null; } // A restricted runner may deny WMI.
             Console.WriteLine("Thread pool minimum set to {0}", Environment.ProcessorCount * 3);
 
             // `dotnet run -- --sync [seconds] [threads]` runs the direct synchronous benchmark and exits (CI / scripted runs).
@@ -67,7 +81,8 @@ namespace TestServer_Console
                 return;
             }
 
-            // `dotnet run -- --sweep [seconds] [output.json]` measures every library and transport at 1, 2, 4, 8 and 16 connections.
+            // `dotnet run -- --sweep [seconds] [output.json]` measures every library and transport at 1, 2, 4, ... connections up to
+            // the core count; with JSONRPC_BENCH_RESULTS set and no output path, the file goes to <dir>/sweep-<run>.json.
             if (args.Length > 0 && args[0] == "--sweep")
             {
                 double seconds = args.Length > 1 && double.TryParse(args[1], out var s) ? s : 2;
@@ -122,7 +137,7 @@ namespace TestServer_Console
                 return;
             }
             Console.CursorVisible = false;
-            HardwarePrinter.PrintHardware(hardwareInfo);
+            if (hardwareInfo != null) HardwarePrinter.PrintHardware(hardwareInfo);
             var pos = Console.CursorTop;
             BenchmarkRunner.Benchmark((update) =>
             {

@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AustinHarris.JsonRpc;
@@ -68,33 +69,44 @@ internal static class KestrelBenchmark
             print($"Kestrel on {httpUrl} (HTTP) and 127.0.0.1:{tcpPort} (TCP), {clients} clients, pipeline {pipeline}, {seconds:0.#} s per row, EnableAsyncMethods = {(asyncMethods ? "true" : "false")}\n");
 
             var rows = new List<BenchmarkRunner.ChartRow>();
+            var resultRows = new JsonArray();
+            // Result ids: the EnableAsyncMethods = false rows and the two TCP rows under true feed benchmarks.json; the rest
+            // are kept in the file under their own ids.
+            string Id(string defaultId, string asyncId) => asyncMethods ? asyncId : defaultId;
             var session = Handler.DefaultSessionId();
             var memInputs = inputs.Select(i => (ReadOnlyMemory<byte>)i).ToArray();
 
             // Scale rows: the same requests with no transport at all.
-            BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, 0.5, out _); // warm-up
-            var elapsed = BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, seconds, out long total);
-            rows.Add(new BenchmarkRunner.ChartRow("in-process, 1 thread", total / elapsed, $"{total,12:N0} RPCs"));
-            elapsed = BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, clients, seconds, out total);
-            rows.Add(new BenchmarkRunner.ChartRow($"in-process, {clients} threads", total / elapsed, $"{total,12:N0} RPCs"));
+            BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, 0.5); // warm-up
+            var (total, elapsed, cpu) = BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, seconds);
+            rows.Add(new BenchmarkRunner.ChartRow("in-process, 1 thread", total / elapsed, $"{total,12:N0} RPCs  {cpu.TrailingText}"));
+            resultRows.Add(BenchResults.Row(Id("kestrel-inproc-1", "kestrel-async-inproc-1"), total / elapsed, total, cpu));
+            (total, elapsed, cpu) = BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, clients, seconds);
+            rows.Add(new BenchmarkRunner.ChartRow($"in-process, {clients} threads", total / elapsed, $"{total,12:N0} RPCs  {cpu.TrailingText}"));
+            resultRows.Add(BenchResults.Row(Id("ours-inproc-n", "kestrel-async-inproc-n"), total / elapsed, total, cpu));
             print($"  in-process rows done ({rows[0].RpcPerSec:N0} / {rows[1].RpcPerSec:N0} RPC/s)");
 
             // HTTP, one request per POST.
             await HttpRun(httpUrl, inputs, 1, clients, 0.5);                                   // warm-up
-            var (count, secs) = await HttpRun(httpUrl, inputs, 1, clients, seconds);
-            rows.Add(new BenchmarkRunner.ChartRow("HTTP, 1 request/POST", count / secs, $"{count,12:N0} RPCs  {secs / count * 1e6 * clients:N1} us/request per client"));
+            var (count, secs, usage) = await HttpRun(httpUrl, inputs, 1, clients, seconds);
+            rows.Add(new BenchmarkRunner.ChartRow("HTTP, 1 request/POST", count / secs, $"{count,12:N0} RPCs  {secs / count * 1e6 * clients:N1} us/request per client  {usage.TrailingText}"));
+            var httpRow = BenchResults.Row(Id("ours-http-1", "kestrel-async-http-1"), count / secs, count, usage);
+            httpRow["usPerRequest"] = Math.Round(secs / count * 1e6 * clients, 1);
+            resultRows.Add(httpRow);
             print($"  HTTP single done ({count / secs:N0} RPC/s)");
 
             // HTTP, a batch per POST.
             await HttpRun(httpUrl, new[] { batch }, batchSize, clients, 0.5);
-            (count, secs) = await HttpRun(httpUrl, new[] { batch }, batchSize, clients, seconds);
-            rows.Add(new BenchmarkRunner.ChartRow($"HTTP, batch of {batchSize}/POST", count / secs, $"{count,12:N0} RPCs"));
+            (count, secs, usage) = await HttpRun(httpUrl, new[] { batch }, batchSize, clients, seconds);
+            rows.Add(new BenchmarkRunner.ChartRow($"HTTP, batch of {batchSize}/POST", count / secs, $"{count,12:N0} RPCs  {usage.TrailingText}"));
+            resultRows.Add(BenchResults.Row(Id("ours-http-100", "kestrel-async-http-100"), count / secs, count, usage));
             print($"  HTTP batch done ({count / secs:N0} RPC/s)");
 
             // TCP, pipelined.
             TcpRun(tcpPort, inputs, clients, 0.5, pipeline, ResultPrefix);
-            (count, secs) = TcpRun(tcpPort, inputs, clients, seconds, pipeline, ResultPrefix);
-            rows.Add(new BenchmarkRunner.ChartRow($"TCP, {pipeline} pipelined{(asyncMethods ? ", inline methods" : "")}", count / secs, $"{count,12:N0} RPCs"));
+            (count, secs, usage) = TcpRun(tcpPort, inputs, clients, seconds, pipeline, ResultPrefix);
+            rows.Add(new BenchmarkRunner.ChartRow($"TCP, {pipeline} pipelined{(asyncMethods ? ", inline methods" : "")}", count / secs, $"{count,12:N0} RPCs  {usage.TrailingText}"));
+            resultRows.Add(BenchResults.Row(Id("ours-tcp", "ours-tcp-async-inline"), count / secs, count, usage));
             print($"  TCP done ({count / secs:N0} RPC/s)");
 
             if (asyncMethods)
@@ -102,12 +114,24 @@ internal static class KestrelBenchmark
                 // The same five calls, each answered by a method that awaits Task.Yield() before returning.
                 var yieldInputs = inputs.Select(i => Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(i).Replace("\"method\":\"", "\"method\":\"" + YieldPrefix))).ToArray();
                 TcpRun(tcpPort, yieldInputs, clients, 0.5, pipeline, ResultPrefix);
-                (count, secs) = TcpRun(tcpPort, yieldInputs, clients, seconds, pipeline, ResultPrefix);
-                rows.Add(new BenchmarkRunner.ChartRow($"TCP, {pipeline} pipelined, yielding methods", count / secs, $"{count,12:N0} RPCs"));
+                (count, secs, usage) = TcpRun(tcpPort, yieldInputs, clients, seconds, pipeline, ResultPrefix);
+                rows.Add(new BenchmarkRunner.ChartRow($"TCP, {pipeline} pipelined, yielding methods", count / secs, $"{count,12:N0} RPCs  {usage.TrailingText}"));
+                resultRows.Add(BenchResults.Row("ours-tcp-async-yield", count / secs, count, usage));
                 print($"  TCP yielding done ({count / secs:N0} RPC/s)");
             }
 
             BenchmarkRunner.PrintBarChart($"Kestrel benchmark - {Config.Serializer.Name} - EnableAsyncMethods = {(asyncMethods ? "true" : "false")} - RPC/s by transport", "Transport", rows);
+
+            if (BenchResults.Enabled)
+            {
+                var doc = BenchResults.Document(asyncMethods ? "kestrel-async" : "kestrel", seconds);
+                doc["clients"] = clients;
+                doc["pipeline"] = pipeline;
+                doc["batchSize"] = batchSize;
+                doc["asyncMethods"] = asyncMethods;
+                doc["rows"] = resultRows;
+                BenchResults.Write(asyncMethods ? "kestrel-async" : "kestrel", doc, print);
+            }
         }
         finally
         {
@@ -146,13 +170,14 @@ internal static class KestrelBenchmark
     }
 
     /// <summary>Each client POSTs its next document, reads the body, checks it is a result, and repeats.</summary>
-    internal static async Task<(long count, double seconds)> HttpRun(string url, byte[][] documents, int rpcsPerDocument, int clients, double seconds)
+    internal static async Task<(long count, double seconds, CpuUsage cpu)> HttpRun(string url, byte[][] documents, int rpcsPerDocument, int clients, double seconds)
     {
         using var handler = new SocketsHttpHandler { MaxConnectionsPerServer = clients * 2, PooledConnectionLifetime = TimeSpan.FromMinutes(5) };
         using var http = new HttpClient(handler);
         var prefix = rpcsPerDocument > 1 ? BatchResultPrefix : ResultPrefix;
         using var cts = new CancellationTokenSource();
         var counts = new long[clients];
+        var meter = CpuMeter.Start();
         var sw = Stopwatch.StartNew();
 
         var tasks = new Task[clients];
@@ -182,7 +207,7 @@ internal static class KestrelBenchmark
         cts.Cancel();
         await Task.WhenAll(tasks);
         sw.Stop();
-        return (counts.Sum(), sw.Elapsed.TotalSeconds);
+        return (counts.Sum(), sw.Elapsed.TotalSeconds, meter.Stop());
     }
 
     /// <summary>
@@ -193,13 +218,14 @@ internal static class KestrelBenchmark
     /// no allocation and no parsing beyond bracket depth.
     /// </summary>
     /// <param name="expectedPrefix">Bytes every response must start with, or null to skip the check (framings that put headers first).</param>
-    internal static (long count, double seconds) TcpRun(int port, byte[][] inputs, int clients, double seconds, int pipeline, byte[] expectedPrefix)
+    internal static (long count, double seconds, CpuUsage cpu) TcpRun(int port, byte[][] inputs, int clients, double seconds, int pipeline, byte[] expectedPrefix)
     {
         const int ringCount = 4096;
         var offsets = new int[ringCount + pipeline + 1];
         var ring = BuildRing(inputs, ringCount, pipeline, offsets);
 
         var counts = new long[clients];
+        var clientTimes = new double?[clients];
         int stop = 0;
         Exception failure = null;
         var ready = new Barrier(clients + 1);
@@ -221,6 +247,7 @@ internal static class KestrelBenchmark
                     long received = 0;
 
                     ready.SignalAndWait();
+                    double? cpuStart = CpuMeter.ThreadTime();
                     while (Volatile.Read(ref stop) == 0)
                     {
                         int free = pipeline - inFlight;
@@ -257,6 +284,8 @@ internal static class KestrelBenchmark
                     }
                     catch (SocketException) { }
 
+                    double? cpuEnd = CpuMeter.ThreadTime();
+                    if (cpuStart.HasValue && cpuEnd.HasValue) clientTimes[slot] = cpuEnd.Value - cpuStart.Value;
                     counts[slot] = received;
                 }
                 catch (Exception e)
@@ -269,6 +298,7 @@ internal static class KestrelBenchmark
         }
 
         ready.SignalAndWait();
+        var meter = CpuMeter.Start();
         var sw = Stopwatch.StartNew();
         Thread.Sleep(TimeSpan.FromSeconds(seconds));
         Volatile.Write(ref stop, 1);
@@ -276,7 +306,8 @@ internal static class KestrelBenchmark
         sw.Stop();
 
         if (failure != null) throw new InvalidOperationException("TCP client failed", failure);
-        return (counts.Sum(), sw.Elapsed.TotalSeconds);
+        double? clientSeconds = clientTimes.All(v => v.HasValue) ? clientTimes.Sum(v => v.Value) : null;
+        return (counts.Sum(), sw.Elapsed.TotalSeconds, meter.Stop(clientSeconds));
     }
 
     /// <summary>
