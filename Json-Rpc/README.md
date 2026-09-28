@@ -140,12 +140,15 @@ The 2.0 runs used the built-in serializer on an AMD Ryzen 7 7800X3D with .NET 10
 
 ![JSON-RPC.Net 1.2.3 and 2.0 throughput through the string and byte entry points](https://raw.githubusercontent.com/Astn/JSON-RPC.NET/master/benchmarks/charts/headline-1x-vs-2.svg)
 
+<!-- benchmarks:headline -->
 | Path | RPC/s | Against 1.2.3 |
 | --- | ---: | ---: |
 | 1.2.3, `Task<string> Process(string)`, thread pool, best batch size | 3.08 M | |
 | 2.0, the same string API and the same loop | 13.3 M | 4.3× |
 | 2.0, `Process(bytes)`, 16 dedicated threads | 31.7 M | 10.3× |
 | 2.0, `ProcessAsync(bytes)`, 16 awaited workers | 32.1 M | 10.4× |
+
+<!-- /benchmarks:headline -->
 
 These measurements cover the library without a transport.
 The asynchronous byte row uses methods that complete inline.

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AustinHarris.JsonRpc;
@@ -65,6 +66,7 @@ public class BenchmarkRunner
         RunSync(session, inputs, serializer, Math.Min(threads, 2), 0.5);
 
         // allocation profile per request shape (a zero here means the request never touches the GC)
+        var allocations = new JsonArray();
         {
             using var w = new PooledByteBufferWriter(1024);
             sb.Clear();
@@ -78,15 +80,15 @@ public class BenchmarkRunner
                 long per = (GC.GetAllocatedBytesForCurrentThread() - before) / reps;
                 w.Clear(); JsonRpcProcessor.Process(session, inputs[k], w, null, serializer);
                 sb.Append("  ").Append(per.ToString().PadLeft(6)).Append(" B  ").Append(taskInputs[k]).Append("  ->  ").Append(w.ToString()).Append('\n');
+                allocations.Add(new JsonObject { ["request"] = taskInputs[k], ["bytes"] = per });
             }
             _print(sb.ToString());
         }
 
         // Sweep 1, 2, 4, ... up to the requested thread count (the count itself is always included).
-        var threadCounts = new List<int>();
-        for (int t = 1; t < threads; t *= 2) threadCounts.Add(t);
-        threadCounts.Add(threads);
+        var threadCounts = Doubling(threads);
         var rows = new List<ChartRow>(threadCounts.Count);
+        var resultRows = new JsonArray();
 
         foreach (var t in threadCounts)
         {
@@ -95,6 +97,10 @@ public class BenchmarkRunner
             double mbIn = rps * bytesIn / inputs.Length / (1024.0 * 1024.0);
             double mbOut = rps * bytesOut / inputs.Length / (1024.0 * 1024.0);
             rows.Add(new ChartRow($"{t} thread{(t == 1 ? "" : "s")}", rps, $"{1e9 / rps * t:N0} ns/RPC per thread  {cpu.TrailingText}"));
+            var resultRow = BenchResults.Row("ours-sync", rps, total, cpu);
+            resultRow.Insert(1, "threads", t);
+            resultRow.Insert(4, "nsPerRequest", Math.Round(1e9 / rps * t));
+            resultRows.Add(resultRow);
 
             // The detailed boxes are only printed for the two documented points: one thread and all threads.
             if (t != 1 && t != threads) continue;
@@ -119,6 +125,25 @@ public class BenchmarkRunner
         }
 
         PrintBarChart($"Sync benchmark - {serializer.Name} - RPC/s by thread count", "Threads", rows);
+
+        if (BenchResults.Enabled)
+        {
+            var doc = BenchResults.Document("sync", seconds);
+            doc["threads"] = threads;
+            doc["allocations"] = allocations;
+            doc["rows"] = resultRows;
+            BenchResults.Write("sync", doc, _print);
+        }
+    }
+
+    /// <summary>The published worker ladder: 1, 2, 4, ... below <paramref name="max"/>, then <paramref name="max"/> itself.</summary>
+    internal static List<int> Doubling(int max)
+    {
+        if (max < 1) throw new ArgumentOutOfRangeException(nameof(max));
+        var counts = new List<int>();
+        for (int t = 1; t < max; t *= 2) counts.Add(t);
+        counts.Add(max);
+        return counts;
     }
 
     internal static (long count, double seconds, CpuUsage cpu) RunSync(string session, ReadOnlyMemory<byte>[] inputs, JsonRpcSerializer serializer, int threads, double seconds)
@@ -174,6 +199,7 @@ public class BenchmarkRunner
         var iterations = 8;
         var cnt = 50;
         var results = new List<ChartRow>(iterations);
+        var resultRows = new JsonArray();
         var minIterationTime = TimeSpan.FromMilliseconds(500);
 
         // Warm up on the exact path the iterations use, for long enough that tiered compilation has replaced
@@ -221,11 +247,22 @@ public class BenchmarkRunner
             double seconds = currentStopwatch.Elapsed.TotalSeconds;
             long total = (long)cnt * currentBatches;
             results.Add(new ChartRow($"#{iteration} {cnt,11:N0}", total / seconds, $"{total,11:N0} RPCs in {seconds:F3} s  {cpu.TrailingText}"));
+            var resultRow = BenchResults.Row("legacy-string", total / seconds, total, cpu);
+            resultRow.Insert(1, "batch", cnt);
+            resultRow.Insert(4, "seconds", Math.Round(seconds, 3));
+            resultRows.Add(resultRow);
         }
 
         lock (renderLock)
         {
             PrintBarChart("Benchmark Summary - RPC/s by batch size", "  #  Batch size", results);
+        }
+
+        if (BenchResults.Enabled)
+        {
+            var doc = BenchResults.Document("legacy", minIterationTime.TotalSeconds);
+            doc["rows"] = resultRows;
+            BenchResults.Write("legacy", doc, _print);
         }
     }
 

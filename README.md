@@ -15,12 +15,15 @@ Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer
   <img alt="JSON-RPC.Net 1.2.3 and 2.0 on one machine, one run per row on 2026-09-25: 3.08 M requests per second through the 1.2.3 string API, 13.3 M through the same API on 2.0, and 31.7 M and 32.1 M through the 2.0 byte entry points" src="benchmarks/charts/headline-1x-vs-2.svg">
 </picture>
 
+<!-- benchmarks:headline -->
 | Path | RPC/s | Against 1.2.3 |
 | --- | ---: | ---: |
 | 1.2.3, `Task<string> Process(string)`, thread pool, best batch size | 3.08 M | |
 | 2.0, the same string API and the same loop | 13.3 M | 4.3× |
 | 2.0, `Process(bytes)`, 16 dedicated threads | 31.7 M | 10.3× |
 | 2.0, `ProcessAsync(bytes)`, 16 awaited workers | 32.1 M | 10.4× |
+
+<!-- /benchmarks:headline -->
 
 The request path uses a span tokenizer over the UTF-8 bytes and invokers compiled against the concrete reader and writer. It writes the response straight into a pooled buffer, with no `Task`, result string or continuation per request. A numeric request never touches the GC. Over Kestrel TCP, the AspNetCore package holds 14.3 M to 16.5 M with 256 requests in flight per connection. [Benchmarks](#benchmarks) has the full tables, conditions and the ranges over each day's runs. The [explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) has the exact values. `benchmarks/Baseline` re-runs the 1.2.3 row from NuGet with the same loop as the 2.0 harness.
 
@@ -600,6 +603,7 @@ The `jsonrpc` member policy (`Lenient` by default) is a compatibility setting, n
 
 ## Benchmarks
 
+<!-- benchmarks:summary -->
 | What | API and mode | RPC/s | Details |
 | --- | --- | ---: | --- |
 | Library alone, 16 threads | `Process(bytes)`, dedicated threads | 31.7 M to 36.4 M | [Sync](#sync-the-library-alone) |
@@ -612,6 +616,8 @@ The `jsonrpc` member policy (`Lenient` by default) is a compatibility setting, n
 | Kestrel HTTP, one request per POST | `EnableAsyncMethods = false` | 123 k to 182 k | HTTP/1.1 round trips dominate |
 | Legacy string API, thread pool | `Task<string> Process(string)`, batches of 6,000 | 12.4 M to 13.3 M | [Legacy](#legacy-string-api-scheduled-synchronous-execution); the 1.x overloads, not the byte path |
 
+<!-- /benchmarks:summary -->
+
 The Sync, Async, Legacy and Kestrel results were measured on 2026-09-25 on an idle AMD Ryzen 7 7800X3D (8 cores / 16 threads, 4.2 GHz), 64 GB, Windows 11, .NET 10, Release, Server GC, with the built-in serializer. Throughput ranges are the low and high over that day's runs: three runs for Sync, Legacy and default-mode Kestrel, two for the `EnableAsyncMethods = true` rows. Each Async throughput cell is one 3 s run; the summary's inline Async spread is across registrations, not runs. Each Sync ns figure is the reported cost from one of that row's runs. The StreamJsonRpc and gRPC comparison and its in-process rows are from 2026-09-23, with the WSL virtual machine shut down. Their ranges cover two runs; the comparison's single throughput figure is the value both runs rounded to. The WebAssembly results are also from 2026-09-23: one interpreter run and the better of two AOT runs per row. The connection sweep is a separate session with WSL and other work active, so its absolute figures are not comparable with the tables. A single benchmark thread on this machine varies with whatever else lands on its core's SMT sibling, so the 1-thread rows are from runs on an idle core.
 
 `TestServer_Console` is the benchmark harness. It binds one service with five small methods (`add`, `addInt`, `NullableFloatToNullableFloat`, `Test2`, `StringMe`), drives the same five requests through the server, checks every response is a `result` rather than an error, and ends each mode with a bar chart of RPC/s. For one-request timings with an allocation column, the numbers to check before merging a change to the dispatch path, see [benchmarks/Micro](benchmarks/Micro/README.md).
@@ -622,7 +628,7 @@ dotnet run -c Release --project TestServer_Console -- --async 3 16  # ProcessAsy
 dotnet run -c Release --project TestServer_Console -- --scale 3 16 4.0   # release gate: ProcessAsync must scale at least 4x from 1 to 16 workers, then per-serializer diagnostics (--no-diagnostics skips them)
 dotnet run -c Release --project TestServer_Console -- --kestrel 3   # through the AspNetCore package, HTTP and TCP (add `async` for EnableAsyncMethods = true)
 dotnet run -c Release --project TestServer_Console -- --compare 3   # the same calls through StreamJsonRpc and gRPC for .NET, side by side
-dotnet run -c Release --project TestServer_Console -- --sweep 2 benchmarks/charts/sweep.json   # every library and transport at 1, 2, 4, 8, 16 connections; one file per run
+dotnet run -c Release --project TestServer_Console -- --sweep 2 benchmarks/charts/sweep.json   # every library and transport at 1, 2, 4, ... connections up to the core count; one file per run
 dotnet run -c Release --project TestServer_Console                  # menu: Enter = Process(bytes), a = ProcessAsync(bytes), t = legacy string API, k = Kestrel, x = compare, q = quit
 dotnet run -c Release --project benchmarks/Baseline                 # the last 1.x release (1.2.3 from NuGet) through the same loop as the t entry
 dotnet run --project samples/WasmHost                               # browser: "Run benchmark" on the page
@@ -630,7 +636,7 @@ dotnet run --project samples/WasmHost                               # browser: "
 
 The three modes measure different things and are named for the entry point they call. `Process(bytes), dedicated threads` measures the library alone. `ProcessAsync(bytes), awaited workers` measures the entry point an asynchronous host calls. `Legacy Process(string), scheduled synchronous work` measures the 1.x string overloads through the thread pool. The Kestrel rows say whether `EnableAsyncMethods` was on.
 
-On Hugging Face Jobs, run `benchmarks/hf/launch.sh <ref> <flavor> [runs]` (`<ref>` is a branch, tag or commit) and retrieve JSON with `benchmarks/hf/fetch.py <job id> <out dir>`; `cpu-upgrade` is 8 vCPU ($0.03/h), `cpu-xl` is 16 vCPU ($1/h), and `cpu-performance` is 32 vCPU ($1.90/h), while `cpu-basic` is 2 vCPU for smoke runs only. These are shared vCPUs, so each job's figures belong to its own machine row and are never merged into the reference-box tables.
+On Hugging Face Jobs, run `benchmarks/hf/launch.sh <ref> <flavor> [runs|publish]` (`<ref>` is a branch, tag or commit) and retrieve JSON with `benchmarks/hf/fetch.py <job id> <out dir>`; `cpu-upgrade` is 8 vCPU ($0.03/h), `cpu-xl` is 16 vCPU ($1/h), and `cpu-performance` is 32 vCPU ($1.90/h), while `cpu-basic` is 2 vCPU for smoke runs only. These are shared vCPUs, so each job's figures belong to its own machine row and are never merged into the reference-box tables.
 
 ### Sync: the library alone
 
@@ -641,6 +647,7 @@ On Hugging Face Jobs, run `benchmarks/hf/launch.sh <ref> <flavor> [runs]` (`<ref
   <img alt="JSON-RPC.Net alone, by worker threads: aggregate requests per second as a low-to-high band, and the reported ns per request per thread" src="benchmarks/charts/sync-threads.svg">
 </picture>
 
+<!-- benchmarks:sync -->
 | Threads | RPC/s | ns per request per thread | Allocations per request |
 | ---: | ---: | ---: | --- |
 | 1 | 4.6 M to 5.0 M | 214 | 0 bytes for numeric shapes, one string for `StringMe` |
@@ -649,12 +656,15 @@ On Hugging Face Jobs, run `benchmarks/hf/launch.sh <ref> <flavor> [runs]` (`<ref
 | 8 | 22.8 M to 27.7 M | 292 | |
 | 16 | 31.7 M to 36.4 M | 439 | |
 
+<!-- /benchmarks:sync -->
+
 Per-thread cost rises with thread count because the 16 threads share 8 physical cores.
 
 ### Async: ProcessAsync, awaited workers
 
 `--async [seconds] [workers]` calls the byte-level `JsonRpcProcessor.ProcessAsync` from `Task.Run` workers that await each call. It uses the same five requests and loop shape as `--sync`. Workers start behind a barrier, stop on a shared flag and walk the inputs with an index. Worker startup is reported separately. Each row registers the five methods with one return shape and one `RpcContextFlow`. The `yieldsOnce` rows use one method that awaits `Task.Yield()`, giving a real suspension per request. Responses are checked before timing. The bytes column reports allocations per request at one worker, including the service method's own allocations. The inline rows use exact per-thread counts, and the `yieldsOnce` rows use the process-wide counter.
 
+<!-- benchmarks:async -->
 | Registration | 1 worker | 16 workers | B per request |
 | --- | ---: | ---: | ---: |
 | synchronous methods, None | 3.47 M | 24.6 M | 6 |
@@ -664,6 +674,8 @@ Per-thread cost rises with thread count because the 16 threads share 8 physical 
 | `ValueTask<T>`, None | 3.76 M | 32.1 M | 6 |
 | `yieldsOnce`, Flow | 915 k | 6.89 M | 741 |
 | `yieldsOnce`, None | 1.14 M | 8.96 M | 559 |
+
+<!-- /benchmarks:async -->
 
 The 16-worker rows are an equal-weight mix of the five requests, except `yieldsOnce`, which is one request. The table below gives bytes per request for each request shape at one worker, including the method's own allocations. The harness prints these lines before each row.
 
@@ -683,6 +695,7 @@ Before 2.0.0, the `ProcessAsync` path was capped near 4 M RPC/s at every worker 
 
 The `t` menu entry submits batches through the 1.x `Task<string> Process(string)` overload from every core at once. This compatibility string API pays for transcoding, a thread-pool hop, a `Task`, a result string and a continuation per request. An asynchronous host uses the byte entry points measured in the Sync and Async tables above. Each batch size is repeated for at least half a second after a one-second warm-up. Throughput peaks once a batch is large enough to keep every core busy and falls off again when hundreds of thousands of requests are queued at once:
 
+<!-- benchmarks:legacy -->
 | Batch size | RPC/s |
 | ---: | ---: |
 | 50 | 1.6 M to 2.0 M |
@@ -691,6 +704,8 @@ The `t` menu entry submits batches through the 1.x `Task<string> Process(string)
 | 36,000 | 11.6 M to 13.3 M |
 | 252,000 | 7.5 M to 7.8 M |
 | 2,016,000 | 7.5 M to 8.0 M |
+
+<!-- /benchmarks:legacy -->
 
 This mode is slower than the byte modes because it measures the cost of the .NET thread pool and a `Task`, a string and a continuation per request as much as the library itself. The AspNetCore host does not use that string path or allocate a result string. It awaits transport reads and flushes without a thread per connection, as the next table shows.
 
@@ -703,6 +718,7 @@ This mode is slower than the byte modes because it measures the cost of the .NET
   <img alt="JSON-RPC.Net by transport: HTTP single, HTTP batch of 100 and TCP pipelined, as low-to-high intervals on a log axis, with the in-process figure for scale" src="benchmarks/charts/kestrel-transports.svg">
 </picture>
 
+<!-- benchmarks:kestrel -->
 | Transport | RPC/s | Note |
 | --- | ---: | --- |
 | in-process, 16 threads | 33.8 M to 37.1 M | |
@@ -711,6 +727,8 @@ This mode is slower than the byte modes because it measures the cost of the .NET
 | TCP, 256 pipelined | 14.3 M to 16.5 M | ring-buffer clients, one thread each, streaming framer |
 | TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that complete inline | 15.0 M to 15.4 M | `--kestrel 3 async`, two runs; inside the spread of the `false` row |
 | TCP, 256 pipelined, `EnableAsyncMethods = true`, methods that suspend once | 1.25 M to 1.29 M | five `async Task<T>` methods awaiting `Task.Yield()` |
+
+<!-- /benchmarks:kestrel -->
 
 The TCP client keeps 256 requests in flight per connection and refills from a precomputed ring of request bytes with one `Send` per refill. On the server, `JsonFramer` feeds the same `Process` call the HTTP endpoint makes. With `EnableAsyncMethods = true`, the connection handler processes each connection's documents one at a time, in order. So 256 pipelined requests are 256 sequential invocations, and a method that suspends pays that cost per request. Concurrency comes from the 16 connections. The last row is a release-required regression row: it is measured with `--kestrel 3 async` on the reference machine before every release and compared with the previous release's published figure, a drop larger than the paired-run spread blocks the release, and it has no absolute floor.
 
@@ -723,6 +741,7 @@ The TCP client keeps 256 requests in flight per connection and refills from a pr
   <img alt="JSON-RPC.Net vs StreamJsonRpc vs gRPC for .NET at 16 connections: low-to-high intervals on a log axis, grouped by library, with the in-process paths under a rule" src="benchmarks/charts/compare-streamjsonrpc.svg">
 </picture>
 
+<!-- benchmarks:compare -->
 | Library and path | RPC/s |
 | --- | ---: |
 | JSON-RPC.Net over Kestrel TCP, raw documents | 13.7 M to 14.6 M |
@@ -731,6 +750,8 @@ The TCP client keeps 256 requests in flight per connection and refills from a pr
 | StreamJsonRpc over Kestrel TCP, `Content-Length` framing, Json.NET formatter (its default) | 625 k |
 | gRPC for .NET, unary calls over HTTP/2 (Grpc.Net.Client, 16 channels × 256 in flight) | 192 k to 198 k |
 | gRPC for .NET, one bidirectional stream per channel, 256 in flight, batched writes | 200 k to 209 k |
+
+<!-- /benchmarks:compare -->
 
 StreamJsonRpc 2.25.29, defaults apart from the formatter and framing named in each row. It is a full bidirectional RPC framework (client proxies, cancellation, progress, marshaled objects, events). The comparison is of the server side answering the same five requests; on that measure JSON-RPC.Net is about 10× faster on the same connections. JSON-RPC.Net ran its built-in serializer, and the fastest StreamJsonRpc rows use System.Text.Json, so this is a comparison of whole server paths, not of one JSON library against itself; running JSON-RPC.Net with the System.Text.Json serializer is a separate measurement and is not in this table.
 
@@ -744,11 +765,14 @@ gRPC for .NET 2.84.0 with default settings apart from Kestrel's `MaxStreamsPerCo
   <img alt="In-process paths: JSON-RPC.Net direct call, StreamJsonRpc Pipe pair and StreamJsonRpc typed proxy, as low-to-high intervals on a log axis" src="benchmarks/charts/inprocess-paths.svg">
 </picture>
 
+<!-- benchmarks:inprocess -->
 | Path | RPC/s |
 | --- | ---: |
 | JSON-RPC.Net in-process, 1 thread (direct call, bytes in, bytes out) | 2.6 M to 3.6 M |
 | StreamJsonRpc in-process, 1 client over a `Pipe` pair, newline framing, System.Text.Json formatter, 256 pipelined | 117 k to 142 k |
 | StreamJsonRpc typed proxy, sequential `await` per call, in-process pipes | 96 k to 97 k (10 µs per round trip) |
+
+<!-- /benchmarks:inprocess -->
 
 StreamJsonRpc's server side has no "document in, document out" call, so its in-process row is a pair of `System.IO.Pipelines` pipes, the closest it has to a direct call; the proxy row is one call at a time, so it measures a round trip, not throughput. The direct-call row is from the comparison session and sits below the sync table's newer 1-thread figure.
 
@@ -759,7 +783,7 @@ StreamJsonRpc's server side has no "document in, document out" call, so its in-p
   <img alt="Every library and transport by client connections, 1 to 16: three panels on a shared log axis, one per library, with a marker shape and dash per setting and whiskers spanning five runs" src="benchmarks/charts/compare-connections.svg">
 </picture>
 
-`--sweep` runs every one of those paths at 1, 2, 4, 8 and 16 client connections (gRPC: channels) and writes one JSON file per run; the chart above is five 2 s runs per point, the marker at the median and the whisker from the lowest to the highest run. New sweep files also record the available core count and per-cell system, process and dedicated TCP-client CPU percentages; a high client share can mean the harness is competing with the server for CPU. It is a separate session from the tables: the WSL virtual machine was running and other work was active, so its absolute figures sit below the table rows (JSON-RPC.Net over TCP 10.9 M to 13.0 M at 16 connections against 13.7 M to 14.6 M in the table), and its gRPC unary figure runs higher (360 k to 404 k against 192 k to 198 k; the cause is not pinned down, and the table keeps the `--compare` figure). What the sweep adds is the shape: JSON-RPC.Net over TCP and batched HTTP climb almost linearly with connections, StreamJsonRpc gains 8 to 10× from one connection to sixteen, and gRPC's .NET client is flat from two channels on because it competes with the server for the same eight cores.
+`--sweep` runs every one of those paths at each power of two from 1 to the core count of client connections (gRPC: channels) and writes one JSON file per run; the chart above is five 2 s runs per point, the marker at the median and the whisker from the lowest to the highest run. New sweep files also record the available core count and per-cell system, process and dedicated TCP-client CPU percentages; a high client share can mean the harness is competing with the server for CPU. It is a separate session from the tables: the WSL virtual machine was running and other work was active, so its absolute figures sit below the table rows (JSON-RPC.Net over TCP 10.9 M to 13.0 M at 16 connections against 13.7 M to 14.6 M in the table), and its gRPC unary figure runs higher (360 k to 404 k against 192 k to 198 k; the cause is not pinned down, and the table keeps the `--compare` figure). What the sweep adds is the shape: JSON-RPC.Net over TCP and batched HTTP climb almost linearly with connections, StreamJsonRpc gains 8 to 10× from one connection to sixteen, and gRPC's .NET client is flat from two channels on because it competes with the server for the same eight cores.
 
 The [benchmark explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) is the same data as an interactive page: toggle series, hover or tab to a point for the exact low, median, high and every run, switch the axis between log and linear, and download the data. It is one self-contained HTML file, [benchmarks/charts/explorer.html](benchmarks/charts/explorer.html), so it also works saved to disk.
 
@@ -814,7 +838,7 @@ The 1.x projects that 2.0 does not build (`AustinHarris.JsonRpc.Client`, `Austin
 
 ### Charts
 
-The charts, the explorer page and the benchmark figures in this README come from one data file, [benchmarks/charts/benchmarks.json](benchmarks/charts/benchmarks.json): the tables transcribed with their published precision and conditions, plus the `--sweep` run files. `python benchmarks/charts/render.py` (plain Python, no packages) renders every chart in a light and a dark variant, which the README picks between with a `<picture>` element, and `render.py --check` fails if a committed chart is stale or a figure in this README no longer matches the data; the pull-request build runs it. GitHub serves README images through a proxy as plain `<img>`, so the SVGs carry no scripts, hover text or links, and every range is drawn as an interval with its figures beside it; the interactive parts live on the explorer page. The explorer tables show median system, process and dedicated TCP-client CPU percentages when the sweep files contain them; a high client share can limit the requests the harness feeds to the server.
+The charts, the explorer page and the benchmark figures in this README come from one data file, [benchmarks/charts/benchmarks.json](benchmarks/charts/benchmarks.json): the tables transcribed with their published precision and conditions, plus the `--sweep` run files. `python benchmarks/charts/render.py` (plain Python, no packages) renders every chart in a light and a dark variant, which the README picks between with a `<picture>` element, and `render.py --check` fails if a committed chart is stale or a figure in this README no longer matches the data; the pull-request build runs it. To republish, run `benchmarks/hf/launch.sh <ref> cpu-performance publish`, then `python benchmarks/hf/fetch.py <job id> <dir>` to extract each run's JSON and text. `python benchmarks/charts/ingest.py <dir> --source <job id> --conditions "..."` folds the JSON into benchmarks.json and the sweep files, and `render.py` regenerates the charts, the explorer and the README tables between `<!-- benchmarks:... -->` markers. `render.py --check` fails when any of them is stale. GitHub serves README images through a proxy as plain `<img>`, so the SVGs carry no scripts, hover text or links, and every range is drawn as an interval with its figures beside it; the interactive parts live on the explorer page. The explorer tables show median system, process and dedicated TCP-client CPU percentages when the sweep files contain them; a high client share can limit the requests the harness feeds to the server.
 
 ## License
 

@@ -1,15 +1,19 @@
-"""Renders the benchmark charts (SVG, light and dark) and the explorer page from benchmarks.json.
+"""Renders the benchmark charts (SVG, light and dark), the explorer page and the README tables from benchmarks.json.
 
-    python benchmarks/charts/render.py            # write every output next to this file
+    python benchmarks/charts/render.py            # write every output next to this file and the README tables
     python benchmarks/charts/render.py --check    # render in memory and fail if a committed output differs
 
-benchmarks.json is the canonical data: the README tables transcribed with their published precision, plus an
-index of the connection-sweep runs (sweep*.json, one file per `TestServer_Console --sweep 2 <file>`), which are
-summarised to low, high and median per cell here. The README tables are checked against the published strings in
-`--check`, so a number cannot change in one place only. Every range drawn is the observed low and high over the
-stated runs, as a capped interval; a lone value is a marker. GitHub serves README images as plain <img>, so the
-SVGs carry everything a reader needs and the explorer page (inline SVG, vanilla JavaScript, the same summaries
-embedded) supplies the toggles and exact values. Plain Python, standard library only.
+benchmarks.json is the canonical data: the measured fields that ingest.py folds in from a results directory, the
+hand-maintained labels, notes and captions, plus an index of the connection-sweep runs (sweep*.json, one file per
+`TestServer_Console --sweep 2 <file>`), which are summarised to low, high and median per cell here. Hand fields may
+carry placeholders ({workers}, {batch}, {us}, {p:<series id>}, ...) that load() fills from the measured fields. Each
+README table that mirrors a set sits between `<!-- benchmarks:<name> -->` and `<!-- /benchmarks:<name> -->` markers
+and is generated here, as are the chart alt texts; `--check` fails when a committed table, alt text, chart or the
+explorer differs from the data, and every published string must appear in the README, so a number cannot change in
+one place only. Every range drawn is the observed low and high over the stated runs, as a capped interval; a lone value
+is a marker. GitHub serves README images as plain <img>, so the SVGs carry everything a reader needs and the explorer
+page (inline SVG, vanilla JavaScript, the same summaries embedded) supplies the toggles and exact values. Plain
+Python, standard library only.
 Design notes: docs/reviews/2026-09-23_codex-astra-charts.md.
 """
 import argparse
@@ -18,6 +22,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import statistics
 import sys
 import xml.dom.minidom
@@ -61,8 +66,12 @@ def load(path=None):
                 runs.append(json.load(f))
             digest.update(canonical(runs[-1]))
         fold_sweep(sweep, runs, [os.path.basename(n) for n in files])
+        n = len(files)
+        sweep["run_count"] = n
+        sweep["runs_text"] = f"{n} runs of {sweep['seconds_per_cell']:g} s per point; whiskers span the runs" if n > 1 else "one run per point; no range yet"
     data["revision"] = digest.hexdigest()[:12]
     validate(data)
+    expand(data)
     return data
 
 
@@ -78,6 +87,8 @@ def fold_sweep(sweep, runs, names):
         if r["connections"] != xs:
             raise DataError("sweep runs disagree on the connection counts")
     by_name = {s["name"]: [] for s in sweep["series"]}
+    if len(by_name) != len(sweep["series"]):
+        raise DataError("sweep series names must be unique")
     cpu_by_name = {s["name"]: [] for s in sweep["series"]}
     for r in runs:
         seen = set()
@@ -133,7 +144,7 @@ def validate(data):
                 points = s["points"]
                 if "x" in st and len(points) != len(st["x"]["values"]):
                     raise DataError(f"{s['id']}: {len(points)} points for {len(st['x']['values'])} x values")
-            elif "values" in s:
+            elif isinstance(s.get("values"), dict):  # the wasm rows: one figure per mode (a list of values is the runs)
                 points = [dict(low=v, high=v) for v in s["values"].values()]
             else:
                 points = [s]
@@ -150,6 +161,130 @@ def validate(data):
                 if sid not in ids:
                     raise DataError(f"group {g['heading']!r} names unknown series {sid}")
     return data
+
+
+# ---------------------------------------------------------------- placeholders
+
+PLACEHOLDER = re.compile(r"\{([a-z_]+)(?::([A-Za-z0-9_.-]+))?\}")
+WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}
+
+
+def fmt_int(v):
+    """A count as the README writes it: thousands separators, no decimals for whole numbers."""
+    return f"{int(v):,}" if float(v).is_integer() else f"{v:g}"
+
+
+def fmt_us(v):
+    """A [low, high] microsecond pair: "10", or "88 to 130" when the whole microseconds differ."""
+    lo, hi = round(v[0]), round(v[1])
+    return f"{lo}" if lo == hi else f"{lo} to {hi}"
+
+
+def set_context(data, st):
+    """The placeholder values a set's own text may use: its parallelism, cores, date, run count and sweep fields."""
+    ctx = {}
+    if isinstance(data.get("host"), str):
+        ctx["host"] = data["host"]
+    for key in ("workers", "cores", "pipeline"):
+        if isinstance(st.get(key), (int, float)):
+            ctx[key] = fmt_int(st[key])
+    for key in ("date", "runs_text"):
+        if isinstance(st.get(key), str):
+            ctx[key] = st[key]
+    if isinstance(st.get("run_count"), int):
+        ctx["runs"] = str(st["run_count"])
+        ctx["runs_word"] = WORDS.get(st["run_count"], str(st["run_count"]))
+    if st.get("x", {}).get("values"):
+        ctx["x_max"] = fmt_int(st["x"]["values"][-1])
+    return ctx
+
+
+def series_context(ctx, s):
+    """A series adds its measured batch size, bytes per request, round-trip time and observation count."""
+    ctx = dict(ctx)
+    for key in ("batch", "bytes"):
+        if isinstance(s.get(key), (int, float)):
+            ctx[key] = fmt_int(s[key])
+    if isinstance(s.get("latency_us"), list) and len(s["latency_us"]) == 2:
+        ctx["us"] = fmt_us(s["latency_us"])
+    if isinstance(s.get("n"), int):
+        ctx["runs"] = str(s["n"])
+        ctx["runs_word"] = WORDS.get(s["n"], str(s["n"]))
+    return ctx
+
+
+def expand_text(value, ctx, published, where):
+    def sub(m):
+        name, arg = m.group(1), m.group(2)
+        if name == "p":
+            if arg not in published:
+                raise DataError(f"{where}: {{p:{arg}}} names no series with a published figure")
+            return published[arg]
+        if arg is not None or name not in ctx:
+            raise DataError(f"{where}: placeholder {m.group(0)} has no value here")
+        return ctx[name]
+    return PLACEHOLDER.sub(sub, value)
+
+
+def expand_value(value, ctx, published, where):
+    if isinstance(value, str):
+        return expand_text(value, ctx, published, where)
+    if isinstance(value, list):
+        return [expand_value(v, ctx, published, where) for v in value]
+    if isinstance(value, dict):
+        return {k: expand_value(v, ctx, published, where) for k, v in value.items()}
+    return value
+
+
+def expand(data):
+    """Fills the placeholders in every set's and series' text in place, then resolves the README summary rows."""
+    published = {s["id"]: s["published"] for st in data["sets"].values() for s in st["series"] if isinstance(s.get("published"), str)}
+    for key, st in data["sets"].items():
+        ctx = set_context(data, st)
+        for field in list(st):
+            if field == "series":
+                st["series"] = [expand_value(s, series_context(ctx, s), published, f"{key}/{s['id']}") for s in st["series"]]
+            else:
+                st[field] = expand_value(st[field], ctx, published, key)
+    data["summary"] = [summary_row(data, row, published) for row in data.get("summary", [])]
+    return data
+
+
+def best_index(points):
+    """The point with the highest median (the midpoint of low and high when a point has no median)."""
+    return max(range(len(points)), key=lambda i: points[i].get("median", (points[i]["low"] + points[i]["high"]) / 2))
+
+
+def summary_row(data, row, published):
+    """A summary row's RPC/s from its source ("set:id", "set:id:last", "set:id:best" or "set:id,id,...:range")."""
+    parts = row["source"].split(":")
+    if len(parts) not in (2, 3) or parts[0] not in data["sets"]:
+        raise DataError(f"summary: bad source {row['source']!r}")
+    st = data["sets"][parts[0]]
+    by_id = {s["id"]: s for s in st["series"]}
+    ids = parts[1].split(",")
+    for sid in ids:
+        if sid not in by_id:
+            raise DataError(f"summary: {row['source']!r} names unknown series {sid}")
+    mode = parts[2] if len(parts) == 3 else "value"
+    ctx = set_context(data, st)
+    if mode == "last":
+        value = fmt_range(by_id[ids[0]]["points"][-1])
+    elif mode == "best":
+        points = by_id[ids[0]]["points"]
+        i = best_index(points)
+        value = fmt_range(points[i])
+        ctx["batch"] = fmt_int(st["x"]["values"][i])
+    elif mode == "range":
+        lo, hi = fmt(min(by_id[i]["low"] for i in ids)), fmt(max(by_id[i]["high"] for i in ids))
+        value = lo if lo == hi else f"{lo} to {hi}"
+    elif mode == "value":
+        value = fmt_range(by_id[ids[0]])
+    else:
+        raise DataError(f"summary: unknown selector {mode!r}")
+    where = f"summary/{row['source']}"
+    return dict(what=expand_text(row["what"], ctx, published, where), api=expand_text(row["api"], ctx, published, where),
+                value=value, details=expand_text(row.get("details", ""), ctx, published, where))
 
 
 # ---------------------------------------------------------------- text and geometry helpers
@@ -391,7 +526,8 @@ def headline_chart(st, subtitle, t, revision, name, width=940):
                 out.append(f'<rect x="{xs(s["low"]):.1f}" y="{cy - 9:.1f}" width="{xs(s["high"]) - xs(s["low"]):.1f}" height="18" rx="3" fill="{color}" fill-opacity="0.35"/>')
             out.append(text(x1 + 18, cy + 4, fmt_range(s), t, weight=600))
             if s is not st["series"][0]:
-                out.append(text(x1 + 18, cy + 18, f"{s['high'] / base:.1f}\u00d7 the first row", t, size=10, fill=t["muted"]))
+                multiple = s.get("against") or f"{s['high'] / base:.1f}\u00d7"
+                out.append(text(x1 + 18, cy + 18, f"{multiple} the first row", t, size=10, fill=t["muted"]))
             y += row_h
     out.append("</svg>")
     return "\n".join(out) + "\n"
@@ -454,7 +590,7 @@ def scaling_chart(st, subtitle, t, revision, name, width=940):
     out.append(f'<line x1="{x0}" y1="{p2_y0}" x2="{x1}" y2="{p2_y0}" stroke="{t["muted"]}"/>')
     for x, n in zip(xpos, threads):
         out.append(text(x, p2_y0 + 18, str(n), t, size=12, anchor="middle"))
-    out.append(text((x0 + x1) / 2, height - 12, "worker threads (each step doubles; 8 physical cores, 16 with SMT)", t, size=12, fill=t["muted"], anchor="middle"))
+    out.append(text((x0 + x1) / 2, height - 12, st["x"].get("caption", "worker threads (each step doubles)"), t, size=12, fill=t["muted"], anchor="middle"))
     out.append(text(0, 0, "requests per second", t, size=12, fill=t["muted"], anchor="middle", extra=f' transform="translate(20 {(p1_y0 + p1_y1) / 2:.1f}) rotate(-90)"'))
     out.append(text(0, 0, "ns per request", t, size=12, fill=t["muted"], anchor="middle", extra=f' transform="translate(20 {(p2_y0 + p2_y1) / 2:.1f}) rotate(-90)"'))
     out.append("</svg>")
@@ -572,34 +708,17 @@ def paired_chart(st, subtitle, t, revision, name, width=940):
 
 # ---------------------------------------------------------------- outputs
 
+CHARTS = [("headline-1x-vs-2", headline_chart, "headline"), ("sync-threads", scaling_chart, "sync"),
+          ("kestrel-transports", interval_chart, "kestrel"), ("compare-streamjsonrpc", interval_chart, "compare"),
+          ("inprocess-paths", interval_chart, "inprocess"), ("compare-connections", sweep_chart, "sweep"),
+          ("wasm-interop", paired_chart, "wasm")]
+
+
 def chart_specs(data):
-    """(file stem, chart function, measurement set, subtitle lines) for every static chart."""
+    """(file stem, chart function, measurement set, subtitle lines) for every static chart; the subtitles are the sets'
+    `subtitle` lines with their placeholders filled."""
     sets = data["sets"]
-    sw = sets["sweep"]
-    n = len(sw["run_files"])
-    runs_text = f"{n} runs of {sw['seconds_per_cell']:g} s per point; whiskers span the runs" if n > 1 else "one run per point; no range yet"
-    return [
-        ("headline-1x-vs-2", headline_chart, sets["headline"],
-         ["The same five requests on one machine in one session, 2026-09-25: Ryzen 7 7800X3D, .NET 10, Server GC, idle box.",
-          "String rows: the best batch size of the thread-pool loop. Byte rows: 16 dedicated threads or 16 awaited workers in a loop."]),
-        ("sync-threads", scaling_chart, sets["sync"],
-         ["Byte entry point in a loop, no scheduler, no transport. Ryzen 7 7800X3D, .NET 10, Server GC, two sweeps on an idle box."]),
-        ("kestrel-transports", interval_chart, sets["kestrel"],
-         ["AustinHarris.JsonRpc.AspNetCore on Kestrel, loopback, 16 clients on the server's 8 cores; three 3 s runs, two for the async rows.",
-          "HTTP clients await one POST at a time; TCP keeps 256 requests in flight per connection."]),
-        ("compare-streamjsonrpc", interval_chart, sets["compare"],
-         ["Same five calls, same Kestrel, 16 connections or channels with 256 requests in flight each, two 3 s runs.",
-          "Every request carries \"jsonrpc\":\"2.0\" (StreamJsonRpc requires it). Intervals span the runs; a dot is a single value."]),
-        ("inprocess-paths", interval_chart, sets["inprocess"],
-         ["No network. A direct call, a Pipe pair and a typed proxy cross different boundaries, so these rows are not a",
-          "like-for-like comparison with each other or with the transport rows. Two 3 s runs; intervals span them."]),
-        ("compare-connections", sweep_chart, sw,
-         [f"Same five calls, same Kestrel, clients on the server's 8 cores, {sw['date']}. TCP and gRPC keep {sw['pipeline']} requests in flight",
-          f"per connection; HTTP clients await one POST at a time (1 or 100 RPCs). {runs_text}."]),
-        ("wasm-interop", paired_chart, sets["wasm"],
-         ["samples/WasmHost in Chrome 152, .NET 10, 20,000 RPCs per row. Interpreter: one run. AOT: the better of two runs.",
-          "Batches are per RPC. The interpreter-to-AOT distance is a deployment difference, not a range."]),
-    ]
+    return [(stem, fn, sets[key], sets[key]["subtitle"]) for stem, fn, key in CHARTS]
 
 
 def render_all(data):
@@ -622,6 +741,136 @@ def explorer(data):
     return template.replace("__DATA__", payload).replace("__REVISION__", data["revision"])
 
 
+# ---------------------------------------------------------------- README tables
+
+# The generated blocks each README carries, in no particular order; every one must be present exactly once.
+README_BLOCKS = {"README.md": ["summary", "headline", "sync", "async", "legacy", "kestrel", "compare", "inprocess"],
+                 "Json-Rpc/README.md": ["headline"]}
+MARKER = re.compile(r"<!-- (/?)benchmarks:([a-z0-9-]+) -->")
+
+
+def cells(*values):
+    """One Markdown table row; an empty cell is written as "| |", as the README tables have them."""
+    return "|" + "".join(f" {v} |" if v != "" else " |" for v in values)
+
+
+def table(header, align, rows):
+    """The table and a blank line, so the closing marker never reads as a table row in any Markdown parser."""
+    return "\n".join([cells(*header), "| " + " | ".join(align) + " |"] + [cells(*r) for r in rows]) + "\n\n"
+
+
+def row_text(s):
+    return s.get("row", s["label"])
+
+
+def readme_blocks(data):
+    """The Markdown of every generated README table, by block name, from the (expanded) data."""
+    S = data["sets"]
+    sync, a1, an = S["sync"], S["async1"], S["asyncn"]
+    by_reg = {s["id"].split("-", 1)[1]: s for s in an["series"]}
+    s0 = sync["series"][0]
+    legacy = S["legacy"]
+    return {
+        "summary": table(["What", "API and mode", "RPC/s", "Details"], ["---", "---", "---:", "---"],
+                         [(r["what"], r["api"], r["value"], r["details"]) for r in data["summary"]]),
+        "headline": table(["Path", "RPC/s", "Against 1.2.3"], ["---", "---:", "---:"],
+                          [(row_text(s), fmt_range(s), s.get("against", "")) for s in S["headline"]["series"]]),
+        "sync": table(["Threads", "RPC/s", "ns per request per thread", "Allocations per request"], ["---:", "---:", "---:", "---"],
+                      [(fmt_int(x), fmt_range(p), fmt_int(p["ns"]), s0.get("note", "") if i == 0 else "")
+                       for i, (x, p) in enumerate(zip(sync["x"]["values"], s0["points"]))]),
+        "async": table(["Registration", "1 worker", f"{fmt_int(an['workers'])} workers", "B per request"], ["---", "---:", "---:", "---:"],
+                       [(row_text(s), fmt_range(s), fmt_range(by_reg[s["id"].split("-", 1)[1]]), fmt_int(s["bytes"])) for s in a1["series"]]),
+        "legacy": table(["Batch size", "RPC/s"], ["---:", "---:"],
+                        [(fmt_int(x), fmt_range(p)) for x, p in zip(legacy["x"]["values"], legacy["series"][0]["points"])]),
+        "kestrel": table(["Transport", "RPC/s", "Note"], ["---", "---:", "---"],
+                         [(row_text(s), fmt_range(s), s.get("row_note", "")) for s in S["kestrel"]["series"]]),
+        "compare": table(["Library and path", "RPC/s"], ["---", "---:"], [(row_text(s), fmt_range(s)) for s in S["compare"]["series"]]),
+        "inprocess": table(["Path", "RPC/s"], ["---", "---:"],
+                           [(row_text(s), fmt_range(s) + (f" ({s['rpc_note']})" if s.get("rpc_note") else "")) for s in S["inprocess"]["series"]]),
+    }
+
+
+def readme_alts(data):
+    """The alt text of each chart image in README.md, by chart stem, from the sets' `alt` templates."""
+    return {stem: data["sets"][key]["alt"] for stem, _, key in CHARTS if "alt" in data["sets"][key]}
+
+
+def split_blocks(body, where):
+    """(name, start, end) of each generated block's body; markers must pair up, open on their own line, and not nest."""
+    found, open_ = [], None
+    for m in MARKER.finditer(body):
+        closing, name = m.group(1) == "/", m.group(2)
+        if not closing:
+            if open_:
+                raise DataError(f"{where}: benchmarks:{name} opens inside benchmarks:{open_[0]}")
+            end = m.end()
+            if body.startswith("\r\n", end):
+                end += 2
+            elif body.startswith("\n", end):
+                end += 1
+            else:
+                raise DataError(f"{where}: benchmarks:{name} must be followed by a line break")
+            open_ = (name, end)
+        else:
+            if not open_ or open_[0] != name:
+                raise DataError(f"{where}: /benchmarks:{name} closes no open block")
+            found.append((name, open_[1], m.start()))
+            open_ = None
+    if open_:
+        raise DataError(f"{where}: benchmarks:{open_[0]} is never closed")
+    return found
+
+
+def alt_pattern(stem):
+    return re.compile(r'(<img alt=")([^"]*)(" src="benchmarks/charts/' + re.escape(stem) + r'\.svg">)')
+
+
+def rewrite_readme(body, blocks, names, alts, where):
+    """The README text with each named block and alt text regenerated; line endings follow the file. Returns the new
+    text and the names of the blocks and alt texts that changed."""
+    nl = "\r\n" if "\r\n" in body else "\n"
+    spans = split_blocks(body, where)
+    present = [name for name, _, _ in spans]
+    for name in present:
+        if name not in names:
+            raise DataError(f"{where}: unknown block benchmarks:{name}")
+        if present.count(name) > 1:
+            raise DataError(f"{where}: block benchmarks:{name} appears more than once")
+    for name in names:
+        if name not in present:
+            raise DataError(f"{where}: no <!-- benchmarks:{name} --> block")
+    changed, out, pos = [], [], 0
+    for name, start, end in spans:
+        new = blocks[name].replace("\n", nl)
+        if body[start:end].replace("\r\n", "\n") != blocks[name]:
+            changed.append(f"block {name}")
+        out += [body[pos:start], new]
+        pos = end
+    out.append(body[pos:])
+    text_ = "".join(out)
+    for stem, alt in alts.items():
+        pattern = alt_pattern(stem)
+        matches = pattern.findall(text_)
+        if len(matches) != 1:
+            raise DataError(f"{where}: expected one <img alt=... src=\"benchmarks/charts/{stem}.svg\">, found {len(matches)}")
+        if matches[0][1] != esc(alt):
+            changed.append(f"alt text of {stem}")
+        text_ = pattern.sub(lambda m: m.group(1) + esc(alt) + m.group(3), text_)
+    return text_, changed
+
+
+def readme_outputs(data):
+    """{README path relative to the root: (current text, regenerated text, changes)} for every README with blocks."""
+    blocks, alts, result = readme_blocks(data), readme_alts(data), {}
+    for rel, names in README_BLOCKS.items():
+        path = os.path.join(ROOT, *rel.split("/"))
+        with open(path, encoding="utf-8", newline="") as f:
+            body = f.read()
+        new, changed = rewrite_readme(body, blocks, names, alts if rel == "README.md" else {}, rel)
+        result[rel] = (body, new, changed)
+    return result
+
+
 def check_readme(data):
     """Every published string in the data must appear in the README it was transcribed from."""
     problems = []
@@ -638,6 +887,15 @@ def check_readme(data):
             for pub in pubs:
                 if pub not in body:
                     problems.append(f"{key}/{s['id']}: {pub!r} is not in {os.path.relpath(readme, ROOT)}")
+    # The NuGet README repeats the headline table (a generated block) and quotes the Kestrel TCP figure.
+    nuget = os.path.join(ROOT, "Json-Rpc", "README.md")
+    with open(nuget, encoding="utf-8") as f:
+        body = f.read()
+    wanted = [(f"headline/{s['id']}", v) for s in data["sets"]["headline"]["series"] for v in (s["published"], s.get("against")) if v]
+    wanted += [(f"kestrel/{s['id']}", s["published"]) for s in data["sets"]["kestrel"]["series"] if s["id"] == "ours-tcp"]
+    for where, pub in wanted:
+        if pub not in body:
+            problems.append(f"{where}: {pub!r} is not in Json-Rpc/README.md")
     return problems
 
 
@@ -664,17 +922,26 @@ def main(argv=None):
         for name, content in outputs.items():
             if name.endswith(".svg"):
                 xml.dom.minidom.parseString(content)
+        readmes = readme_outputs(data)
     except (DataError, KeyError, ValueError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    problems = check_readme(data)
+    problems = []
     if args.check:
         problems += check_outputs(outputs)
+        problems += [f"{rel}: {c} differs from the data" for rel, (_, _, changed) in readmes.items() for c in changed]
     else:
         for name, content in outputs.items():
             with open(os.path.join(HERE, name), "w", encoding="utf-8", newline="\n") as f:
                 f.write(content)
             print("wrote", os.path.relpath(os.path.join(HERE, name), ROOT))
+        for rel, (old, new, changed) in readmes.items():
+            if new != old:
+                with open(os.path.join(ROOT, *rel.split("/")), "w", encoding="utf-8", newline="") as f:
+                    f.write(new)
+                print("wrote", rel, "(" + ", ".join(changed) + ")")
+    # After the README tables are rewritten, so a published figure that only a generated table carries is found.
+    problems = check_readme(data) + problems
     for p in problems:
         print("check:", p, file=sys.stderr)
     if not problems:

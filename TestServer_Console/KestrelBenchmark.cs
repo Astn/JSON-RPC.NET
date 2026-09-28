@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AustinHarris.JsonRpc;
@@ -68,6 +69,10 @@ internal static class KestrelBenchmark
             print($"Kestrel on {httpUrl} (HTTP) and 127.0.0.1:{tcpPort} (TCP), {clients} clients, pipeline {pipeline}, {seconds:0.#} s per row, EnableAsyncMethods = {(asyncMethods ? "true" : "false")}\n");
 
             var rows = new List<BenchmarkRunner.ChartRow>();
+            var resultRows = new JsonArray();
+            // Result ids: the EnableAsyncMethods = false rows and the two TCP rows under true feed benchmarks.json; the rest
+            // are kept in the file under their own ids.
+            string Id(string defaultId, string asyncId) => asyncMethods ? asyncId : defaultId;
             var session = Handler.DefaultSessionId();
             var memInputs = inputs.Select(i => (ReadOnlyMemory<byte>)i).ToArray();
 
@@ -75,26 +80,33 @@ internal static class KestrelBenchmark
             BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, 0.5); // warm-up
             var (total, elapsed, cpu) = BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, seconds);
             rows.Add(new BenchmarkRunner.ChartRow("in-process, 1 thread", total / elapsed, $"{total,12:N0} RPCs  {cpu.TrailingText}"));
+            resultRows.Add(BenchResults.Row(Id("kestrel-inproc-1", "kestrel-async-inproc-1"), total / elapsed, total, cpu));
             (total, elapsed, cpu) = BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, clients, seconds);
             rows.Add(new BenchmarkRunner.ChartRow($"in-process, {clients} threads", total / elapsed, $"{total,12:N0} RPCs  {cpu.TrailingText}"));
+            resultRows.Add(BenchResults.Row(Id("ours-inproc-n", "kestrel-async-inproc-n"), total / elapsed, total, cpu));
             print($"  in-process rows done ({rows[0].RpcPerSec:N0} / {rows[1].RpcPerSec:N0} RPC/s)");
 
             // HTTP, one request per POST.
             await HttpRun(httpUrl, inputs, 1, clients, 0.5);                                   // warm-up
             var (count, secs, usage) = await HttpRun(httpUrl, inputs, 1, clients, seconds);
             rows.Add(new BenchmarkRunner.ChartRow("HTTP, 1 request/POST", count / secs, $"{count,12:N0} RPCs  {secs / count * 1e6 * clients:N1} us/request per client  {usage.TrailingText}"));
+            var httpRow = BenchResults.Row(Id("ours-http-1", "kestrel-async-http-1"), count / secs, count, usage);
+            httpRow["usPerRequest"] = Math.Round(secs / count * 1e6 * clients, 1);
+            resultRows.Add(httpRow);
             print($"  HTTP single done ({count / secs:N0} RPC/s)");
 
             // HTTP, a batch per POST.
             await HttpRun(httpUrl, new[] { batch }, batchSize, clients, 0.5);
             (count, secs, usage) = await HttpRun(httpUrl, new[] { batch }, batchSize, clients, seconds);
             rows.Add(new BenchmarkRunner.ChartRow($"HTTP, batch of {batchSize}/POST", count / secs, $"{count,12:N0} RPCs  {usage.TrailingText}"));
+            resultRows.Add(BenchResults.Row(Id("ours-http-100", "kestrel-async-http-100"), count / secs, count, usage));
             print($"  HTTP batch done ({count / secs:N0} RPC/s)");
 
             // TCP, pipelined.
             TcpRun(tcpPort, inputs, clients, 0.5, pipeline, ResultPrefix);
             (count, secs, usage) = TcpRun(tcpPort, inputs, clients, seconds, pipeline, ResultPrefix);
             rows.Add(new BenchmarkRunner.ChartRow($"TCP, {pipeline} pipelined{(asyncMethods ? ", inline methods" : "")}", count / secs, $"{count,12:N0} RPCs  {usage.TrailingText}"));
+            resultRows.Add(BenchResults.Row(Id("ours-tcp", "ours-tcp-async-inline"), count / secs, count, usage));
             print($"  TCP done ({count / secs:N0} RPC/s)");
 
             if (asyncMethods)
@@ -104,10 +116,22 @@ internal static class KestrelBenchmark
                 TcpRun(tcpPort, yieldInputs, clients, 0.5, pipeline, ResultPrefix);
                 (count, secs, usage) = TcpRun(tcpPort, yieldInputs, clients, seconds, pipeline, ResultPrefix);
                 rows.Add(new BenchmarkRunner.ChartRow($"TCP, {pipeline} pipelined, yielding methods", count / secs, $"{count,12:N0} RPCs  {usage.TrailingText}"));
+                resultRows.Add(BenchResults.Row("ours-tcp-async-yield", count / secs, count, usage));
                 print($"  TCP yielding done ({count / secs:N0} RPC/s)");
             }
 
             BenchmarkRunner.PrintBarChart($"Kestrel benchmark - {Config.Serializer.Name} - EnableAsyncMethods = {(asyncMethods ? "true" : "false")} - RPC/s by transport", "Transport", rows);
+
+            if (BenchResults.Enabled)
+            {
+                var doc = BenchResults.Document(asyncMethods ? "kestrel-async" : "kestrel", seconds);
+                doc["clients"] = clients;
+                doc["pipeline"] = pipeline;
+                doc["batchSize"] = batchSize;
+                doc["asyncMethods"] = asyncMethods;
+                doc["rows"] = resultRows;
+                BenchResults.Write(asyncMethods ? "kestrel-async" : "kestrel", doc, print);
+            }
         }
         finally
         {

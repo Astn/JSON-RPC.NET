@@ -1,0 +1,206 @@
+{
+  "mode": "scale",
+  "machine": "AMD EPYC 7R13 Processor, 4 cores of 64 host CPUs, cgroup quota, Linux 6.1.0 #1 SMP, .NET 10.0.0, Release, Server GC",
+  "runtime": ".NET 10.0.0, Release, Server GC",
+  "serializer": "jsmn",
+  "date": "2026-09-27",
+  "seconds": 3,
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "run": 1,
+  "cores": 4,
+  "workers": 4,
+  "threshold": 1.0,
+  "runs": 2,
+  "counts": [
+    1,
+    2,
+    4
+  ],
+  "rows": [
+    {
+      "id": "scale-sync-none",
+      "shape": "sync",
+      "flow": "None",
+      "workers": 1,
+      "rpcPerSec": 1000000,
+      "values": [
+        1000000,
+        1000000
+      ],
+      "rpcs": 6000000,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    },
+    {
+      "id": "scale-sync-none",
+      "shape": "sync",
+      "flow": "None",
+      "workers": 2,
+      "rpcPerSec": 1900000,
+      "values": [
+        1900000,
+        1900000
+      ],
+      "rpcs": 11400000,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    },
+    {
+      "id": "scale-sync-none",
+      "shape": "sync",
+      "flow": "None",
+      "workers": 4,
+      "rpcPerSec": 3600000,
+      "values": [
+        3600000,
+        3600000
+      ],
+      "rpcs": 21600000,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    },
+    {
+      "id": "scale-task-none",
+      "shape": "task",
+      "flow": "None",
+      "workers": 1,
+      "rpcPerSec": 1000000,
+      "values": [
+        1000000,
+        1000000
+      ],
+      "rpcs": 6000000,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    },
+    {
+      "id": "scale-task-none",
+      "shape": "task",
+      "flow": "None",
+      "workers": 2,
+      "rpcPerSec": 1900000,
+      "values": [
+        1900000,
+        1900000
+      ],
+      "rpcs": 11400000,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    },
+    {
+      "id": "scale-task-none",
+      "shape": "task",
+      "flow": "None",
+      "workers": 4,
+      "rpcPerSec": 3600000,
+      "values": [
+        3600000,
+        3600000
+      ],
+      "rpcs": 21600000,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    },
+    {
+      "id": "scale-valuetask-none",
+      "shape": "valuetask",
+      "flow": "None",
+      "workers": 1,
+      "rpcPerSec": 1000000,
+      "values": [
+        1000000,
+        1000000
+      ],
+      "rpcs": 6000000,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    },
+    {
+      "id": "scale-valuetask-none",
+      "shape": "valuetask",
+      "flow": "None",
+      "workers": 2,
+      "rpcPerSec": 1900000,
+      "values": [
+        1900000,
+        1900000
+      ],
+      "rpcs": 11400000,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    },
+    {
+      "id": "scale-valuetask-none",
+      "shape": "valuetask",
+      "flow": "None",
+      "workers": 4,
+      "rpcPerSec": 3600000,
+      "values": [
+        3600000,
+        3600000
+      ],
+      "rpcs": 21600000,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    }
+  ],
+  "gate": [
+    {
+      "shape": "sync",
+      "flow": "None",
+      "twoOverOne": 1.9,
+      "nOverOne": 3.6,
+      "pass": true
+    },
+    {
+      "shape": "task",
+      "flow": "None",
+      "twoOverOne": 1.9,
+      "nOverOne": 3.6,
+      "pass": true
+    },
+    {
+      "shape": "valuetask",
+      "flow": "None",
+      "twoOverOne": 1.9,
+      "nOverOne": 3.6,
+      "pass": true
+    }
+  ],
+  "verdict": "pass",
+  "diagnostics": [
+    {
+      "id": "scale-diag-stj-sync-none",
+      "serializer": "stj",
+      "shape": "sync",
+      "flow": "None",
+      "one": 900000,
+      "many": 3000000,
+      "ratio": 3.3,
+      "bytesPerRpc": 120,
+      "cpu": {
+        "system": 50.0,
+        "process": 45.0
+      }
+    }
+  ],
+  "exitCode": 0
+}

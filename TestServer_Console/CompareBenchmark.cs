@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AustinHarris.JsonRpc;
@@ -78,6 +79,7 @@ internal static class CompareBenchmark
         {
             print($"{Versions()}; Kestrel on loopback, {clients} clients, pipeline {pipeline}, {seconds:0.#} s per row\n");
             var rows = new List<BenchmarkRunner.ChartRow>();
+            var resultRows = new JsonArray();
             var session = Handler.DefaultSessionId();
 
             // ---- in-process floors
@@ -85,31 +87,37 @@ internal static class CompareBenchmark
             BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, Warm);
             var (total, elapsed, cpu) = BenchmarkRunner.RunSync(session, memInputs, Config.Serializer, 1, seconds);
             rows.Add(new BenchmarkRunner.ChartRow("JSON-RPC.Net in-process, 1 thread", total / elapsed, $"{total,12:N0} RPCs  direct call, bytes in, bytes out  {cpu.TrailingText}"));
+            resultRows.Add(BenchResults.Row("ours-direct-1", total / elapsed, total, cpu));
             print($"  JSON-RPC.Net in-process done ({rows[^1].RpcPerSec:N0} RPC/s)");
 
             PipeRun(newLine, Warm, pipeline);
             var (count, secs, usage) = PipeRun(newLine, seconds, pipeline);
             rows.Add(new BenchmarkRunner.ChartRow("StreamJsonRpc in-process, 1 client", count / secs, $"{count,12:N0} RPCs  Pipe pair, newline framing, STJ formatter, {pipeline} pipelined  {usage.TrailingText}"));
+            resultRows.Add(BenchResults.Row("sjr-pipe", count / secs, count, usage));
             print($"  StreamJsonRpc in-process done ({count / secs:N0} RPC/s)");
 
             await ProxyRun(Warm);
             (count, secs, usage) = await ProxyRun(seconds);
             rows.Add(new BenchmarkRunner.ChartRow("StreamJsonRpc proxy, sequential await", count / secs, $"{count,12:N0} RPCs  {secs / count * 1e6:N1} us per round trip  {usage.TrailingText}"));
+            var proxyRow = BenchResults.Row("sjr-proxy", count / secs, count, usage);
+            proxyRow["usPerRequest"] = Math.Round(secs / count * 1e6, 1);
+            resultRows.Add(proxyRow);
             print($"  StreamJsonRpc proxy done ({count / secs:N0} RPC/s)");
 
             // ---- Kestrel TCP, same client for every row
-            foreach (var (label, port, inputs, prefix) in new[]
+            foreach (var (label, id, port, inputs, prefix) in new[]
             {
-                ("JSON-RPC.Net TCP, raw documents", oursPort, raw, JsonRpcPrefix),
-                ("StreamJsonRpc TCP, newline + STJ", sjrNewLineStjPort, newLine, JsonRpcPrefix),
-                ("StreamJsonRpc TCP, Content-Length + STJ", sjrHeaderStjPort, header, (byte[])null),
-                ("StreamJsonRpc TCP, Content-Length + Json.NET", sjrHeaderNewtonsoftPort, header, (byte[])null),
+                ("JSON-RPC.Net TCP, raw documents", "ours-tcp-jsonrpc", oursPort, raw, JsonRpcPrefix),
+                ("StreamJsonRpc TCP, newline + STJ", "sjr-newline-stj", sjrNewLineStjPort, newLine, JsonRpcPrefix),
+                ("StreamJsonRpc TCP, Content-Length + STJ", "sjr-cl-stj", sjrHeaderStjPort, header, (byte[])null),
+                ("StreamJsonRpc TCP, Content-Length + Json.NET", "sjr-cl-newtonsoft", sjrHeaderNewtonsoftPort, header, (byte[])null),
             })
             {
                 Probe(port, inputs, label);
                 KestrelBenchmark.TcpRun(port, inputs, clients, Warm, pipeline, prefix);
                 (count, secs, usage) = KestrelBenchmark.TcpRun(port, inputs, clients, seconds, pipeline, prefix);
                 rows.Add(new BenchmarkRunner.ChartRow(label, count / secs, $"{count,12:N0} RPCs  {usage.TrailingText}"));
+                resultRows.Add(BenchResults.Row(id, count / secs, count, usage));
                 print($"  {label} done ({count / secs:N0} RPC/s)");
             }
 
@@ -117,22 +125,40 @@ internal static class CompareBenchmark
             await GrpcCompare.UnaryRun(grpcPort, clients, pipeline, Warm);
             (count, secs, usage) = await GrpcCompare.UnaryRun(grpcPort, clients, pipeline, seconds);
             rows.Add(new BenchmarkRunner.ChartRow("gRPC for .NET unary, HTTP/2", count / secs, $"{count,12:N0} RPCs  {clients} channels, {pipeline} calls in flight each  {usage.TrailingText}"));
+            resultRows.Add(BenchResults.Row("grpc-unary", count / secs, count, usage));
             print($"  gRPC unary done ({count / secs:N0} RPC/s)");
 
             await GrpcCompare.StreamRun(grpcPort, clients, pipeline, Warm);
             (count, secs, usage) = await GrpcCompare.StreamRun(grpcPort, clients, pipeline, seconds);
             rows.Add(new BenchmarkRunner.ChartRow("gRPC for .NET bidirectional stream", count / secs, $"{count,12:N0} RPCs  {clients} streams, {pipeline} calls in flight each  {usage.TrailingText}"));
+            resultRows.Add(BenchResults.Row("grpc-stream", count / secs, count, usage));
             print($"  gRPC stream done ({count / secs:N0} RPC/s)");
 
             BenchmarkRunner.PrintBarChart("JSON-RPC.Net vs StreamJsonRpc vs gRPC - RPC/s", "Library / transport", rows);
+
+            if (BenchResults.Enabled)
+            {
+                var doc = BenchResults.Document("compare", seconds);
+                doc["clients"] = clients;
+                doc["pipeline"] = pipeline;
+                doc["versions"] = new JsonObject
+                {
+                    ["jsonrpc"] = typeof(JsonRpcProcessor).Assembly.GetName().Version?.ToString(),
+                    ["streamJsonRpc"] = PackageVersion(typeof(JsonRpc)),
+                    ["grpc"] = PackageVersion(typeof(Grpc.Net.Client.GrpcChannel)),
+                };
+                doc["rows"] = resultRows;
+                BenchResults.Write("compare", doc, print);
+            }
         }
     }
 
     /// <summary>
-    /// Every library and transport at 1, 2, 4, 8 and 16 client connections: the data for the README's
-    /// multi-series chart. Same host, same five calls, same pipeline depth per connection as
-    /// <see cref="RunAsync"/>. Prints a table and, when <paramref name="outputPath"/> is given, writes the
-    /// numbers as JSON for benchmarks/charts/render.py.
+    /// Every library and transport at 1, 2, 4, ... client connections up to the core count
+    /// (<see cref="BenchmarkRunner.Doubling"/>): the data for the README's multi-series chart. Same host, same five
+    /// calls, same pipeline depth per connection as <see cref="RunAsync"/>. Prints a table and, when
+    /// <paramref name="outputPath"/> is given (or JSONRPC_BENCH_RESULTS is set, as <c>sweep-&lt;run&gt;.json</c> there),
+    /// writes the numbers as JSON for benchmarks/charts/render.py.
     /// </summary>
     internal static async Task SweepAsync(Action<string> print, double seconds = 2, string outputPath = null, int pipeline = 256)
     {
@@ -143,17 +169,17 @@ internal static class CompareBenchmark
         var batch = new[] { KestrelBenchmark.BuildBatch(raw, 100) };
 
         await using var h = await StartAsync(pipeline);
-        int[] connections = { 1, 2, 4, 8, 16 };
-        (string name, string kind, Func<int, double, Task<(long count, double seconds, CpuUsage cpu)>> run)[] series =
+        int[] connections = BenchmarkRunner.Doubling(Environment.ProcessorCount).ToArray();
+        (string name, string id, string kind, Func<int, double, Task<(long count, double seconds, CpuUsage cpu)>> run)[] series =
         {
-            ("JSON-RPC.Net, TCP", "ours", (c, s) => Task.FromResult(KestrelBenchmark.TcpRun(h.OursPort, raw, c, s, pipeline, JsonRpcPrefix))),
-            ("JSON-RPC.Net, HTTP, batch of 100 per POST", "ours", (c, s) => KestrelBenchmark.HttpRun(h.HttpUrl, batch, 100, c, s)),
-            ("JSON-RPC.Net, HTTP, 1 request per POST", "ours", (c, s) => KestrelBenchmark.HttpRun(h.HttpUrl, raw, 1, c, s)),
-            ("StreamJsonRpc, TCP, newline + System.Text.Json", "theirs", (c, s) => Task.FromResult(KestrelBenchmark.TcpRun(h.SjrNewLineStjPort, newLine, c, s, pipeline, JsonRpcPrefix))),
-            ("StreamJsonRpc, TCP, Content-Length + System.Text.Json", "theirs", (c, s) => Task.FromResult(KestrelBenchmark.TcpRun(h.SjrHeaderStjPort, header, c, s, pipeline, null))),
-            ("StreamJsonRpc, TCP, Content-Length + Json.NET", "theirs", (c, s) => Task.FromResult(KestrelBenchmark.TcpRun(h.SjrHeaderNewtonsoftPort, header, c, s, pipeline, null))),
-            ("gRPC for .NET, unary", "grpc", (c, s) => GrpcCompare.UnaryRun(h.GrpcPort, c, pipeline, s)),
-            ("gRPC for .NET, bidirectional stream", "grpc", (c, s) => GrpcCompare.StreamRun(h.GrpcPort, c, pipeline, s)),
+            ("JSON-RPC.Net, TCP", "sweep-ours-tcp", "ours", (c, s) => Task.FromResult(KestrelBenchmark.TcpRun(h.OursPort, raw, c, s, pipeline, JsonRpcPrefix))),
+            ("JSON-RPC.Net, HTTP, batch of 100 per POST", "sweep-ours-http-100", "ours", (c, s) => KestrelBenchmark.HttpRun(h.HttpUrl, batch, 100, c, s)),
+            ("JSON-RPC.Net, HTTP, 1 request per POST", "sweep-ours-http-1", "ours", (c, s) => KestrelBenchmark.HttpRun(h.HttpUrl, raw, 1, c, s)),
+            ("StreamJsonRpc, TCP, newline + System.Text.Json", "sweep-sjr-newline-stj", "theirs", (c, s) => Task.FromResult(KestrelBenchmark.TcpRun(h.SjrNewLineStjPort, newLine, c, s, pipeline, JsonRpcPrefix))),
+            ("StreamJsonRpc, TCP, Content-Length + System.Text.Json", "sweep-sjr-cl-stj", "theirs", (c, s) => Task.FromResult(KestrelBenchmark.TcpRun(h.SjrHeaderStjPort, header, c, s, pipeline, null))),
+            ("StreamJsonRpc, TCP, Content-Length + Json.NET", "sweep-sjr-cl-newtonsoft", "theirs", (c, s) => Task.FromResult(KestrelBenchmark.TcpRun(h.SjrHeaderNewtonsoftPort, header, c, s, pipeline, null))),
+            ("gRPC for .NET, unary", "sweep-grpc-unary", "grpc", (c, s) => GrpcCompare.UnaryRun(h.GrpcPort, c, pipeline, s)),
+            ("gRPC for .NET, bidirectional stream", "sweep-grpc-stream", "grpc", (c, s) => GrpcCompare.StreamRun(h.GrpcPort, c, pipeline, s)),
         };
         Probe(h.OursPort, raw, series[0].name);
         Probe(h.SjrNewLineStjPort, newLine, series[3].name);
@@ -180,11 +206,16 @@ internal static class CompareBenchmark
         for (int si = 0; si < series.Length; si++)
             print("  " + series[si].name.PadRight(56) + string.Join("", connections.Select((_, ci) => $"{results[si, ci],14:N0}")));
 
+        if (outputPath == null && BenchResults.Enabled) outputPath = BenchResults.PathFor("sweep");
         if (outputPath != null)
         {
             var doc = new
             {
+                mode = "sweep",
                 machine = MachineDescription.Current(),
+                runtime = BenchResults.Runtime,
+                commit = Environment.GetEnvironmentVariable("JSONRPC_BENCH_COMMIT") is { Length: > 0 } commit ? commit : null,
+                run = BenchResults.Run,
                 cores = Environment.ProcessorCount,
                 date = DateTime.Now.ToString("yyyy-MM-dd"),
                 secondsPerCell = seconds,
@@ -192,13 +223,15 @@ internal static class CompareBenchmark
                 connections,
                 series = series.Select((s, si) => new
                 {
-                    s.name, s.kind,
+                    s.name, s.id, s.kind,
                     rpcPerSec = connections.Select((_, ci) => Math.Round(results[si, ci])).ToArray(),
                     cpuSystem = connections.Select((_, ci) => usages[si, ci].SystemPercent is double v ? Math.Round(v, 1) : (double?)null).ToArray(),
                     cpuProcess = connections.Select((_, ci) => usages[si, ci].ProcessPercent is double v ? Math.Round(v, 1) : (double?)null).ToArray(),
                     cpuClients = connections.Select((_, ci) => usages[si, ci].ClientPercent is double v ? Math.Round(v, 1) : (double?)null).ToArray()
                 }).ToArray(),
             };
+            var outputDir = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+            if (!string.IsNullOrEmpty(outputDir)) Directory.CreateDirectory(outputDir);
             File.WriteAllText(outputPath, JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = true }) + "\n");
             print($"\nwrote {outputPath}");
         }
