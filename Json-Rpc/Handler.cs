@@ -915,8 +915,8 @@ namespace AustinHarris.JsonRpc
 
         /// <summary>
         /// Maps what an invocation threw to the error the handler sees: an authored <see cref="JsonRpcException"/> is
-        /// passed as it is, anything else becomes -32603 with the thrown exception as <c>data</c>. Only the wrappers
-        /// the invocation machinery adds are stripped first (<see cref="UnwrapInvocation"/>); the exception's own
+        /// passed as it is, anything else becomes -32603 with the thrown exception as <c>data</c>. Only the two
+        /// wrapper types are stripped first (<see cref="UnwrapInvocation"/>); the exception's own
         /// <see cref="Exception.InnerException"/> is never substituted for it, so an error handler always receives
         /// the object the method threw, with its cause still attached.
         /// </summary>
@@ -928,10 +928,11 @@ namespace AustinHarris.JsonRpc
         }
 
         /// <summary>
-        /// Strips the wrappers that reflection and task machinery put around what a method threw: a
+        /// Strips the two wrapper types that reflection and task machinery put around what a method threw: a
         /// <see cref="TargetInvocationException"/>, and an <see cref="AggregateException"/> holding exactly one
-        /// exception (a faulted task observed through <c>Result</c> or <c>Wait</c>). An aggregate of several
-        /// failures is kept whole, since no single one of them is "the" error. Nothing else is unwrapped.
+        /// exception (a faulted task observed through <c>Result</c> or <c>Wait</c>). The decision is by type alone,
+        /// so a method that throws one of these itself is unwrapped the same way. An aggregate of several failures
+        /// is kept whole, since no single one of them is "the" error. Nothing else is unwrapped.
         /// </summary>
         private static Exception UnwrapInvocation(Exception ex)
         {

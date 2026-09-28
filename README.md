@@ -342,7 +342,7 @@ Set `Config.IncludeExceptionDetails = true` only for trusted development clients
 
 A `JsonRpcException` thrown by the application, or returned by an error handler, keeps the `data` it was given; that data is authored, not redacted.
 
-The exception a handler receives is the one the method threw, with its own `InnerException` still attached; the library never substitutes the cause for the error. Only two wrappers added by the invocation machinery are stripped first: a `TargetInvocationException` from reflection and an `AggregateException` holding exactly one exception (a faulted task observed through `Result` or `Wait`). An aggregate of several exceptions is passed whole. A `JsonRpcException` found only inside another exception's `InnerException` is not promoted: the outer exception is an internal error like any other.
+The exception a handler receives is the one the method threw, with its own `InnerException` still attached; the library never substitutes the cause for the error. Only two wrapper types are stripped first, by type and wherever they came from: a `TargetInvocationException` (what reflection adds) and an `AggregateException` holding exactly one exception (what a faulted task observed through `Result` or `Wait` adds). An aggregate of several exceptions is passed whole. A `JsonRpcException` found only inside another exception's `InnerException` is not promoted: the outer exception is an internal error like any other.
 
 ### Handlers
 
