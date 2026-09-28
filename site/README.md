@@ -5,6 +5,7 @@ The pages at https://astn.github.io/JSON-RPC.NET/ are built from the Markdown fi
 | Page | Source |
 | --- | --- |
 | Overview | `README.md` |
+| API reference | `docs/reference.md` |
 | Serializers | `docs/serializers.md` |
 | ASP.NET Core hosting | `AustinHarris.JsonRpc.AspNetCore/README.md` |
 | Json.NET serializer | `AustinHarris.JsonRpc.Newtonsoft/README.md` |

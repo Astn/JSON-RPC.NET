@@ -24,4 +24,4 @@ dotnet run -- ui             # the pipe host, methods run on the owning thread
 curl -s -X POST http://127.0.0.1:5078/rpc/ -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}'
 ```
 
-The README's [Hosting](../../README.md#hosting) section walks through the three files.
+The [embedded hosting reference](../../docs/reference.md#embedded-http-without-aspnet-core-a-pipe-without-kestrel-a-thread-that-owns-the-state) walks through the three files.

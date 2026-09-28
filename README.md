@@ -2,13 +2,13 @@
 
 ![Build Master](https://github.com/Astn/JSON-RPC.NET/workflows/Build%20Master/badge.svg) ![NuGet](https://img.shields.io/nuget/v/AustinHarris.JsonRpc) ![NuGet preview](https://img.shields.io/nuget/vpre/AustinHarris.JsonRpc?label=preview)
 
-JSON-RPC.Net is a [JSON-RPC 2.0](https://www.jsonrpc.org/specification) server for .NET. You give it a request document and it gives you the response document, bytes in and bytes out; the transport is yours. Host it in Kestrel, a console app, sockets, pipes, or a Blazor WebAssembly page.
+A JSON-RPC server has a short job description: read a request, call a method, write a response. The work around that call can be considerably larger. JSON-RPC.Net 2.0 keeps the core at the document boundary: UTF-8 bytes go in, UTF-8 bytes come out, and your application chooses how they travel. The same service can sit behind Kestrel, a pipe, a socket, or a browser page.
 
-Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer pluggable. The core depends on no JSON library: Json.NET and System.Text.Json ship as separate packages, and the built-in serializer needs neither. On one core it answers a small request in about 315 ns, with no allocation for numeric parameters. The library alone answers 44.2 M to 45.7 M requests per second on a 32-core cloud host, 24 times what 1.2.3 does on the same machine. Over pipelined TCP, a Kestrel host answers 18.5 M requests per second. [Benchmarks](#benchmarks) gives the method and the full tables.
+For example, send `{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}` and the `add` method returns `{"jsonrpc":"2.0","result":3.0,"id":1}`. Below, you can run that exchange as a complete server. What does keeping this path in bytes buy us?
 
 ## Performance
 
-2.0 answers the same five requests 6.0 times faster than 1.2.3 through the 1.x string API and 24.3 times faster through the byte entry points its hosts use (ratios of the medians). The synchronous byte path handles 44.2 M to 45.7 M requests per second on 32 threads of a 32-core Hugging Face Jobs `cpu-performance` host, with no allocation for a numeric request. All results come from the same machine, the same requests and one job; each range is the low and high over that job's runs.
+The same five small methods were measured through the last 1.x release and through 2.0 in one job on one 32-core host. The ranges show the low and high of that job's runs. Through the **same string API and loop**, 2.0's median throughput was 6.0× that of 1.2.3. Through 2.0's new byte entry point, the median comparison was 24.3×. Those are different call paths; the table names each one.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="benchmarks/charts/headline-1x-vs-2-dark.svg">
@@ -25,78 +25,11 @@ Version 2.0 rebuilt the pipeline around UTF-8 bytes and made the JSON serializer
 
 <!-- /benchmarks:headline -->
 
-The request path uses a span tokenizer over the UTF-8 bytes and invokers compiled against the concrete reader and writer. It writes the response straight into a pooled buffer, with no `Task`, result string or continuation per request. A numeric request never touches the GC. Over Kestrel TCP, the AspNetCore package holds 18.5 M with 256 requests in flight per connection. [Benchmarks](#benchmarks) has the full tables, the conditions and the ranges over the job's runs. The [explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) has the exact values. `benchmarks/Baseline` re-runs the 1.2.3 row from NuGet with the same loop as the 2.0 harness.
-
-
-It is a server only. There are no client proxies and no server-to-client calls. If you need a bidirectional RPC framework, look at [StreamJsonRpc](https://www.nuget.org/packages/StreamJsonRpc); the benchmarks compare the two.
-
-This README and the package guides are also published at [astn.github.io/JSON-RPC.NET](https://astn.github.io/JSON-RPC.NET/). What the library does by default and what it leaves to you is under [Security](#security).
-
-- [Performance](#performance)
-- [Packages](#packages)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Getting started](#getting-started)
-- [Defining methods](#defining-methods)
-- [Hosting](#hosting)
-- [Errors](#errors)
-- [Asynchronous methods and cancellation](#asynchronous-methods-and-cancellation)
-- [Sessions and context](#sessions-and-context)
-- [Configuration](#configuration)
-- [Security](#security)
-- [Benchmarks](#benchmarks)
-- [Upgrading from 1.x](#upgrading-from-1x)
-- [Versioning and support](#versioning-and-support)
-- [Building](#building)
-- [License](#license)
-
-## Packages
-
-All four packages are MIT licensed and ship together with the same version number.
-
-| Package | What it is |
-| --- | --- |
-| `AustinHarris.JsonRpc` | The server. Envelope parsing, method dispatch, parameter binding, error mapping, sessions. Ships with the built-in serializer, `JsmnSerializer`: a span port of the [jsmn](https://github.com/zserge/jsmn) tokenizer plus a cached reflection mapper, with no JSON library behind it. |
-| `AustinHarris.JsonRpc.Newtonsoft` | Json.NET 13 serializer. The compatibility choice: `JsonSerializerSettings`, `[JsonProperty]`, converters, lenient input. |
-| `AustinHarris.JsonRpc.SystemTextJson` | System.Text.Json serializer. `JsonSerializerOptions`, `Utf8JsonReader`/`Utf8JsonWriter` straight on the request bytes. |
-| `AustinHarris.JsonRpc.AspNetCore` | Kestrel hosting: an HTTP endpoint on `PipeReader`/`BodyWriter`, a `ConnectionHandler` for raw TCP, Unix socket and named pipe connections, and DI registration of services. |
-
-## Requirements
-
-`AustinHarris.JsonRpc`, `.Newtonsoft` and `.SystemTextJson` target:
-
-| Target | Covers |
-| --- | --- |
-| `netstandard2.0` | .NET Framework 4.6.1+, .NET Core 2.0+, Mono 5.4+, Xamarin, Unity 2018.1+ |
-| `netstandard2.1` | .NET Core 3.0+, Mono 6.4+, Xamarin |
-| `net8.0` | .NET 8 (LTS) |
-| `net10.0` | .NET 10 (LTS) |
-
-`AustinHarris.JsonRpc.AspNetCore` targets `net8.0` and `net10.0`.
-
-The "Covers" column is what each target framework admits, not what is tested. CI runs the test suite on `net8.0` and `net10.0`; the WebAssembly sample is built in CI and run by hand. The other runtimes can load the `netstandard` assets but are not part of the test matrix. On .NET Framework, 4.7.2 or later avoids the binding redirects that 4.6.1 to 4.7.1 need for `netstandard2.0` libraries.
-
-Dependencies at 2.0.0: none on `net8.0` and `net10.0`; on `netstandard` only, `System.Memory` 4.6.3, and `netstandard2.0` also references `System.Threading.Tasks.Extensions` 4.5.0 for `ValueTask`. The Newtonsoft package depends on Newtonsoft.Json 13.0.4 and the System.Text.Json package on System.Text.Json 10.0.3.
-
-The core uses no reflection emit. The WebAssembly sample runs under the configurations listed in [samples/WasmHost/README.md](samples/WasmHost/README.md); it validates neither `PublishTrimmed` nor `PublishAot`, which are unsupported: services and their `[JsonRpcMethod]` members are found by reflection and the invokers are compiled expression trees.
-
-## Installation
-
-```
-dotnet add package AustinHarris.JsonRpc --prerelease
-```
-
-2.0 is published as `2.0.0-preview.3`; without `--prerelease`, NuGet resolves to the last 1.x release. The four assemblies are strong-named with one key (public key token `e6819c02cf4aec44`) that is checked into the repository and does not change between releases, so a signed caller can reference them and .NET Framework loads them.
-
-The packages are not annotated for trimming or Native AOT: a project that sets `IsAotCompatible` or `PublishTrimmed` gets trim warnings from the reflection binder, and a trimmed application can lose the methods it binds. Hosts with that constraint wait for the source generator planned for 2.8; see [Versioning and support](#versioning-and-support).
-
-Add `AustinHarris.JsonRpc.Newtonsoft` or `AustinHarris.JsonRpc.SystemTextJson` if you want that serializer, and `AustinHarris.JsonRpc.AspNetCore` to host in Kestrel.
+The byte path parses the request and writes the reply without making a result string or scheduling a `Task` for every call. On one thread, the five-request mix averaged a reported 315 ns per request; numeric shapes allocated 0 bytes in the library. Over pipelined Kestrel TCP, the host reached 18.5 M RPC/s. The async and HTTP results in [Benchmarks](#benchmarks) show what each boundary adds.
 
 ## Getting started
 
-### 1. Declare a service
-
-Save this as `server.cs`. It is a .NET 10 file-based app: one C# file with no project file. The `#:sdk` and `#:package` directives select the web SDK and package. `ServiceBinder.BindMethod` registers the lambdas; Kestrel serves them at `/rpc`.
+Here is a server you can put in one file. Save it as `server.cs`; the `#:` directives make it a .NET 10 file-based app. Two lambdas become RPC methods, and Kestrel gives them an HTTP endpoint.
 
 ```csharp
 #:sdk Microsoft.NET.Sdk.Web
@@ -116,7 +49,7 @@ app.MapJsonRpc("/rpc");
 app.Run();
 ```
 
-Run `dotnet run server.cs`. Kestrel prints the URL it listens on. To use the address below, run `dotnet run server.cs -- --urls http://127.0.0.1:5077`, then send this request from another terminal:
+Run `dotnet run server.cs -- --urls http://127.0.0.1:5077`, then call it from another terminal:
 
 ```bash
 curl -s -X POST http://127.0.0.1:5077/rpc -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}'
@@ -126,502 +59,125 @@ curl -s -X POST http://127.0.0.1:5077/rpc -H "Content-Type: application/json" -d
 {"jsonrpc":"2.0","result":3.0,"id":1}
 ```
 
-On .NET 8, the same code works in `Program.cs` in an ordinary ASP.NET Core project: install the package with `dotnet add package AustinHarris.JsonRpc.AspNetCore --prerelease` and drop the two `#:` lines.
+That is the whole round trip. A request without an `id` is a notification and gets no response; a batch is an array of requests and gets an array of responses, omitting notifications. On .NET 8, put the same C# code in an ASP.NET Core `Program.cs`, remove the two `#:` lines, and install `AustinHarris.JsonRpc.AspNetCore` with `--prerelease`.
 
-For methods grouped in a class, create `CalculatorService.cs`. Derive from `JsonRpcService` and mark the methods you want to expose with `[JsonRpcMethod]`. Constructing the service registers it, so you only need to keep the instance alive.
+### Calling the core directly
 
-```csharp
-using AustinHarris.JsonRpc;
-
-public class CalculatorService : JsonRpcService
-{
-    [JsonRpcMethod]                 // exposed as "add"
-    private double add(double l, double r) => l + r;
-
-    [JsonRpcMethod("multiply")]     // exposed under an explicit name
-    public int Multiply(int l, int r) => l * r;
-
-    [JsonRpcMethod]
-    public string StringMe(string x) => x;
-}
-```
-
-Methods can be `private`; parameters may be positional (`"params":[1,2]`) or named (`"params":{"l":1,"r":2}`). Optional parameters with default values are honoured, and a parameter's JSON name can be overridden with `[JsonRpcParam("name")]`. A named member that matches no parameter is refused with `-32602` naming it, never dropped, so a misspelled name cannot silently fall back to a default value.
-
-Every method lives in a *session*, a named set of methods with its own handlers and serializer. Both examples register methods in the default session (`Handler.DefaultSessionId()`), which is fine for an application that owns its process. Code that is a guest in someone else's process, such as a plugin, an add-in or a library, should name a session of its own (`ServiceBinder.BindService("my-plugin", this)` and the matching `sessionId` on the processor calls): the default session is one process-wide registry shared with every other component that uses the library, so a guest that binds there can collide with, replace or be replaced by methods it has never heard of, and a handler it sets on `Config` changes them all. Lambdas and classes can be mixed in one session, but method names must be unique: `BindMethod` throws for a name that is already registered, and a class bound afterwards replaces an earlier registration of the same name. Both examples register `add`, so keep one of them. See [Sessions and context](#sessions-and-context).
-
-The next step drives `CalculatorService` in process, without a transport.
-
-### 2. Process requests
+If your transport already gives you a JSON document, you can call the processor yourself. The byte overload is the native path; the string overload is convenient when the document is already a string.
 
 ```csharp
-using System;
 using System.Buffers;
 using System.Text;
 using AustinHarris.JsonRpc;
 
-var service = new CalculatorService();   // binds itself to the default session; keep a reference
-
-// Strings, asynchronous invocation.
-string response = await JsonRpcProcessor.ProcessAsync("""{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}""");
-// {"jsonrpc":"2.0","result":3.0,"id":1}
-
-// Strings, synchronous, on the calling thread. Named parameters.
-string sync = JsonRpcProcessor.ProcessSync("""{"method":"multiply","params":{"l":6,"r":7},"id":2}""");
-// {"jsonrpc":"2.0","result":42,"id":2}
-
-// Bytes: the native path. The string overloads transcode into it.
+ServiceBinder.BindMethod("add", (int l, int r) => l + r);
 var output = new ArrayBufferWriter<byte>();
-JsonRpcProcessor.Process(Handler.DefaultSessionId(), """{"method":"add","params":[2,3],"id":3}"""u8, output);
-Console.WriteLine(Encoding.UTF8.GetString(output.WrittenSpan));   // nothing is written for a notification
+JsonRpcProcessor.Process(Handler.DefaultSessionId(),
+    """{"method":"add","params":[2,3],"id":3}"""u8, output);
+Console.WriteLine(Encoding.UTF8.GetString(output.WrittenSpan));
 ```
 
-Batches (`[{...},{...}]`) and notifications (requests without an `id`) are handled per the spec: a batch answers with an array, a notification produces nothing. The byte overloads take `ReadOnlySpan<byte>`, `ReadOnlyMemory<byte>` or `ReadOnlySequence<byte>`. A `"""..."""u8` literal is a `ReadOnlySpan<byte>` (C# 11 and later). A bare `byte[]` selects the span overload on C# 14 and later; on C# 12 and 13 it is ambiguous between the memory and span overloads, so pass it as `AsSpan()` there.
+The processor does not open a listener or choose framing. A host that reads several documents from one stream can use `JsonFramer`; [the embedded host sample](samples/EmbeddedHost) shows a complete pipe host. The [reference](docs/reference.md#in-process-strings-or-bytes) covers buffer ownership, cancellation and deadlines.
 
-That is the whole in-process server. The rest of this page is about exposing methods, putting a transport in front, and what happens when things go wrong.
+## Where it fits
+
+JSON-RPC.Net is a **server** for [JSON-RPC 2.0](https://www.jsonrpc.org/specification). It binds methods, reads documents and writes replies. It does not provide client proxies or server-to-client calls. For a bidirectional RPC framework, [StreamJsonRpc](https://www.nuget.org/packages/StreamJsonRpc) serves a different set of needs; the [comparison](#versus-streamjsonrpc-and-grpc) explains what each benchmark measures.
+
+The core has no JSON-library dependency. Its built-in serializer is the default; Json.NET and System.Text.Json are optional packages. The four packages share a version and are MIT licensed:
+
+| Package | Choose it for |
+| --- | --- |
+| `AustinHarris.JsonRpc` | The document-in, document-out server, with the built-in serializer. |
+| `AustinHarris.JsonRpc.AspNetCore` | HTTP or raw connections hosted by Kestrel, plus service registration through DI. |
+| `AustinHarris.JsonRpc.Newtonsoft` | Json.NET settings, converters, attributes or lenient input. |
+| `AustinHarris.JsonRpc.SystemTextJson` | System.Text.Json options and converters. |
+
+2.0 is currently `2.0.0-preview.3`. For an existing project, install the core with `dotnet add package AustinHarris.JsonRpc --prerelease`, then add the serializer or ASP.NET Core package you need. Without `--prerelease`, NuGet selects the last 1.x release.
 
 ## Defining methods
 
-A *method* is a callable identified by the `method` member of a request; its implementation is a delegate, a `[JsonRpcMethod]` member of a class, or a member of a bound interface. `ServiceBinder` never asks for a `MethodInfo`; the same word names the -32601 "Method not found" error. Names beginning with `rpc.` and the name `$/cancelRequest` are reserved and refused at registration.
-
-### Classes
-
-Any class works, not only `JsonRpcService` subclasses: bind an instance with `ServiceBinder.BindService(sessionId, instance)`. A `JsonRpcService` subclass binds itself to the default session in its parameterless constructor. Write `: base(false)` for a subclass that something else binds (the AspNetCore host binds every registered service to its effective session) and `: base(sessionId)` to bind to another session.
-
-An instance bound with `BindService(sessionId, instance)` serves every request on every thread, so it must be thread-safe. `BindService(sessionId, typeof(T), resolve)` binds a type instead: right before each call the resolver is handed the RPC context and returns the instance to invoke, which is how a container's scoped and transient lifetimes reach a method (the AspNetCore package does this for `AddJsonRpcService<T>(ServiceLifetime.Scoped)`; see [Kestrel HTTP endpoint](#kestrel-http-endpoint)). The core takes no dependency on any container: the resolver is a plain delegate, so Microsoft.Extensions.DependencyInjection, Autofac and a hand-written factory all fit. Static methods never resolve.
-
-### Delegates
-
-Bind a delegate as a JSON-RPC method with `ServiceBinder.BindMethod`; a lambda keeps its parameter names for named params:
+A delegate is enough for a small API, as the first example shows. When methods belong together, mark members of a class with `[JsonRpcMethod]`:
 
 ```csharp
-ServiceBinder.BindMethod("add", (double l, double r) => l + r);
-ServiceBinder.BindMethod("greet", (string who) => "hello " + who);                            // {"method":"greet","params":{"who":"you"}}
-ServiceBinder.BindMethod(sessionId, "scale", (double v, double f) => v * f,
-    parameterNames: new[] { "value", null }, defaults: new Dictionary<string, object> { ["f"] = 10 });
-ServiceBinder.UnbindMethod("add");
-```
-
-A name already registered on the session is an error (unbind it first); a delegate whose parameter names cannot be recovered (a closed delegate created with `Delegate.CreateDelegate`) gets `arg1`, `arg2`, ... unless you pass names. `Task` and `ValueTask` delegates are served by `ProcessAsync`; see [Asynchronous methods and cancellation](#asynchronous-methods-and-cancellation).
-
-### Interfaces
-
-An interface can define the exposed contract, including a tree of interface-typed properties. Implementation-only methods stay private to the host; parameter names, `[JsonRpcParam]`, aliases and optional defaults come from the interface:
-
-```csharp
-public interface IWorld { ICharacter Character { get; } IAdmin Admin { get; } }
-public interface ICharacter { void MoveAndRotate(float distance, float roll = 0, int ticks = 1); }
-public interface IAdmin { ICharacter Character { get; } }
-
-RpcBinding binding = ServiceBinder.BindInterface<IWorld>(sessionId, world);
-// Character.MoveAndRotate and Admin.Character.MoveAndRotate
-binding.Dispose(); // unbinds this tree, leaving later replacements alone
-
-using var characterOnly = ServiceBinder.BindInterface<IWorld>(sessionId, world,
-    new RpcInterfaceBindingOptions { Include = m => m.Path.Length == 1 });
-// Include can also inspect m.MethodInfo for the host's own interface attributes.
-```
-
-Each interface-typed property becomes a name segment, so `IWorld.Character.MoveAndRotate` is exposed as `Character.MoveAndRotate`. The whole tree is walked and compiled when you call `BindInterface`, so a request pays nothing for it.
-
-What happens at registration:
-
-- Each property getter runs once, and the object it returns is the one that serves calls. Setting the property later changes nothing. A getter may have side effects; they happen once and are not undone if registration fails.
-- Registration is all or nothing. It throws, exposing no method, on an empty or duplicate name, a name starting with `rpc.`, a name already bound in the session, a null or throwing getter, a cycle, or a path deeper than 32 properties.
-- Inherited members, explicit implementations and closed generic interfaces are supported. Generic methods and default interface method bodies are rejected.
-
-Naming, through `RpcInterfaceBindingOptions`:
-
-| Option | Default | Effect |
-| --- | --- | --- |
-| `Recursive` | `true` | `false` binds only the root interface's methods |
-| `Prefix` | `""` | prepended to every generated name |
-| `Separator` | `"."` | joins property segments and the method name |
-| `Casing` | `Preserve` | `CamelCase` lower-cases the first letter of each generated segment (invariant culture) |
-| `Include` | all | a predicate over `RpcInterfaceMethod` (`Path`, `MethodInfo`, `Interface`, `Leaf`, `DefaultName`) |
-| `NameRule` | none | returns the complete wire name, replacing the rules above |
-
-An explicit `[JsonRpcMethod("alias")]` on an interface method is used as written. `Task` and `ValueTask` members are served by `ProcessAsync`; `[JsonRpcMethod(ContextFlow = RpcContextFlow.Flow)]` on the interface member opts into context flow across awaits (see [Asynchronous methods and cancellation](#asynchronous-methods-and-cancellation)).
-
-`BindInterface` returns an `RpcBinding`. Disposing it unbinds exactly this tree (not a later registration under the same names), is safe to call twice, and does not dispose your objects. Calls already dispatched finish on the implementation they started with.
-
-### Reading what is bound
-
-Tooling that lists or inspects a session reads `Handler.GetSessionHandler(sessionId).MetaData.Services`, an `IDictionary<string, SMDService>` keyed by wire name. Each entry's `Method` is the compiled `RpcMethod` (`Name`, `Parameters` with their types and defaults, `ReturnType`) and `dele` is the delegate behind it. The collection is a live view: read it, do not modify it, and register and unregister through `ServiceBinder` and `Handler.DestroySession`.
-
-## Hosting
-
-The core is transport-agnostic. Pick whichever of these fits, or build your own on the byte entry point.
-
-### In-process (strings or bytes)
-
-Call the processor yourself, as in [Getting started](#getting-started). The byte overloads take what a `PipeReader` gives you (`ReadOnlySequence<byte>`) and write to any `IBufferWriter<byte>`: a `PipeWriter`, a socket buffer or `HttpResponse.BodyWriter`. Nothing is written for a notification, so check `output.WrittenCount` before sending. If your transport carries several documents per connection, `JsonFramer.TryReadDocument` cuts complete documents out of the byte stream without parsing them. Its span form, `JsonFramer.FindDocumentEnd`, returns the length of the first complete document and `-1` both when the document is still incomplete and when the buffer does not start with `{` or `[` after whitespace, so a host tells the two apart itself (the first non-whitespace byte) or a line of garbage stalls the connection. Nothing in the core bounds a host's receive buffer: cap it at the document limit you would accept and fail the connection at the cap, as the Kestrel handler does with `MaxRequestBytes`.
-
-A host that owns its transport also owns the deadline (the core has none; see [Deadlines](#asynchronous-methods-and-cancellation)). Link a `CancellationTokenSource` to the connection's lifetime token, arm it with `CancelAfter` and pass its token to `ProcessAsync` and to the write of the reply. When the budget expires, abort the transport at once, but still await the call: `ProcessAsync` completes only after the running method has terminated, a cancelled call commits no response bytes, and until the await returns the request memory and the output writer belong to the call, so neither goes back to a pool or is reused before then.
-
-```csharp
-// One request document on a connection the host owns: `rented` came from ArrayPool<byte>.Shared,
-// `transport` is the connection's stream, `lifetime` is cancelled when the connection closes.
-static async Task ServeDocumentAsync(string sessionId, byte[] rented, int length, Stream transport,
-    CancellationToken lifetime)
+public class CalculatorService : JsonRpcService
 {
-    var output = new ArrayBufferWriter<byte>();
-    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
-    deadline.CancelAfter(TimeSpan.FromSeconds(5));
-    // When the budget expires, abort the transport at once, even while a method is still running.
-    using var abort = deadline.Token.Register(static s => ((Stream)s!).Dispose(), transport);
-    try
-    {
-        await JsonRpcProcessor.ProcessAsync(sessionId, new ReadOnlyMemory<byte>(rented, 0, length), output,
-            context: transport, serializer: null, cancellationToken: deadline.Token);
-    }
-    catch (OperationCanceledException)
-    {
-        return;   // the call has terminated and wrote no response bytes
-    }
-    finally
-    {
-        // Only now that the awaited call has returned may the input go back to the pool
-        // (or the output be reused): until then the processor may still read and write them.
-        ArrayPool<byte>.Shared.Return(rented);
-    }
-    if (output.WrittenCount > 0)   // nothing is written for a notification
-        await transport.WriteAsync(output.WrittenMemory, deadline.Token);
+    [JsonRpcMethod]
+    private double add(double l, double r) => l + r;
+
+    [JsonRpcMethod("multiply")]
+    public int Multiply(int l, int r) => l * r;
 }
 ```
 
-### Embedded: HTTP without ASP.NET Core, a pipe without Kestrel, a thread that owns the state
+Constructing `CalculatorService` registers it in the default session; keep that instance alive. The attribute makes even a `private` method callable by a client, so review every annotated member as part of your public API. Parameters can be positional or named, and optional defaults work for either. One service instance may handle concurrent requests, so shared state needs to be thread-safe. If you prefer to make the wire contract explicit, `ServiceBinder.BindInterface<T>` can expose methods through an interface tree. The [binding reference](docs/reference.md#defining-methods) has the registration rules, names, lifetimes and interface options.
 
-A plugin, an add-in, a desktop or editor process or a daemon cannot always bring the ASP.NET Core shared framework in, and often has a thread that must run the methods. [samples/EmbeddedHost](samples/EmbeddedHost) is three hosts over one service, each about a page, with a `check` mode that runs them against a client:
+## Hosting
 
-- **`HttpListenerHost.cs`**: HTTP through `System.Net.HttpListener`, which is in the base library. What `MapJsonRpc` does for you, this host does itself: a body limit, a deadline (HttpListener has no client-abort token, so the host arms its own and answers `504` when it fires), `204` for a notification, `405` for anything but `POST`.
-- **`StreamHost.cs`**: any `Stream` (the sample uses a named pipe) with newline-delimited documents in both directions, which is what MCP's stdio transport and most line-oriented clients expect. The host frames with `JsonFramer`, bounds its buffer, runs documents one at a time in order, and keeps a *separate* write loop fed by a queue: one loop that reads, processes and writes in turn deadlocks against a client that pipelines requests, because both ends end up waiting for the other to read. Server-side events become outbound notifications on the same queue, so they never interleave with a reply mid-write.
-- **`UiThread.cs`**: a `SynchronizationContext` over one thread. Every document, and every continuation after an `await` inside a method, runs on that thread, so methods touch UI or editor state without locks. The core has no dispatch context of its own (that arrives with duplex in 2.6), so the host marshals whole documents, not individual calls.
+Choose a host for the boundary you already have:
 
-The service passes `HttpListenerContext` or the connection's `Stream` as the RPC context, so a method can read `Handler.RpcContext()` before its first `await` and reach the caller; the same adapter shape works for any transport object.
+| Boundary | Start here |
+| --- | --- |
+| ASP.NET Core HTTP | `app.MapJsonRpc("/rpc")`; add authentication and authorization as usual. Enable async methods for cooperative request timeouts. [Hosting options](AustinHarris.JsonRpc.AspNetCore/README.md). |
+| Raw TCP, Unix socket or named pipe in Kestrel | `JsonRpcConnectionHandler` reads consecutive JSON documents. Clients must frame complete JSON replies themselves. [Connection setup](docs/reference.md#kestrel-raw-connections-tcp-unix-socket-named-pipe). |
+| A transport you own | Pass request bytes and an output writer to `JsonRpcProcessor`; the [embedded examples](samples/EmbeddedHost) show HTTP without ASP.NET Core, a newline-delimited pipe and a UI thread. |
+| Blazor WebAssembly | Call the processor from browser interop; [WasmHost](samples/WasmHost/README.md) runs the same service in a browser. |
 
-### Kestrel HTTP endpoint
-
-```csharp
-using AustinHarris.JsonRpc.AspNetCore;
-
-var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddJsonRpc();
-builder.Services.AddJsonRpcService<CalculatorService>();   // built by DI; any class with [JsonRpcMethod] works
-
-var app = builder.Build();
-app.MapJsonRpc("/rpc");                                    // POST /rpc; compose with RequireAuthorization() etc.
-app.Run();
-```
-
-A request or batch answers `200 application/json`; a notification answers `204`. The body goes from `PipeReader` to `BodyWriter` without becoming a string. Inside a method, `JsonRpcContext.Current().Value` is the `HttpContext`.
-
-`AddJsonRpcService<T>()` registers `T` as a singleton: resolved once from the root container when the host starts, one instance for every request on every thread, so it must be thread-safe and cannot take scoped dependencies such as an EF Core `DbContext` (a singleton uses `IDbContextFactory<T>`, or captures `((HttpContext)Handler.RpcContext()).RequestServices` before its first `await`). `AddJsonRpcService<T>(ServiceLifetime.Scoped)` (or `Transient`) resolves `T` per call from the request's provider instead: `HttpContext.RequestServices` on HTTP, a scope the raw connection handler opens and disposes per document. A `DbContext` then goes in the constructor as usual, every call of a batch shares one scope, and a transient is created per call. A lifetime that disagrees with an existing registration of `T` is refused, at registration or at startup. To await `Task` and `ValueTask` methods, set `o.EnableAsyncMethods = true` in `AddJsonRpc`; the request is then cancelled when the client disconnects (`RequestAborted`). The other options (session per request, serializer, body size limit, content type) and the per-endpoint overload `MapJsonRpc(pattern, options)` are in the [package README](AustinHarris.JsonRpc.AspNetCore/README.md).
-
-### Kestrel raw connections (TCP, Unix socket, named pipe)
-
-```csharp
-builder.WebHost.ConfigureKestrel(k =>
-{
-    k.ListenLocalhost(9000, l => l.UseConnectionHandler<JsonRpcConnectionHandler>());
-    // k.ListenUnixSocket("/tmp/rpc.sock", l => l.UseConnectionHandler<JsonRpcConnectionHandler>());
-    // k.ListenNamedPipe("rpc", l => l.UseConnectionHandler<JsonRpcConnectionHandler>());
-});
-```
-
-Clients write JSON documents back to back (whitespace or newlines between them are fine) and read the responses in the same order, also back to back: no newline, no `Content-Length` header, so the client must cut one complete JSON value at a time out of the stream. A client that expects newline-delimited or `Content-Length`-framed replies (an LSP or MCP stdio client) needs a host that adds that framing; [the embedded stream host](#embedded-http-without-aspnet-core-a-pipe-without-kestrel-a-thread-that-owns-the-state) shows the newline form. Notifications produce nothing. The framer accepts strict JSON only, so single-quoted strings and other lenient syntax are refused on a raw connection even with the Json.NET serializer.
-
-A raw connection has no authentication, authorisation or rate limiting; those are HTTP middleware and do not run here. Listen on loopback or a Unix socket, or put something in front that authenticates. A document larger than `MaxRequestBytes` (4 MB) aborts the connection. The core applies its own `JsonRpcLimits` to the document the host hands over, so the transport limit is met first and the core limit second.
-
-With `EnableAsyncMethods = true`, documents on one connection are processed one at a time in order, and replies already finished are flushed before the connection waits on a slow method. Separate connections run concurrently.
-
-### Blazor WebAssembly
-
-The core runs inside the browser. [samples/WasmHost](samples/WasmHost) is a Blazor WebAssembly app where JavaScript hands a request document to a `[JSExport]`/`[JSInvokable]` method that calls the processor and returns the response, with no HTTP involved. The same service class then serves both the browser and the server. The sample page also benchmarks JSON-RPC against plain Blazor interop; the numbers are in its README.
-
-### Classic ASP.NET (System.Web)
-
-`AustinHarris.JsonRpc.AspNet` is a 1.x package and is not part of 2.0. It targets .NET Framework 4.0, and the 2.0 core needs `netstandard2.0` (.NET Framework 4.6.1 or later), so the two cannot be combined. To host in System.Web on 2.0, call `JsonRpcProcessor.ProcessSync` from your own `IHttpHandler`.
-
-## Errors
-
-### Exception disclosure
-
-By default (`Config.IncludeExceptionDetails = false`), an unhandled exception thrown by a method, or thrown while its result is written, becomes `-32603 Internal Error` with `data: null`. Nothing about the exception leaves the process: not its type name, not its message. The redaction happens when the response is written, after the error handler ran, so a handler still sees the original `Exception` in `data` and can decide what the client gets instead:
-
-```csharp
-Config.SetErrorHandler((request, error) =>
-    error.data is Exception ex ? new JsonRpcException(1000, "Server error", Log(ex)) : error);
-```
-
-Set `Config.IncludeExceptionDetails = true` only for trusted development clients: `data` then carries the full `ExceptionInfo` (`ClassName`, `Message`, `Source`, `StackTraceString`, `HResult` and the `InnerException` chain).
-
-A `JsonRpcException` thrown by the application, or returned by an error handler, keeps the `data` it was given; that data is authored, not redacted.
-
-The exception a handler receives is the one the method threw, with its own `InnerException` still attached; the library never substitutes the cause for the error. Only two wrapper types are stripped first, by type and wherever they came from: a `TargetInvocationException` (what reflection adds) and an `AggregateException` holding exactly one exception (what a faulted task observed through `Result` or `Wait` adds). An aggregate of several exceptions is passed whole. A `JsonRpcException` found only inside another exception's `InnerException` is not promoted: the outer exception is an internal error like any other.
-
-### Handlers
-
-Throw `JsonRpcException(code, message, data)` to return an error of your own. Pick the code outside `-32768..-32000`: the specification reserves that range, `-32700..-32600` for the errors in the table below and `-32099..-32000` for the server implementation, and a client that sees `-32000` cannot tell your error from the server's. Positive codes, or negative ones above `-32000`, are yours; the library raises none of them. To reshape errors, or to inspect requests on the way in and out, register handlers. Each handler belongs to one session:
-
-```csharp
-// Default session
-Config.SetErrorHandler((request, exception) => new JsonRpcException(1000, "Server error", exception.data));
-Config.SetParseErrorHandler((rawJson, exception) => exception);
-Config.SetPreProcessHandler((request, context) => null);              // return a JsonRpcException to reject; may replace Method/Params/Id
-Config.SetPostProcessHandler((request, response, context) => null);   // return a JsonRpcException to replace the result
-
-// Another session: other sessions do not inherit the default session's handlers
-Config.SetErrorHandler("client-42", (request, exception) => exception);
-Config.SetParseErrorHandler("client-42", (rawJson, exception) => exception);
-Config.SetPreProcessHandler("client-42", (request, context) => null);
-Config.SetPostProcessHandler("client-42", (request, response, context) => null);
-```
-
-The overloads without a session id set the **default session's** handler, not a process-wide one; the overloads with a session id create the session when it does not exist yet, and a null handler clears only that session's. A pre- or post-process handler moves its session onto a slower path, which builds `JsonRequest` and `JsonResponse` objects for the handler to see. Leave them unset unless you need them. (`Config.SetBeforeProcessHandler(sessionId, …)`, the 1.x name, still works and is marked obsolete.)
-
-### Error codes
-
-The errors the library raises itself carry structured `data`, identical for every serializer, and the error handler receives the same object:
-
-| Code | `error.data` | Object seen by the error handler |
-| --- | --- | --- |
-| `-32601` Method not found | `{"method":"<name as requested>"}` | `MethodNotFoundInfo` |
-| `-32600` Invalid Request: the document or batch exceeds a configured limit | `{"limit":"maxDocumentBytes","maximum":4194304}` or `{"limit":"maxBatchCount","maximum":1024}` (the configured maximum) | `LimitExceededInfo` |
-| `-32602` Invalid params: count, missing, unknown or repeated named parameter | a sentence, e.g. `"Named parameter 'b' was not present."` | `string` |
-| `-32602` Invalid params: a value the serializer could not convert | `{"reason":"conversion","parameter":"b","index":1,"expectedType":"int32"}` plus `"message"` when `Config.IncludeExceptionDetails` is on; the value sent is never echoed | `ParameterErrorInfo` (with the serializer's exception in `Cause`) |
-| `-32603` Internal error: the method threw, its result could not be written, or a parameter's type is one the serializer cannot handle | `null`, or the full `ExceptionInfo` when `Config.IncludeExceptionDetails` is on, see [Exception disclosure](#exception-disclosure) | `Exception` |
-
-In the second `-32602` row, "could not convert" means the serializer refused the value (`JsonRpcBindException`, `FormatException`, `OverflowException`, `InvalidCastException`, or any `JsonException` from System.Text.Json or Json.NET); what each serializer accepts (say `"7"` for an `int`) is its own decision, see [docs/serializers.md](docs/serializers.md).
+The core leaves transport policy to the host. A raw Kestrel connection does not run HTTP middleware, so it needs authentication and limits at the listener or in front of it. [Hosting details](docs/reference.md#hosting) cover framing, service lifetimes and cancellation.
 
 ## Asynchronous methods and cancellation
 
-A method may return `Task`, `Task<T>`, `ValueTask` or `ValueTask<T>`. Call it through `JsonRpcProcessor.ProcessAsync`. The processor awaits the method and writes its result; `Task` and `ValueTask` answer `null`. A method that completes synchronously runs inline and the byte overloads then return `Task.CompletedTask`.
-
-**Cost.** With `RpcContextFlow.None`, the built-in numeric fast path adds no dispatcher allocation when the invocation completes inline. The service's own allocations (a `Task.FromResult`, a result string) are separate and included in the harness figures. Flow allocates an `InvocationState` even when the call completes inline. A method that suspends may allocate its own async state plus completion state in the result writer, the request handler and the document processor. The yielding benchmark measured 548 B per request under None at one worker (the median of two runs on 2026-09-28), including the service's allocations. A suspension also costs a continuation per request. The figures are in [Async](#async-processasync-awaited-workers).
+Methods may return `Task`, `Task<T>`, `ValueTask` or `ValueTask<T>`. Use `ProcessAsync` to await them. In the ASP.NET Core host, set `builder.Services.AddJsonRpc(o => o.EnableAsyncMethods = true)`; the default host uses the synchronous path. The older `Task<string> Process(...)` compatibility overload schedules synchronous work and does not await an async method.
 
 ```csharp
 [JsonRpcMethod("lookup")]
 public async Task<Item> Lookup(int id, [JsonRpcCancellation] CancellationToken cancellationToken)
     => await repository.FindAsync(id, cancellationToken).ConfigureAwait(false);
-
-await JsonRpcProcessor.ProcessAsync(sessionId, requestMemory, output,
-    context: requestContext, cancellationToken: cancellationToken);
-string response = await JsonRpcProcessor.ProcessAsync(sessionId, requestJson,
-    context: requestContext, cancellationToken: cancellationToken);
 ```
 
-**Which entry point to use.** `ProcessAsync` is the only entry point that awaits. `Process` and `ProcessSync` answer an async method with `-32603` and a message pointing to `ProcessAsync`, and do not call it. The older `Task<string> Process(…)` overloads run the synchronous path on the thread pool through `Task.Factory.StartNew`; despite returning a `Task`, they do not await async methods either.
+Cancellation is cooperative. The processor waits for a running method to finish, even after its token fires, and cannot undo effects the method has already made. A host sets the deadline; the processor has none of its own. By default, ambient RPC context is available until the first real `await`. Capture what you need before it, or opt a method into `RpcContextFlow.Flow` if its accessors must work afterward. Flow has an allocation cost measured in the [async benchmark](#async-processasync-awaited-workers). The [async reference](docs/reference.md#asynchronous-methods-and-cancellation) covers ownership of buffers and the exact cancellation rules.
 
-**Deadlines.** The server defines no per-call deadline and no client-supplied deadline member. On HTTP, configure the ASP.NET Core request-timeouts middleware (`AddRequestTimeouts`, `UseRequestTimeouts`, `WithRequestTimeout`) on the endpoint; its budget covers the whole HTTP request including a batch, it is observed only with `EnableAsyncMethods = true` (the synchronous endpoint path passes no token), and only by `[JsonRpcCancellation]` parameters and by the processor between and after batch elements, so a completed result can be discarded without the method having observed a token. Raw and in-process hosts own their lifetime tokens; application methods own finer operation budgets. Cancellation is cooperative: the library waits for running methods and does not undo their effects. A host that owns its transport enforces a deadline itself; [In-process (strings or bytes)](#in-process-strings-or-bytes) shows one.
+## Errors
 
-**Order.** A batch runs one request at a time, in order. Notifications are awaited like any other request.
+Throw `JsonRpcException(code, message, data)` for an error your client should see. Binding failures use `-32602`, a missing method uses `-32601`, and an unhandled method failure becomes `-32603`.
 
-**Cancellation.** To receive the processor's token, a method declares a `CancellationToken` parameter marked `[JsonRpcCancellation]`. That parameter never binds from JSON and is left out of the SMD, so it may sit anywhere in the signature: positional and named parameters are matched as if it were not there. Since C# wants optional parameters last, `(int id, [JsonRpcCancellation] CancellationToken token, int limit = 10)` is the natural shape. A `CancellationToken` parameter without the attribute is rejected at registration. A synchronous method called through `ProcessAsync` receives the token too; through `Process` and `ProcessSync` it receives the default token. When the token fires:
+### Exception disclosure
 
-- the processor checks it before each invocation, between batch elements, and before writing the response;
-- a method already running is waited for, not abandoned, so a method that ignores the token delays cancellation;
-- nothing is written to `output`, the returned task is cancelled, and whatever the method already did stays done.
-
-An `OperationCanceledException` that a method throws while the processor's token has not fired is an ordinary error.
-
-**Buffers.** The byte overloads accept `ReadOnlyMemory<byte>`, `ReadOnlySequence<byte>` or `ReadOnlySpan<byte>`. The span overload and segmented sequences are copied before the first await. For memory you pass in, keep the request bytes unchanged and the output writer to yourself until the task completes. No output span is held across an await. The task finishes when the response is written, not when your transport has flushed it.
-
-**Ambient context after an await.** `Handler.RpcContext()`, `Handler.RpcRequestId()`, `JsonRpcContext.Current()` and `Handler.RpcSetException()` work in an async method only up to its first real await. That default, `RpcContextFlow.None`, allocates nothing. Read what you need at the top of the method:
-
-```csharp
-[JsonRpcMethod("lookup")]
-public async Task<Item> Lookup(int id)
-{
-    var http = (HttpContext)Handler.RpcContext();        // before the first await
-    JsonRpcRequestId requestId = Handler.RpcRequestId();  // an owned copy, safe to keep
-    var item = await repository.FindAsync(id);
-    if (item == null) throw new JsonRpcException(1001, "Not found", null);
-    return item;
-}
-```
-
-If a method needs the accessors after awaiting, opt it into `RpcContextFlow.Flow`. The accessors then work across sequential awaits and nested dispatch, and every invocation pays one allocation for the execution-context bridge, completed tasks included:
-
-```csharp
-[JsonRpcMethod(ContextFlow = RpcContextFlow.Flow)]
-public async Task<Item> Lookup(int id)
-{
-    var item = await repository.FindAsync(id);
-    if (item == null) Handler.RpcSetException(new JsonRpcException(1001, "Not found", null));
-    return item;
-}
-
-ServiceBinder.BindMethod(sessionId, "lookup", new Func<int, Task<Item>>(LookupAsync),
-    contextFlow: RpcContextFlow.Flow);
-```
-
-In either mode, give parallel branches and background work their own copies of the context and request id, because the ambient state is cleared when the call finishes. Use `Handler.RpcRequestIdRaw()` only in the statement that reads it.
-
-**Rejected at registration:** `async void`, custom awaitables, a `Task` that returns a `Task`, `IAsyncEnumerable<T>`, and `ref`/`out` parameters on async methods (including the legacy trailing `ref JsonRpcException`). A method that returns a null `Task` is answered with `-32603`.
-
-Work that should outlive the request is better served by a job ticket:
-
-```csharp
-[JsonRpcMethod] private string startExport(string filter) { var job = Jobs.Start(() => ExportAsync(filter)); return job.Id; }
-[JsonRpcMethod] private ExportStatus exportStatus(string jobId) => Jobs.Status(jobId);
-```
-
-The client gets a ticket immediately and polls, or the transport pushes a notification when the job finishes.
+By default, an unhandled exception sends `-32603 Internal Error` with `data: null`: its type and message stay on the server. `Config.IncludeExceptionDetails = true` includes exception details for trusted development clients. Application-authored `JsonRpcException` data is sent as supplied. The [error reference](docs/reference.md#errors) lists the structured error data and the per-session hooks for reshaping responses.
 
 ## Sessions and context
 
-A *session* is a named set of JSON-RPC methods with its own configuration, stored in a process-wide registry until explicitly destroyed; it has no connection lifetime of its own and no relationship to ASP.NET Core session state. Sessions let you host independent sets of methods, for example one per connected client or tenant:
+A session is a named method table with its own serializer and handlers. The default session is enough for an application that owns its process. A plugin or multi-tenant host can bind its own session, route calls to it, and destroy it when the tenant or connection goes away. A session ID chooses methods; it does not authorize a caller. Requests for an unknown session answer “method not found” without creating one. See the [session reference](docs/reference.md#sessions-and-context) for registration and lifetime rules.
 
-```csharp
-ServiceBinder.BindService("client-42", new CalculatorService());   // any object with [JsonRpcMethod] members
-string response = await JsonRpcProcessor.Process("client-42", request, context);
-Handler.DestroySession("client-42");
-```
-
-Sessions are stored in a process-wide registry. Binding (`ServiceBinder.BindService`, `BindMethod`, `BindInterface`, a `JsonRpcService` constructor), the per-session `Config` setters and `Handler.GetSessionHandler(sessionId)` create a session; it remains until `Handler.DestroySession(sessionId)` is called. A request for a session id that was never registered creates nothing: every call in it answers `-32601` and the default session's methods are not reachable through it, so an id taken from a route or header cannot grow the registry. Each registration or destruction makes every thread refresh its copy of the registry on its next lookup, so register at startup or when a connection or tenant appears, not per request, and destroy tenant- or connection-scoped sessions when their lifetime ends.
-
-### What sessions are for
-
-A session is an independent method table with its own serializer, `jsonrpc` version policy and handlers, chosen per request by its id. That covers:
-
-- **API versions.** Bind `v1` and `v2` as two sessions with different method names or parameter contracts and serve both at once.
-- **Tenants.** Bind the same class once per tenant, each session over its own instance, and give some tenants methods the others do not have.
-- **Connections.** Bind a session when a client connects and destroy it when the client disconnects, so its methods live exactly as long as the connection.
-- **Capability sets.** Offer a small public session and a larger administrative one instead of a mode flag inside every method.
-- **Migration and experiments.** Route selected clients to a session bound to a new implementation of the same method names while the rest keep the established one.
-- **Wire compatibility.** Set the serializer, version policy and error handlers per session for clients with different expectations.
-- **Several surfaces in one process.** An embedded host runs independent method sets side by side, even over one transport: the Kestrel HTTP endpoint picks the session per request through `JsonRpcOptions.SessionSelector`.
-
-### Rough edges
-
-- **Authorisation.** A session id is routing, not a permission. When it selects tenant data or privileged methods, the host decides which id a caller may name; the library guarantees only that an unknown id reaches nothing.
-- **Lifetime.** A session stays in the registry until `Handler.DestroySession(sessionId)`. Connection- and tenant-scoped sessions need cleanup the host can rely on, such as a disconnect callback.
-- **Registration cost.** Each registration or destruction makes every thread refresh its view of the registry on its next lookup, so a session per request is the wrong shape; a session per connection or tenant is fine.
-- **Shared instances.** `BindService(sessionId, instance)` hands the same object to every concurrent call, so it must be thread-safe and must not keep request state in fields. `BindService(sessionId, typeof(T), resolve)` and `AddJsonRpcService<T>(ServiceLifetime.Scoped)` give each call its own instance; see [Classes](#classes).
-- **The default session.** A `JsonRpcService` subclass built with the parameterless constructor binds to the default session, and a handler setter on `Config` without a session id changes the default session's handler.
-- **Compatibility.** Two versions can expose different signatures, but an old result shape or old semantics still needs its own implementation or an adapter.
-- **Configuration scope.** A session is not a whole server: exception disclosure is process-wide and the serializer can also be chosen per call; the scopes are listed under [Configuration](#configuration).
-
-### Context
-
-Pass an arbitrary context object through to your methods and read it with `Handler.RpcContext()` or `JsonRpcContext.Current().Value` (the AspNetCore package passes the `HttpContext` or `ConnectionContext`):
-
-```csharp
-await JsonRpcProcessor.Process(request, context: httpContext);
-
-[JsonRpcMethod]
-private string WhoAmI() => ((HttpContext)Handler.RpcContext()).User.Identity.Name;
-```
-
-A host of your own passes whatever names the caller: the request object, the connection, a client record. Read it at the top of the method, before the first `await` (the default context flow does not cross one; see [Ambient context after an await](#asynchronous-methods-and-cancellation)), and keep what you need in a local. Methods that must not depend on the transport take an interface the host implements and cast to that, so the same service runs under Kestrel, under `HttpListener` and in the tests.
+The host may pass a context object with each call. Under ASP.NET Core it is an `HttpContext` or `ConnectionContext`; a method reads it with `Handler.RpcContext()`. Capture it before the first `await` unless context flow is enabled.
 
 ### The request id
 
-The request's `id` is available the same way, read on demand from the request bytes, so a method that never asks pays nothing:
-
-```csharp
-[JsonRpcMethod]
-private string Track()
-{
-    JsonRpcRequestId id = JsonRpcContext.CurrentRequestId();   // or Handler.RpcRequestId(): an owned snapshot, keep it anywhere
-    if (id.TryGetInt64(out long n)) { /* integer id */ }
-    string text = id.GetString();                               // string ids (decoded); null otherwise
-    string digits = id.GetIntegerText();                        // integers, including ones wider than Int64
-    JsonRpcIdKind kind = Handler.RpcRequestIdKind();            // Integer, String, Null, or Absent for a notification
-    ReadOnlySpan<byte> raw = Handler.RpcRequestIdRaw();         // the id's JSON as sent (`12`, `"abc"`, `null`); a borrow, use it before returning
-    return id.ToString();
-}
-```
-
-`JsonRpcRequestId` is a small struct you own: keep it anywhere. An integer id allocates nothing, a string id allocates its decoded string, and `RpcRequestIdRaw()` never allocates but is only valid until the method returns. If a method dispatches another request through `JsonRpcProcessor`, the inner method sees the inner id, and the outer id comes back afterwards. A pre-process handler that replaces `JsonRequest.Id` changes the id the method sees. A method parameter called `id` is unrelated: it binds from `params` like any other.
-
-After an `await`, these accessors follow the rules in [Asynchronous methods and cancellation](#asynchronous-methods-and-cancellation).
+A method can read the request's `id` through `Handler.RpcRequestId()` or `JsonRpcContext.CurrentRequestId()` when it needs to correlate work. The [request-id reference](docs/reference.md#the-request-id) covers string, integer, null and notification IDs, including the borrowed raw-byte accessor.
 
 ## Configuration
 
-Settings live on `Config`. They do not all reach every scope:
-
-| Setting | Per call | Per session | Process-wide |
-| --- | --- | --- | --- |
-| Serializer | `serializer` argument | `Config.SetSerializer(sessionId, …)` | `Config.SetSerializer(…)` / `Config.Serializer` |
-| `jsonrpc` version policy | | `Config.SetVersionPolicy(sessionId, …)` | `Config.VersionPolicy` |
-| Exception details | | | `Config.IncludeExceptionDetails` |
-| Error, parse-error, pre- and post-process handlers | | `Config.Set…Handler(sessionId, …)` (see [Handlers](#handlers)) | no: the overloads without a session id set the **default session's** handler |
-
-Where more than one scope applies, the narrowest one wins. Context and cancellation are supplied per call.
-
-### Serializer
-
-```csharp
-// Process-wide
-Config.SetSerializer(new SystemTextJsonRpcSerializer(new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
-
-// Per session
-Config.SetSerializer("legacy-clients", new NewtonsoftJsonRpcSerializer(new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }));
-
-// Per call
-string json = JsonRpcProcessor.ProcessSync(sessionId, request, context, serializer);
-```
-
-The built-in serializer is the default. All three serializers write the envelope, primitives, dates and plain objects the same way (member order, `.0` on whole floats, ISO dates, nulls written), and the test suite runs its protocol cases against each of them. They are not interchangeable for every request: the coercions they accept, the CLR types they support and the object model they hand to handlers differ, so test client-visible requests and responses before switching. Library options go into the serializer's constructor and nowhere else:
-
-| Serializer | Constructor | Notes |
-| --- | --- | --- |
-| built-in | `new JsmnSerializer(lenient: false, maxDepth: 64)` | `lenient` accepts `'single quotes'`, unquoted keys and trailing commas |
-| Json.NET | `new NewtonsoftJsonRpcSerializer(settings)` | one `JsonSerializer` is built from the settings and reused; input is always lenient |
-| System.Text.Json | `new SystemTextJsonRpcSerializer(options)` | the package adds its wire-format converters to a copy of your options when they are missing |
-
-The full contract, what the core fixes versus what a serializer decides, is in [docs/serializers.md](docs/serializers.md).
-
-### Limits
-
-```csharp
-Config.SetLimits(new JsonRpcLimits(maxDocumentBytes: 8 * 1024 * 1024, maxBatchCount: 2048));
-Config.SetLimits("legacy-clients", JsonRpcLimits.Unlimited);
-```
-
-Zero disables either bound; `JsonRpcLimits.Unlimited` disables both. A null per-session value inherits the process-wide limits.
+The built-in serializer is ready to use. Choose Json.NET or System.Text.Json when your application needs their converters or options; test client-visible requests before switching because accepted values and supported CLR types differ. A serializer can be selected per call, per session or for the process. The `jsonrpc` version policy and limits are also configurable. By default the core accepts documents up to 4 MiB and batches up to 1024 entries. [Configuration details](docs/reference.md#configuration) lists the scopes and constructors, and the [serializer guide](docs/serializers.md) describes the wire behavior.
 
 ### Nesting depth
 
-Every serializer exposes `MaxDepth` (default 64). A request nested deeper is answered `-32700` before any handler or binding runs, so recursive parameter conversion is bounded by the same number the JSON library itself enforces: the built-in serializer's constructor argument, `JsonSerializerOptions.MaxDepth`, or `JsonSerializerSettings.MaxDepth`.
-
-### The `jsonrpc` member
-
-```csharp
-Config.VersionPolicy = JsonRpcVersionPolicy.Lenient;          // process default
-Config.SetVersionPolicy("strict-clients", JsonRpcVersionPolicy.Strict);   // per session; null follows the process default
-```
-
-| Policy | Missing member | `"2.0"` | Anything else |
-| --- | --- | --- | --- |
-| `Lenient` (default) | accepted | accepted | `-32600 Invalid Request` |
-| `Ignore` | accepted | accepted | accepted |
-| `Strict` | `-32600 Invalid Request` | accepted | `-32600 Invalid Request` |
-
-The default keeps tool harnesses that omit the member working while a client speaking another version is told so. `Ignore` is for talking to anything at all.
+Every serializer defaults to a maximum JSON depth of 64. The Kestrel host also limits bytes while receiving, before the core sees them. [Limits and error behavior](docs/reference.md#limits) explains which bound applies first.
 
 ## Security
 
-What the library does by default:
+The library redacts unexpected exceptions, rejects oversized documents and batches, and does not create a session for an unknown session ID. Every `[JsonRpcMethod]` is exposed regardless of C# visibility. One service instance can serve concurrent calls.
 
-- **Exception details are off.** An unhandled exception reaches the client as `-32603` with `data: null`: no type name, no message. `Config.IncludeExceptionDetails = true` sends the type, message, stack trace, source, HResult and inner exceptions; use it in development only. See [Exception disclosure](#exception-disclosure).
-- **Rejected values are not echoed.** A `-32602` conversion error names the parameter and the expected type, never the value sent.
-- **Nesting is limited to 64 levels.** A deeper request is `-32700` before any of your code runs.
-- **Document and batch size are limited.** The core rejects a document over `JsonRpcLimits.MaxDocumentBytes` (4 MiB by default) or a batch with more than `MaxBatchCount` entries (1024) with `-32600` and a `data` object naming the limit, before anything is parsed or executed; `Config.SetLimits` changes them, `JsonRpcLimits.Unlimited` disables them. The Kestrel host also bounds bytes while receiving (`MaxRequestBytes`, 4 MB: HTTP answers `413`, a raw connection is aborted), so the first applicable limit wins. There is no response-size limit and no request deadline; a batch runs sequentially, so a batch of small requests ties up one request's worth of server time for all of them.
-- **Every `[JsonRpcMethod]` is callable.** Visibility does not matter (private methods are exposed), and `AddJsonRpcServicesFromAssembly` exposes every class in the assembly that carries the attribute.
-- **Requests do not create sessions.** An unknown session id answers `-32601` and leaves the registry alone; sessions are created by binding and by the per-session `Config` setters, and live until destroyed; see [Sessions and context](#sessions-and-context).
-- **Cancellation is cooperative.** It waits for a running method and cannot undo what the method already did.
+The host owns authentication, authorization, TLS, rate limiting, logging and deadlines. On HTTP, use ASP.NET Core middleware and endpoint metadata; raw connections need equivalent controls at the listener. A session ID is routing, not a permission check. The [security reference](docs/reference.md#security) gives the defaults and boundaries in detail.
 
-What it leaves to you:
+## Requirements
 
-Authentication, connection identity, TLS, rate limiting, request logging and deadlines belong to the host. HTTP hosts use ASP.NET Core middleware and endpoint metadata (`RequireAuthorization`, `UseRateLimiter`, the request-timeouts middleware); raw connections bypass that pipeline, so listen on loopback or a Unix socket, authenticate in front of them and use listener limits. Methods enforce authorisation that depends on parameter values. Core limits constrain admitted documents and batches, while transports bound bytes during receipt. Authentication and credential handling remain application responsibilities.
-- **Service state.** One service instance serves every request concurrently; see [Classes](#classes).
+The core and both serializer packages target `netstandard2.0`, `netstandard2.1`, `net8.0` and `net10.0`. The ASP.NET Core package targets `net8.0` and `net10.0`. CI tests .NET 8 and .NET 10 on Windows and Linux; the other runtimes can load the `netstandard` assets but are outside that test matrix.
 
-The `jsonrpc` member policy (`Lenient` by default) is a compatibility setting, not a control; see [The `jsonrpc` member](#the-jsonrpc-member).
+The reflection binder is not supported under trimming or Native AOT. A trimmed application can lose bound methods. The WebAssembly sample runs in its documented interpreter and AOT configurations, which do not validate `PublishTrimmed` or `PublishAot` for the library. [Versioning and support](#versioning-and-support) has the release policy.
+
 
 ## Benchmarks
+
+How much of a request's cost belongs to the server, and how much belongs to everything around it? These results follow the same small calls from a direct byte invocation to awaited methods, Kestrel, and competing frameworks. The summary is a map; each section below says which work its number includes.
 
 <!-- benchmarks:summary -->
 | What | API and mode | RPC/s | Details |
@@ -638,29 +194,13 @@ The `jsonrpc` member policy (`Lenient` by default) is a compatibility setting, n
 
 <!-- /benchmarks:summary -->
 
-Every table, chart and figure in this section except the WebAssembly one comes from one Hugging Face Jobs run on a `cpu-performance` host: AMD EPYC 7R13, 32 cores (a cgroup quota of all 32 of the host's CPUs), Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC, with the built-in serializer. The job ran `benchmarks/hf/run.sh <commit> publish` on 2026-09-28 (job 6ab9b3936b030d633f69b0fb, commit 6c3c272): the scaling gate once, three runs of the `t` entry, two of every other mode and of `benchmarks/Baseline`, and five of `--sweep`, one after another. Throughput ranges are the low and high over those runs, and a single figure is one that every run rounded to; the [explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) also has the median and every run. The summary's inline Async range spans the registrations as well as the runs. Each Sync ns figure is the median of the runs' reported costs. The WebAssembly results are a browser measurement on a desktop from 2026-09-23; see the sample's README.
+The main tables and charts come from one Hugging Face Jobs `cpu-performance` run: AMD EPYC 7R13, 32 cores (a cgroup quota of all 32 host CPUs), Ubuntu 24.04.5 LTS, .NET 10.0.12, Release, Server GC, built-in serializer. The publish job ran on 2026-09-28 (job 6ab9b3936b030d633f69b0fb, commit 6c3c272). It ran the scaling gate once, the legacy string mode three times, every other mode and `benchmarks/Baseline` twice, and the connection sweep five times, in sequence. Ranges are the low and high over those runs; a single figure is one that every run rounded to. Each Sync ns figure is the median of the runs' reported costs. The summary's inline Async range also spans different registrations. The [explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) shows the medians and individual runs.
 
-`TestServer_Console` is the benchmark harness. It binds one service with five small methods (`add`, `addInt`, `NullableFloatToNullableFloat`, `Test2`, `StringMe`), drives the same five requests through the server, checks every response is a `result` rather than an error, and ends each mode with a bar chart of RPC/s. For one-request timings with an allocation column, the numbers to check before merging a change to the dispatch path, see [benchmarks/Micro](benchmarks/Micro/README.md).
-
-```
-dotnet run -c Release --project TestServer_Console -- --sync 3      # library only, 1..N threads (add a thread count, e.g. --sync 3 1, for one row)
-dotnet run -c Release --project TestServer_Console -- --async 3 32  # ProcessAsync from 32 awaited workers (the job host's core count), one row per registration (--async 3 1 for the 1-worker column)
-dotnet run -c Release --project TestServer_Console -- --scale 3 32 4.0   # release gate: ProcessAsync must scale at least 4x from 1 to 32 workers (default: the core count), then per-serializer diagnostics (--no-diagnostics skips them)
-dotnet run -c Release --project TestServer_Console -- --kestrel 3   # through the AspNetCore package, HTTP and TCP (add `async` for EnableAsyncMethods = true)
-dotnet run -c Release --project TestServer_Console -- --compare 3   # the same calls through StreamJsonRpc and gRPC for .NET, side by side
-dotnet run -c Release --project TestServer_Console -- --sweep 2 benchmarks/charts/sweep.json   # every library and transport at 1, 2, 4, ... connections up to the core count; one file per run
-dotnet run -c Release --project TestServer_Console                  # menu: Enter = Process(bytes), a = ProcessAsync(bytes), t = legacy string API, k = Kestrel, x = compare, q = quit
-dotnet run -c Release --project benchmarks/Baseline                 # the last 1.x release (1.2.3 from NuGet) through the same loop as the t entry
-dotnet run --project samples/WasmHost                               # browser: "Run benchmark" on the page
-```
-
-The three modes measure different things and are named for the entry point they call. `Process(bytes), dedicated threads` measures the library alone. `ProcessAsync(bytes), awaited workers` measures the entry point an asynchronous host calls. `Legacy Process(string), scheduled synchronous work` measures the 1.x string overloads through the thread pool. The Kestrel rows say whether `EnableAsyncMethods` was on.
-
-On Hugging Face Jobs, run `benchmarks/hf/launch.sh <ref> <flavor> [runs|publish]` (`<ref>` is a branch, tag or commit) and retrieve JSON with `benchmarks/hf/fetch.py <job id> <out dir>`; `cpu-upgrade` is 8 vCPU ($0.03/h), `cpu-xl` is 16 vCPU ($1/h), and `cpu-performance` is 32 vCPU ($1.90/h), while `cpu-basic` is 2 vCPU for smoke runs only. The published tables come from the `publish` profile on `cpu-performance` ([benchmarks/hf](benchmarks/hf/README.md) describes it); figures from any other flavor belong to their own machine and are not merged into them.
+`TestServer_Console` binds five small methods (`add`, `addInt`, `NullableFloatToNullableFloat`, `Test2` and `StringMe`), sends the same five requests through each path, and checks that every reply is a result rather than an error. The WebAssembly figures come from a separate desktop browser run on 2026-09-23. To repeat the publish job or inspect its exact commands, see [the benchmark guide](benchmarks/hf/README.md); [micro-benchmarks](benchmarks/Micro/README.md) show one-request cost and allocations.
 
 ### Sync: the library alone
 
-`--sync` calls the byte-level `JsonRpcProcessor.Process` in a loop from 1, 2, 4, ... threads up to the core count, so it measures parsing, dispatch, binding and response writing with no scheduler in the way.
+Start with the library alone. `--sync` calls the byte-level `JsonRpcProcessor.Process` on dedicated threads, measuring parsing, dispatch, binding and response writing without a transport or a per-call scheduler hop. What changes when more cores join the loop?
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="benchmarks/charts/sync-threads-dark.svg">
@@ -679,11 +219,11 @@ On Hugging Face Jobs, run `benchmarks/hf/launch.sh <ref> <flavor> [runs|publish]
 
 <!-- /benchmarks:sync -->
 
-Per-thread cost rises with the thread count, from 315 ns at one thread to 712 ns at 32, where the loop occupies every core the job has.
+One thread handled 3.17 M to 3.18 M RPC/s at a reported 315 ns per request. At 32 threads the aggregate reached 44.2 M to 45.7 M RPC/s, while the reported per-thread cost rose to 712 ns as every available core was occupied. Numeric shapes allocated 0 bytes in the library; `StringMe` returned its own string.
 
 ### Async: ProcessAsync, awaited workers
 
-`--async [seconds] [workers]` calls the byte-level `JsonRpcProcessor.ProcessAsync` from `Task.Run` workers that await each call. It uses the same five requests and loop shape as `--sync`. Workers start behind a barrier, stop on a shared flag and walk the inputs with an index. Worker startup is reported separately. Each row registers the five methods with one return shape and one `RpcContextFlow`. The `yieldsOnce` rows use one method that awaits `Task.Yield()`, giving a real suspension per request. Responses are checked before timing. The bytes column reports allocations per request at one worker, including the service method's own allocations. The inline rows use exact per-thread counts, and the `yieldsOnce` rows use the process-wide counter.
+The next question is what `ProcessAsync` costs when a method can await. `--async` starts `Task.Run` workers once, then each worker awaits calls over the same request set as `--sync`. Most registrations complete inline; `yieldsOnce` really awaits `Task.Yield()` on every request. The last column includes the service method's own allocations at one worker, so it measures the whole call shape.
 
 <!-- benchmarks:async -->
 | Registration | 1 worker | 32 workers | B per request |
@@ -698,7 +238,7 @@ Per-thread cost rises with the thread count, from 315 ns at one thread to 712 ns
 
 <!-- /benchmarks:async -->
 
-The 32-worker rows are an equal-weight mix of the five requests, except `yieldsOnce`, which is one request. The table below gives bytes per request for each request shape at one worker, including the method's own allocations. The harness prints these lines before each row.
+The 32-worker inline rows mix the five requests equally; `yieldsOnce` is one request shape. The per-method allocation table below makes the source of those bytes easier to see. Each value is bytes per request at one worker, including method allocations.
 
 | Registration | `add` | `addInt` | nullable float | decimal | `StringMe` |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -708,13 +248,13 @@ The 32-worker rows are an equal-weight mix of the five requests, except `yieldsO
 | `ValueTask<T>`, Flow | 184 | 184 | 184 | 184 | 216 |
 | `ValueTask<T>`, None | 0 | 0 | 0 | 0 | 32 |
 
-With `RpcContextFlow.None`, the dispatcher adds no allocation to a method that completes inline. Allocations in the `Task<T>` None row come from the service's own `Task.FromResult` (`Task<int>` for 8 comes from the runtime's cache). The 32 bytes of `StringMe` are its result string. Flow allocates the `InvocationState` and the execution-context bridge on every call, inline or not. A real suspension allocates the method's own async state plus completion state in the result writer, the request handler and the document processor. The `yieldsOnce` None row measured 548 B per request at one worker, including the method's own allocations. The 7 to 10 M target for a hosted server applies to methods that complete inline. A method that suspends also costs a continuation per request.
+With `RpcContextFlow.None`, the dispatcher adds no allocation when a method completes inline. The `Task<T>` None row includes the service's `Task.FromResult` allocations (`Task<int>` for 8 uses the runtime cache); `StringMe` allocates its 32-byte result string. Flow allocates invocation and execution-context state even for an inline completion. An actual suspension also needs completion state in the method, result writer, handler and processor: `yieldsOnce` under None measured 548 B per request at one worker, including the method.
 
-Before 2.0.0, the `ProcessAsync` path was capped near 4 M RPC/s at every worker count because each document took one lock on the shared scratch pool. No single-threaded benchmark could see this limit. Each thread now caches one scratch in front of that pool. `--scale [seconds] [workers] [threshold]` is the gate that catches the next such limit. It measures the inline None rows at 1, 2 and N workers (N defaults to the core count) in three paired runs and takes the medians. It exits non-zero when any N/1 ratio is below the threshold (4.0 in the release gate). After the gate it prints a diagnostics table that is never gated: the three inline None rows and the `yieldsOnce` None row at 1 and N workers under each serializer (`jsmn`, `stj`, `newtonsoft`), one run per cell, with the N/1 ratio and the bytes per request at one worker, so that a regression in one serializer's path or in the suspending path shows up on its own. A final `--no-diagnostics` argument skips the table. The lock gave 1.3; the cache gives 12.1 to 13.1 at 32 workers on the job host (the gate's medians, 2026-09-28). Before a release, run `benchmarks/hf/launch.sh <release commit> cpu-performance publish`, which runs the gate first, and paste its gate table into the release notes. The same release job measures the `--kestrel 3 async` TCP row with methods that suspend once and compares it with the previous release's figure from the same flavor: a drop larger than the spread of its runs blocks the release, and the row has no absolute floor (see [Kestrel](#kestrel-through-the-aspnetcore-package)). The pull-request build runs a diagnostic `--scale 3 4 2.0` on the shared runner. It also checks that every `lock`, `Interlocked`, `Volatile.Write`, thread-static and writable static field on the request-path files of the core and both companion serializers is listed in `.github/request-path-sync.allowlist` with a reason (per-thread, miss-path, registration-only, read-only-after-init).
+A lock explains why the async path needed a scaling test. Before 2.0.0, one lock on a shared scratch pool capped `ProcessAsync` near 4 M RPC/s at every worker count; a single-thread benchmark could not reveal it. A per-thread scratch slot removed that bottleneck. The scaling gate measured 1.3 with the lock and 12.1 to 13.1 at 32 workers with the cache (medians on 2026-09-28). It tests inline methods across worker counts and serializers before release; [the benchmark guide](benchmarks/hf/README.md) has the gate and diagnostic commands.
 
 ### Legacy string API: scheduled synchronous execution
 
-The `t` menu entry submits batches through the 1.x `Task<string> Process(string)` overload from every core at once. This compatibility string API pays for transcoding, a thread-pool hop, a `Task`, a result string and a continuation per request. An asynchronous host uses the byte entry points measured in the Sync and Async tables above. Each batch size is repeated for at least half a second after a one-second warm-up. Throughput peaks once a batch is large enough to keep every core busy and falls off again when hundreds of thousands of requests are queued at once:
+The 1.x compatibility overload pays for work the byte path avoids. The `t` mode sends batches through `Task<string> Process(string)` from every core. Each request pays for transcoding, a thread-pool hop, a `Task`, a result string and a continuation. The table varies batch size after a one-second warm-up, timing each size for at least half a second. More queued work helps until the queue itself becomes the cost.
 
 <!-- benchmarks:legacy -->
 | Batch size | RPC/s |
@@ -730,11 +270,11 @@ The `t` menu entry submits batches through the 1.x `Task<string> Process(string)
 
 <!-- /benchmarks:legacy -->
 
-This mode is slower than the byte modes because it measures the cost of the .NET thread pool and a `Task`, a string and a continuation per request as much as the library itself. The AspNetCore host does not use that string path or allocate a result string. It awaits transport reads and flushes without a thread per connection, as the next table shows.
+That peak is below the byte paths because this mode measures the thread pool and string API as well as dispatch. The ASP.NET Core host uses bytes and awaits transport reads and flushes; its results bring the network boundary into view.
 
 ### Kestrel: through the AspNetCore package
 
-`--kestrel [seconds]` starts a real Kestrel on loopback with `MapJsonRpc` and `JsonRpcConnectionHandler`, then drives it with one client per core (32 on the job host) on the same machine. Every figure is therefore an upper bound for one box talking to itself. The in-process rows show the same requests through the byte entry point with no transport, to give a sense of scale. The `EnableAsyncMethods = false` rows are the default, where the host calls `Process`. `--kestrel 3 async` runs the same host with `EnableAsyncMethods = true` and sends every document through `ProcessAsync`. It also adds a TCP row whose five methods await `Task.Yield()` before answering. The trailing text on each `--kestrel` row reports system, harness-process and, for TCP, dedicated-client CPU during that row's timed window as a share of the available cores.
+What changes when the call goes through a real host? `--kestrel` starts Kestrel on loopback with the HTTP endpoint and raw connection handler, then drives it from one client per core (32 on this host). The client and server share a loopback machine and compete for its cores, so these are local results rather than remote end-to-end predictions. The in-process row provides scale. The default host calls `Process`; the async rows enable `ProcessAsync`, first with methods that complete inline and then with methods that await `Task.Yield()`.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="benchmarks/charts/kestrel-transports-dark.svg">
@@ -753,11 +293,13 @@ This mode is slower than the byte modes because it measures the cost of the .NET
 
 <!-- /benchmarks:kestrel -->
 
-The TCP client keeps 256 requests in flight per connection and refills from a precomputed ring of request bytes with one `Send` per refill. On the server, `JsonFramer` feeds the same `Process` call the HTTP endpoint makes. With `EnableAsyncMethods = true`, the connection handler processes each connection's documents one at a time, in order. So 256 pipelined requests are 256 sequential invocations, and a method that suspends pays that cost per request. Concurrency comes from the connections, one per core. The last row is a release-required regression row: it is measured by the publish job on `cpu-performance` before every release and compared with the previous release's figure from the same flavor; a drop larger than the spread of its runs blocks the release, and it has no absolute floor.
+One HTTP POST per call spends most of its time on the round trip: 156 k to 162 k RPC/s, versus 14.4 M to 14.8 M when each POST contains a batch of 100. Raw TCP with 256 pipelined requests reached 18.5 M. The host processes documents in order on each connection; enabling async methods preserves that order. When every method actually suspends, each pipelined request pays for its own continuation, and the TCP row falls to 2.86 M to 2.87 M. The publish job tracks that suspended row for regressions; [the benchmark guide](benchmarks/hf/README.md) describes the gate.
 
 ### Versus StreamJsonRpc and gRPC
 
-[StreamJsonRpc](https://www.nuget.org/packages/StreamJsonRpc) is Microsoft's JSON-RPC library, the one behind Visual Studio and the language-server stack. `--compare` hosts both libraries on the same Kestrel TCP listener and drives them with the same pipelining client (one connection per core, 32 on the job host, 256 requests in flight each), so the only variable is the library answering. StreamJsonRpc requires the `jsonrpc` member, so every request in this mode carries `"jsonrpc":"2.0"`, which is why the JSON-RPC.Net rows are a little below the other tables. The same mode also hosts [gRPC for .NET](https://learn.microsoft.com/aspnet/core/grpc/) (HTTP/2, protobuf) on the same Kestrel, answering the same five calls from [calculator.proto](TestServer_Console/Protos/calculator.proto), driven by its own client with the same shape: one channel per core, 256 calls in flight each. Each row was run twice for 3 s; both results are shown. The trailing text on each `--compare` row reports system, harness-process and, for TCP, dedicated-client CPU during that row's timed window as a share of the available cores.
+The comparison needs a little care. [StreamJsonRpc](https://www.nuget.org/packages/StreamJsonRpc) is Microsoft's full bidirectional JSON-RPC framework, used by Visual Studio and language-server tooling. `--compare` gives it and JSON-RPC.Net the same five requests on Kestrel TCP, one connection per core (32 here) and 256 requests in flight per connection. StreamJsonRpc requires `"jsonrpc":"2.0"`, so these requests include it and the JSON-RPC.Net row sits below its other TCP measurements. The rows retain each library's named formatter and framing; they compare complete server paths.
+
+The same run hosts [gRPC for .NET](https://learn.microsoft.com/aspnet/core/grpc/) on Kestrel with the corresponding five calls from [calculator.proto](TestServer_Console/Protos/calculator.proto). Its Grpc.Net.Client uses one channel per core and 256 calls in flight per channel. Each row ran twice for 3 s; the table shows both results as a range.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="benchmarks/charts/compare-streamjsonrpc-dark.svg">
@@ -776,9 +318,11 @@ The TCP client keeps 256 requests in flight per connection and refills from a pr
 
 <!-- /benchmarks:compare -->
 
-StreamJsonRpc 2.25.29, defaults apart from the formatter and framing named in each row. It is a full bidirectional RPC framework (client proxies, cancellation, progress, marshaled objects, events). The comparison is of the server side answering the same five requests; on that measure JSON-RPC.Net is about 15× faster than StreamJsonRpc's fastest row on the same connections. JSON-RPC.Net ran its built-in serializer, and the fastest StreamJsonRpc rows use System.Text.Json, so this is a comparison of whole server paths, not of one JSON library against itself; running JSON-RPC.Net with the System.Text.Json serializer is a separate measurement and is not in this table.
+StreamJsonRpc 2.25.29 used its defaults apart from the formatter and framing named in each row. Its fastest row reached 1.06 M to 1.15 M RPC/s; JSON-RPC.Net answered the same five calls at about 15× that rate on the same connections. StreamJsonRpc also provides client proxies, cancellation, progress, marshaled objects and events. JSON-RPC.Net used its built-in serializer while the fastest StreamJsonRpc rows used System.Text.Json. This is a whole-server comparison; JSON-RPC.Net with its System.Text.Json serializer was measured separately and is not in the table.
 
-gRPC for .NET 2.84.0 with default settings apart from Kestrel's `MaxStreamsPerConnection` (raised to 256 so the pipeline depth is not capped at 100). protobuf has no `decimal`, so `Test2` carries the units/nanos `DecimalValue` message the gRPC docs recommend; nullable values use proto3 `optional`. The gRPC rows are a different kind of measurement from the rows above them: there is no cheap raw client for HTTP/2 + protobuf, so the client is Grpc.Net.Client on the same cores as the server, and the figure is what a .NET caller and a .NET service get end to end. In the sweep below, one channel reaches 136 k to 143 k unary calls per second and eight reach 338 k to 357 k; more channels lose ground because client and server compete for the same cores. The streaming row batches its writes the way the TCP client does (BufferHint on every message but the last of a refill), and the server flushes only when its input runs dry, the same once-per-read-group flush `JsonRpcConnectionHandler` does.
+gRPC for .NET 2.84.0 used default settings except Kestrel's `MaxStreamsPerConnection`, raised to 256 so the pipeline depth was not capped at 100. Protobuf has no `decimal`, so `Test2` used the units/nanos `DecimalValue` message recommended in the gRPC docs; nullable values used proto3 `optional`.
+
+These gRPC rows include Grpc.Net.Client running on the same cores as the server. They measure what a .NET caller and service achieve end to end, while the JSON-RPC TCP rows use a lightweight raw client. In the sweep, one gRPC channel handled 136 k to 143 k unary calls per second and eight handled 338 k to 357 k; additional channels competed with the server for the same cores. The streaming row batched writes (`BufferHint` on every message except the last in a refill) and the server flushed when its input ran dry, matching the TCP handler's once-per-read-group flush.
 
 <details>
 <summary>In-process paths: a direct call, a Pipe pair and a typed proxy (different boundaries, not comparable with the rows above)</summary>
@@ -806,29 +350,40 @@ StreamJsonRpc's server side has no "document in, document out" call, so its in-p
   <img alt="Every library and transport by client connections, 1 to 32: three panels on a shared log axis, one per library, with a marker shape and dash per setting and whiskers spanning five runs" src="benchmarks/charts/compare-connections.svg">
 </picture>
 
-`--sweep` runs every one of those paths at each power of two from 1 to the core count of client connections (gRPC: channels) and writes one JSON file per run; the chart above is five 2 s runs per point, up to 32 connections on the job host, the marker at the median and the whisker from the lowest to the highest run. Each sweep file also records the available core count and per-cell system, process and dedicated TCP-client CPU percentages; a high client share can mean the harness is competing with the server for CPU. The sweep ran in the same job as the tables, with a 2 s warm-up and 2 s of timing per cell, so its cells sit near the table rows rather than on them (JSON-RPC.Net over TCP 17.3 M to 17.8 M at 32 connections against 16.4 M to 16.8 M in the comparison table). Its gRPC figures run higher than the `--compare` rows: unary 269 k to 290 k at 32 channels against 158 k to 166 k, and the stream 893 k to 913 k against 703 k to 733 k; the cause is not pinned down, and the table keeps the `--compare` figures. What the sweep adds is the shape: JSON-RPC.Net over TCP and batched HTTP climb with every doubling of connections, from 1.58 M and 744 k at one connection to 17.5 M and 14.6 M at 32 (medians); StreamJsonRpc gains 5 to 6× from one connection to 32, and its two `Content-Length` rows level off after 16; gRPC's unary calls peak at eight channels, while its stream keeps climbing to 902 k at 32.
+What happens between one connection and 32? `--sweep` repeats the networked library and transport paths at each power-of-two connection count (channels for gRPC). The chart uses five 2 s runs per point, a median marker and a low-to-high whisker. Sweep files also record system, process and dedicated TCP-client CPU shares, because a busy client can limit what reaches the server.
+
+The sweep ran in the same job as the tables, with a 2 s warm-up and 2 s timed window per cell. The TCP result is near its comparison-table row: JSON-RPC.Net measured 17.3 M to 17.8 M at 32 connections, versus 16.4 M to 16.8 M in the comparison table. The gRPC sweep results are higher: unary 269 k to 290 k versus 158 k to 166 k; streaming 893 k to 913 k versus 703 k to 733 k. The cause is not pinned down, so the comparison table keeps its original figures.
+
+The scaling pattern is the reason for this chart. JSON-RPC.Net over TCP rises from a 1.58 M median at one connection to 17.5 M at 32; batched HTTP goes from 744 k to 14.6 M. StreamJsonRpc gains 5 to 6× from one to 32 connections, with its two `Content-Length` paths leveling off after 16. gRPC unary peaks at eight channels, while its stream climbs to 902 k at 32.
 
 The [benchmark explorer](https://astn.github.io/JSON-RPC.NET/benchmarks/charts/explorer.html) is the same data as an interactive page: toggle series, hover or tab to a point for the exact low, median, high and every run, switch the axis between log and linear, and download the data. It is one self-contained HTML file, [benchmarks/charts/explorer.html](benchmarks/charts/explorer.html), so it also works saved to disk.
 
 ### WebAssembly: in the browser
 
-The [WasmHost sample](samples/WasmHost/README.md) compares JSON-RPC through JS interop with plain Blazor interop for the same `add(1, 2)` in Chrome, under the .NET 10 interpreter and AOT-compiled; its README has the table and a chart. Interpreted, a plain `DotNet.invokeMethod` add costs about 64 µs (the JSON marshalling Blazor does), a JSON-RPC document written as UTF-8 straight into WebAssembly memory and run through a `[JSExport]` costs 53 µs, and a batch of 100 that way reaches 27 k RPC/s. AOT-compiled (`dotnet publish` with the `wasm-tools` workload) the same three are 15 µs, 7 µs and 210 k RPC/s; a typed `[JSExport]` add takes 0.3 µs either way.
+The browser changes the boundary again. The [WasmHost sample](samples/WasmHost/README.md) compares the same `add(1, 2)` through JSON-RPC and plain Blazor interop in Chrome, under the .NET 10 interpreter and AOT. Interpreted, plain `DotNet.invokeMethod` took about 64 µs including Blazor's JSON marshalling, a UTF-8 JSON-RPC document written directly into WebAssembly memory through `[JSExport]` took 53 µs, and a batch of 100 reached 27 k RPC/s. AOT changed those three results to 15 µs, 7 µs and 210 k RPC/s; a typed `[JSExport]` add took 0.3 µs either way. The [sample README](samples/WasmHost/README.md) has the table and chart.
 
 ### simdjson
 
-simdjson was evaluated as a fourth parser and not adopted: through the only maintained .NET binding its parse alone costs more than the whole built-in envelope read, and walking the result is 5 to 6 times slower with 350 bytes or more of garbage per request. The harness and numbers are in [benchmarks/SimdJsonEval/RESULTS.md](benchmarks/SimdJsonEval/RESULTS.md).
+One parser experiment did not help. simdjson was evaluated as a fourth parser and not adopted: through the .NET binding tested here, its parse alone costs more than the whole built-in envelope read, and walking the result is 5 to 6 times slower with 350 bytes or more of garbage per request. The harness and numbers are in [benchmarks/SimdJsonEval/RESULTS.md](benchmarks/SimdJsonEval/RESULTS.md).
 
 ### History
+
+The current tables come from the 2026-09-28 cloud job. Earlier measurements used a desktop and different harness configurations, so they tell the development story rather than extend the current comparison.
+
+<details>
+<summary>Earlier desktop results and a corrected 1.x result</summary>
 
 The charts, the explorer page and the figures in this file come from one data file, [benchmarks/charts/benchmarks.json](benchmarks/charts/benchmarks.json); how they are rendered and checked is under [Building](#charts). Until 2026-09-28 the published figures were measured on a desktop, an AMD Ryzen 7 7800X3D (8 cores / 16 threads), and the dated figures below come from it.
 
 On 2026-09-25 the `ProcessAsync` path was found capped near 4 M RPC/s at every worker count. Every document took one lock on the shared scratch pool, which the single-threaded micro-benchmarks could not detect. A one-slot per-thread cache in front of the pool took the inline rows to 22.2 M to 32.1 M at 16 workers (one run per registration), against 31.7 M for the synchronous entry point in the same session. The `--scale` gate and the request-path allowlist exist to catch the next such limit before a release.
 
-The Performance section reported one desktop session on 2026-09-25. The last 1.x release on NuGet, 1.2.3, was driven by the same loop as the `t` entry ([benchmarks/Baseline](benchmarks/Baseline/Program.cs)). It reached 3.08 M at its best batch size of 1,200 and fell to 1.5 M at two million. In the same session, 2.0 peaked at 13.3 M through the same string API, and the byte entry points ran at 31.7 M and 32.1 M.
+An earlier version of this README reported one desktop session on 2026-09-25. The last 1.x release on NuGet, 1.2.3, was driven by the same loop as the `t` entry ([benchmarks/Baseline](benchmarks/Baseline/Program.cs)). It reached 3.08 M at its best batch size of 1,200 and fell to 1.5 M at two million. In the same session, 2.0 peaked at 13.3 M through the same string API, and the byte entry points ran at 31.7 M and 32.1 M.
 
 The 2026-09-23 performance pass (compiled invokers that read the tokens and write the pooled buffer through direct calls instead of virtual, delegate and interface calls; a tokenizer that keeps its scanner state in locals; a last-session cache; envelope keys matched by length; a flat method table) was measured A/B in one session: the same seven runs of `--sync 2 1` went from 3.2 M to 4.1 M (median 3.6 M) before to 4.0 M to 4.8 M (median 4.4 M) after, about 20 to 25 % more on one thread. The transport rows are bound by the loopback round trips rather than by the library and moved less.
 
 Under the previous harness (one pass per batch, workstation GC) the two-million batch ran at about 525,000 RPC/s on 1.3 and 1,584,906 RPC/s on 2.0 on the same machine. The 1.x figure published earlier in this README was measured while the benchmark service was not bound, so every request took the "method not found" path; the benchmark now prints the responses so that cannot go unnoticed.
+
+</details>
 
 ## Upgrading from 1.x
 
@@ -836,32 +391,26 @@ Most 1.x services run unchanged. [Upgrading from 1.x](docs/upgrading.md) lists t
 
 ## Versioning and support
 
-- **Versioning.** The 2.x packages follow [Semantic Versioning](https://semver.org/) for the public API and the wire behaviour documented here: a breaking change to either arrives only in a new major version.
-- **Deprecations.** An obsolete member warns with a `JSONRPC0xxx` diagnostic id whose link explains the replacement ([obsoletions](docs/obsoletions.md)); it stays at warning level through 2.x and is removed in the next major.
-- **Releases.** The four packages are built from one repository, carry one version number and are released together; use matching versions. There is no release cadence.
-- **Previews.** 2.0 ships as `2.0.0-preview.N` first. A preview is complete and tested, but the public API may still change between previews; the stable 2.0.0 follows once the API has settled.
-- **Tested** means the `net8.0` and `net10.0` test runs on Windows and Linux listed under [Requirements](#requirements). Other runtimes can load the `netstandard` assets and are not tested.
-- **Trimming and Native AOT** are unsupported until the library is annotated and that is validated in CI, planned for 2.8 with the source generator. A host that publishes trimmed or with `PublishAot` today sees trim warnings from the reflection binder and can lose bound methods; that is the one constraint that keeps a host off 2.0.
-- **1.x** receives no further releases.
-- **Changes** are recorded per version in [CHANGELOG.md](CHANGELOG.md); the NuGet release notes link there.
-- **Vulnerabilities** are reported privately, see [SECURITY.md](SECURITY.md). Questions and bugs go to [GitHub issues](https://github.com/Astn/JSON-RPC.NET/issues).
+The four 2.x packages are released together at one version; use matching versions. Public API and documented wire behavior follow [Semantic Versioning](https://semver.org/). There is no fixed release cadence. Previews such as `2.0.0-preview.N` are tested but may change API before the stable release; 1.x receives no further releases.
+
+Obsolete members warn with a `JSONRPC0xxx` diagnostic and a link to the [replacement](docs/obsoletions.md). They remain warnings through 2.x and are removed in the next major version. [CHANGELOG.md](CHANGELOG.md) records changes. Report vulnerabilities privately through [SECURITY.md](SECURITY.md); use [GitHub issues](https://github.com/Astn/JSON-RPC.NET/issues) for questions and bugs.
+
+CI tests `net8.0` and `net10.0` on Windows and Linux. Other runtimes can load the `netstandard` assets but are outside that test matrix. Trimming and Native AOT remain unsupported until the reflection binder is annotated and validated in CI, planned alongside a source generator for 2.8; a trimmed host today can lose bound methods.
 
 ## Building
 
-Requires the .NET 10 SDK (pinned in `global.json`) and the .NET 8 runtime for the `net8.0` test target.
+Use the .NET 10 SDK pinned in `global.json` and the .NET 8 runtime for the `net8.0` tests:
 
 ```
 dotnet build AustinHarris.JsonRpc.sln
 dotnet test AustinHarris.JsonRpcTestN
 ```
 
-The test suite runs its protocol cases once per serializer (built-in, Json.NET, System.Text.Json) plus the parser, dispatch, version-policy and Kestrel integration tests, on both `net8.0` and `net10.0`. Building a package project in Release produces its NuGet package in `bin/Release/`. The WebAssembly sample builds without the `wasm-tools` workload; add it for AOT.
-
-The 1.x projects that 2.0 does not build (`AustinHarris.JsonRpc.Client`, `AustinHarris.JsonRpc.AspNet`, the Windows Phone 7 client, `JsonRpcTest` and `TestClient`) are no longer in the tree. Their source is in the git history before 2.0, and the 1.x packages stay on NuGet.
+The suite runs protocol cases across the built-in, Json.NET and System.Text.Json serializers, plus parser, dispatch, version-policy and Kestrel tests, on both targets. A Release build of a package project writes its NuGet package under `bin/Release/`. The WebAssembly sample builds without `wasm-tools`; add that workload for AOT.
 
 ### Charts
 
-The charts, the explorer page and the benchmark figures in this README come from one data file, [benchmarks/charts/benchmarks.json](benchmarks/charts/benchmarks.json): the publish job's results folded in by `ingest.py`, plus the `--sweep` run files. `python benchmarks/charts/render.py` (plain Python, no packages) renders every chart in a light and a dark variant, which the README picks between with a `<picture>` element, and `render.py --check` fails if a committed chart is stale or a figure in this README no longer matches the data; the pull-request build runs it. To republish, run `benchmarks/hf/launch.sh <ref> cpu-performance publish`, then `python benchmarks/hf/fetch.py <job id> <dir>` to extract each run's JSON and text. `python benchmarks/charts/ingest.py <dir> --source <job id> --conditions "..."` folds the JSON into benchmarks.json and the sweep files, and `render.py` regenerates the charts, the explorer and the README tables between `<!-- benchmarks:... -->` markers. `render.py --check` fails when any of them is stale. GitHub serves README images through a proxy as plain `<img>`, so the SVGs carry no scripts, hover text or links, and every range is drawn as an interval with its figures beside it; the interactive parts live on the explorer page. The explorer tables show median system, process and dedicated TCP-client CPU percentages when the sweep files contain them; a high client share can limit the requests the harness feeds to the server.
+The tables and charts are generated from [benchmarks/charts/benchmarks.json](benchmarks/charts/benchmarks.json). `python benchmarks/charts/render.py --check` verifies that the published figures and generated assets agree. [The benchmark guide](benchmarks/hf/README.md#republishing) describes the publish, fetch and rendering steps.
 
 ## License
 

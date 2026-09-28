@@ -45,6 +45,8 @@ TYPST_VERSION = "0.14"
 PAGES = [
     ("index.html", "README.md", "JSON-RPC.NET", "Overview", "Guide",
      "A high performance JSON-RPC 2.0 server for .NET: bytes in, bytes out, pluggable serializers, Kestrel hosting."),
+    ("reference.html", "docs/reference.md", "API and hosting reference", "API reference", "Guide",
+     "Detailed binding, hosting, async, session, configuration and security behavior for JSON-RPC.NET."),
     ("changelog.html", "CHANGELOG.md", "What is new", "What is new", "Guide",
      "Release notes for every version: what 2.0 adds, changes, removes and fixes, and the 1.x history."),
     ("upgrading.html", "docs/upgrading.md", "Upgrading from 1.x", "Upgrading from 1.x", "Guide",

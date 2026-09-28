@@ -36,6 +36,8 @@
     img: ("void", (attrs) => himg(attrs.at("src", default: ""), alt: attrs.at("alt", default: ""))),
     picture: (attrs, body) => html.elem("picture", body),
     source: ("void", (attrs) => html.elem("source", attrs: attrs)),
+    details: (attrs, body) => html.elem("details", body, attrs: attrs),
+    summary: (attrs, body) => html.elem("summary", body, attrs: attrs),
   ),
 )
 
